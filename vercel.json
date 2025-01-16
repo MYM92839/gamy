@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src * data: blob:; style-src * 'unsafe-inline'; style-src-elem *; script-src * 'unsafe-eval' 'unsafe-inline'; connect-src *; font-src * data:;"
+          "value": "default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src-elem 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-eval'; font-src 'self' https://cdn.jsdelivr.net data:; connect-src 'self'; img-src 'self' data:;"
         }
       ]
     }
