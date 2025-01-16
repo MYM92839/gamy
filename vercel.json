@@ -5,15 +5,9 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; style-src 'self' 'https://cdn.jsdelivr.net';"
+          "value": "default-src 'self'; style-src * 'unsafe-inline'; style-src-elem *;"
         }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }
