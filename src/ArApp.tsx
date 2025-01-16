@@ -586,7 +586,7 @@ export default function ArApp() {
           <ARAnchor
             target={0}
             onAnchorFound={() => {
-              console.log('RABBIT found');
+              console.log('RABBIT found!');
             }}
             onAnchorLost={() => {
               console.log('RABBIT lost');
