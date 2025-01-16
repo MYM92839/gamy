@@ -580,7 +580,7 @@ export default function ArApp() {
         }}
       >
         {/* <FrameH /> */}
-
+        {/*  */}
         {char === 'moon' || char === 'moons' && (
           // @ts-ignore
           <ARAnchor
