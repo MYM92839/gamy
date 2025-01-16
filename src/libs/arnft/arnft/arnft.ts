@@ -3,7 +3,7 @@ import { Camera } from '@react-three/fiber';
 import { WebGLRenderer } from 'three';
 import { isMobile, setMatrix } from './utils';
 
-const workerScript = '/gamyoungar/arnft.worker.js';
+const workerScript = '/arnft.worker.js';
 
 export class ARNft {
   inputWidth: any;

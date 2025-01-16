@@ -13,7 +13,7 @@ function MindApp() {
   return (
     // @ts-ignore
     <ARView
-      imageTargets="/gamyoungar/targets.mind"
+      imageTargets="/targets.mind"
       filterMinCF={1}
       filterBeta={10000}
       missTolerance={0}

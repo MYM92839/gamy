@@ -140,20 +140,20 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
           if (cookieStr.includes(num)) {
             // cancelAnimationFrame(tickfunc);
             Cookies.set('WonjuPopup', 'already', cookieOpt);
-            window.location.href = `https://wonju.go.kr/gamyoungar`;
+            window.location.href = `https://wonju.go.kr`;
             return;
           } else {
             // cancelAnimationFrame(tickfunc);
             Cookies.remove('WonjuPlaces', cookieOpt);
             Cookies.set('WonjuPlaces', cookieStr + num + '', cookieOpt);
             Cookies.set('WonjuPopup', num + '', cookieOpt);
-            window.location.href = `https://wonju.go.kr/gamyoungar`;
+            window.location.href = `https://wonju.go.kr`;
             return;
           }
         } else {
           Cookies.set('WonjuPlaces', num, cookieOpt);
           Cookies.set('WonjuPopup', num + '', cookieOpt);
-          window.location.href = `https://wonju.go.kr/gamyoungar`;
+          window.location.href = `https://wonju.go.kr`;
           return;
         }
       } else {

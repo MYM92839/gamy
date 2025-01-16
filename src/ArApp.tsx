@@ -66,9 +66,9 @@ Modal.setAppElement('#root');
 
 function Tree() {
   const modelRef = useRef<THREE.Group>(null);
-  const { nodes, materials, animations } = useGLTF('/gamyoungar/walk_f.glb', false, false, (loader) => {
+  const { nodes, materials, animations } = useGLTF('/walk_f.glb', false, false, (loader) => {
     const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/gamyoungar/draco/');
+    dracoLoader.setDecoderPath('/draco/');
     loader.setDRACOLoader(dracoLoader);
   });
   const { actions } = useAnimations(animations, modelRef);
@@ -155,9 +155,9 @@ function Tree() {
 function Box({ onRenderEnd }: { onRenderEnd: () => void }) {
   const modelRef = useRef<THREE.Group>(null);
 
-  const { nodes, materials, animations } = useGLTF('/gamyoungar/moon_ff.glb', false, false, (loader) => {
+  const { nodes, materials, animations } = useGLTF('/moon_ff.glb', false, false, (loader) => {
     const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/gamyoungar/draco/');
+    dracoLoader.setDecoderPath('/draco/');
     loader.setDRACOLoader(dracoLoader);
   }) as GLTFResult;
   const { actions } = useAnimations(animations, modelRef);
@@ -558,7 +558,7 @@ export default function ArApp() {
       {loading && <Spinner className='fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate' />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon' ? '/gamyoungar/moon.mind' : char === 'moons' ? '/gamyoungar/moons.mind' : '/gamyoungar/tree.mind'}
+        imageTargets={char === 'moon' ? '/moon.mind' : char === 'moons' ? '/moons.mind' : '/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // Maximum number of targets tracked simultaneously
@@ -609,7 +609,7 @@ export default function ArApp() {
           </ARAnchor>
         )}
 
-        <Environment files="/gamyoungar/HDRI_01.exr" preset={undefined} />
+        <Environment files="/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
       </ARView>
     </>
