@@ -1,0 +1,22 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#root html body {
+  overflow-y: hidden;
+  background-color: #344173;
+  overscroll-behavior: none; /* 스와이프 제스처 방지 */
+  touch-action: none; /* 터치 동작 비활성화 */
+}
+
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    overscroll-behavior: none; /* 스와이프 방지 */
+  }
+
+  .relative {
+    overflow: hidden; /* 스크롤 막기 */
+  }
+}
