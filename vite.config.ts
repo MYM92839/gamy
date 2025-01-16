@@ -4,8 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: '/', // CSP에서 이미 허용된 경로로 변경
   build: {
-    minify: 'esbuild',
-    sourcemap: false, // eval 제거
+    target: 'esnext', // 최신 ES 표준을 대상으로 빌드
+    minify: 'esbuild', // esbuild를 사용해 eval을 피함
+    sourcemap: false, // 소스 맵에서 eval 사용 방지
     assetsDir: 'assets',
     rollupOptions: {
       output: {
