@@ -1,9 +1,20 @@
 {
   "routes": [
-      { "handle": "filesystem" },
-      {
-          "src": "/.*",
-          "dest": "/index.html"
-      }
+    { "handle": "filesystem" },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; connect-src 'self' blob: data:;"
+        }
+      ]
+    }
   ]
 }
