@@ -558,7 +558,7 @@ export default function ArApp() {
       {loading && <Spinner className='fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate' />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon' ? '/moon.mind' : char === 'moons' ? '/moons.mind' : '/tree.mind'}
+        imageTargets={char === 'moon' ? '/moon1.mind' : char === 'moons' ? '/moons.mind' : '/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // Maximum number of targets tracked simultaneously
