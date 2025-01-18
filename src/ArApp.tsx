@@ -730,7 +730,7 @@ export default function ArApp() {
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         filterMinCF={0.05} // 신뢰도 값을 낮추어 감지 민감도 증가
-        filterBeta={0.05} // 필터 반응 속도를 더 높여 빠르게 위치 조정
+        filterBeta={0.01} // 필터 반응 속도를 더 높여 빠르게 위치 조정
         missTolerance={5} // 트래킹 실패 허용 범위를 줄여 빠른 재탐지
         warmupTolerance={7} // 초기 트래킹을 더 유연하게
         id="three-canvas"
