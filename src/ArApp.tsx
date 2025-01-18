@@ -261,7 +261,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         name="Scene"
         ref={shadowRef}
         dispose={null}
-        scale={[0.5, 0.5, 0.5]}
+        scale={[0.05, 0.05, 0.05]}
         position={[0.1, 0.25, 0]}
         rotation={[0, Math.PI / 3, 0]}
       >
@@ -424,8 +424,8 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
       <group
         name="Scene"
         ref={modelRef}
-        visible={false}
-        scale={[0.05, 0.05, 0.05]}
+        visible={true}
+        scale={[0.1, 0.1, 0.1]}
         position={[-0.45, 0, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
@@ -804,7 +804,7 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        <Center scale={[0.005, 0.005, 0.005]} position={[0, -2, 0]}>
+        <Center scale={[1, 1, 1]} position={[0, -2, 0]}>
           {(char === 'moon' || char === 'moons') && (
             // @ts-ignore
             <ARAnchor
@@ -821,7 +821,7 @@ export default function ArApp() {
               <Box onRenderEnd={handleLoading} on={on} />
             </ARAnchor>
           )}
-          {/* <Box onRenderEnd={handleLoading} on={on} /> */}
+          <Box onRenderEnd={handleLoading} on={on} />
 
           {char === 'trees' && (
             // @ts-ignore
