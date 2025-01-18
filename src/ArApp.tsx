@@ -190,7 +190,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   const modelRef = useRef<THREE.Group>(null);
   const instances = useContext(context);
 
-  const { nodes, animations } = useGLTF('/gamyoungar/moon_f.glb', false, false, (loader) => {
+  const { nodes, animations } = useGLTF('/moon_f.glb', false, false, (loader) => {
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('/draco/');
     loader.setDRACOLoader(dracoLoader);
@@ -536,10 +536,10 @@ export default function ArApp() {
       <ARView
         imageTargets={
           char === 'moon'
-            ? '/gamyoungar/moon.mind'
+            ? '/moon.mind'
             : char === 'moons'
-            ? '/gamyoungar/moons.mind'
-            : '/gamyoungar/tree.mind'
+            ? '/moons.mind'
+            : '/tree.mind'
         }
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
