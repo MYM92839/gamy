@@ -213,9 +213,9 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   }, [nodes]);
 
   console.log('NODES', nodes);
-  if (nodes && nodes.Root_M) {
+  if (nodes && modelRef.current) {
     const p = new THREE.Vector3();
-    nodes.Root_M.getWorldPosition(p);
+    modelRef.current.getWorldPosition(p);
     console.log('LNODDD', p);
   }
 
@@ -551,7 +551,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 1],
+          position: [0, 0, 300],
           near: 0.001,
           far: 100000,
         }}
