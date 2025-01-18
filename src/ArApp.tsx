@@ -800,7 +800,7 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        <Center>
+        <Center scale={[0.1, 0.1, 0.1]}>
           {(char === 'moon' || char === 'moons') && (
             // @ts-ignore
             <ARAnchor
