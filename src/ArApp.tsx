@@ -175,8 +175,10 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   console.log('NODES', nodes);
   if (nodes && modelRef.current) {
     const p = new THREE.Vector3();
+    const s = new THREE.Vector3();
     nodes.Root_M.getWorldPosition(p);
-    console.log('LNODDD', p);
+    nodes.Root_M.getWorldScale(s);
+    console.log('LNODDD', p, s);
   }
 
   return (
