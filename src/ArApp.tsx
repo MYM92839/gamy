@@ -736,11 +736,6 @@ export default function ArApp() {
         camera={{
           position: [0, 0, 10],
         }}
-        gl={{
-          antialias: true,
-          alpha: true,
-          powerPreference: 'high-performance',
-        }}
       >
         {/* <FrameH /> */}
         {/* <Plane args={[1, 1, 1]}>
