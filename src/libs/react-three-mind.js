@@ -32064,7 +32064,7 @@ const JR = Ve(!1), fR = Ve({}), uD = Ve(), kD = Ve(!0), t1 = nl(({ children: C, 
   }, [Y, w, h]);
   return hC.jsxs(hC.Fragment, { children: [hC.jsx(WR, { fullscreen: !0, zIndexRange: [-1, -1], calculatePosition: () => [0, 0], style: { top: 0, left: 0 }, children: hC.jsx(TR, { ref: h, onUserMedia: L, onUserMediaError: (Z) => {
     e && e(Z);
-  }, height: M, width: Y, videoConstraints: { facingMode: a ? "user" : "environment" }, style: T, mirrored: a && o }) }), C] });
+  }, height: M, width: Y, videoConstraints: { facingMode: a ? "user" : "environment" }, style: T, mirrored: a && o, id: "three-video" }) }), C] });
 }), D1 = nl(({ children: C, autoplay: A = !0, imageTargets: g, maxTrack: I = 1, filterMinCF: B, filterBeta: Q, warmupTolerance: E, missTolerance: i, flipUserCamera: o = !0, onReady: t, onError: e, ...s }, a) => {
   const r = ZE(null), h = ZE(null);
   return rl(a, () => ({ startTracking: () => {
