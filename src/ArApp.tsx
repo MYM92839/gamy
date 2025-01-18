@@ -182,7 +182,7 @@ function Tree() {
   );
 }
 
-function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void }) {
+function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
   const [{ nodes, materials, animations }, { nodes: snodes, materials: smaterials, animations: sanimations }] = useGLTF(
@@ -193,8 +193,10 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
 
   useEffect(() => {
     console.log('ACTIONS', actions);
-    if (actions && sactions) {
+    if (actions && sactions && on) {
       if (sactions.Scene) {
+        if (shadowRef.current) shadowRef.current.visible = true;
+          if (modelRef.current) modelRef.current.visible = false;
         sactions.Scene.reset().play();
         sactions.Scene?.setLoop(THREE.LoopOnce, 1);
         sactions.Scene.clampWhenFinished = true;
@@ -215,7 +217,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         });
       }
     }
-  }, [actions]);
+  }, [on]);
 
   useEffect(() => {
     if (nodes) onRenderEnd();
@@ -501,7 +503,7 @@ export default function ArApp() {
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
-
+  const [on, setOn] = useState(false);
   function openModal() {
     setIsOpen(true);
     captureImage();
@@ -753,12 +755,14 @@ export default function ArApp() {
             target={0}
             onAnchorFound={() => {
               console.log('RABBIT found');
+              setOn(true);
             }}
             onAnchorLost={() => {
               console.log('RABBIT lost');
+              setOn(false);
             }}
           >
-            <Box onRenderEnd={handleLoading} />
+            <Box onRenderEnd={handleLoading} on={on} />
           </ARAnchor>
         )}
         {/* <Box onRenderEnd={handleLoading} /> */}
