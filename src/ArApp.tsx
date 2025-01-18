@@ -292,124 +292,25 @@ export default function ArApp() {
     }
   };
 
-  // const captureImage = async () => {
-  //   const videoElement: HTMLVideoElement | null = document.querySelector('#ar-video'); // 비디오 요소
-  //   const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-  //     .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-  //   const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
-
-  //   if (!container || !videoElement || !threeCanvas) {
-  //     console.warn('Required elements not ready');
-  //     return;
-  //   }
-
-  //   // 캔버스 크기 설정
-  //   const containerWidth = container.clientWidth;
-  //   const containerHeight = container.clientHeight;
-  //   const devicePixelRatio = window.devicePixelRatio || 1;
-
-  //   const offscreenCanvas = document.createElement('canvas');
-  //   offscreenCanvas.width = containerWidth * devicePixelRatio;
-  //   offscreenCanvas.height = containerHeight * devicePixelRatio;
-
-  //   const context = offscreenCanvas.getContext('2d');
-  //   if (!context) {
-  //     console.error('Failed to create canvas context.');
-  //     return;
-  //   }
-
-  //   // 고해상도 지원
-  //   context.scale(devicePixelRatio, devicePixelRatio);
-
-  //   // Helper function to calculate draw parameters
-  //   const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
-  //     const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-  //     const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
-
-  //     if (elementWidth === 0 || elementHeight === 0) return null;
-
-  //     const elementAspectRatio = elementWidth / elementHeight;
-  //     const containerAspectRatio = containerWidth / containerHeight;
-
-  //     let drawWidth = containerWidth;
-  //     let drawHeight = containerHeight;
-  //     let offsetX = 0;
-  //     let offsetY = 0;
-
-  //     if (objectFit === 'cover') {
-  //       if (elementAspectRatio > containerAspectRatio) {
-  //         drawWidth = containerHeight * elementAspectRatio;
-  //         offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-  //       } else {
-  //         drawHeight = containerWidth / elementAspectRatio;
-  //         offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-  //       }
-  //     } else if (objectFit === 'contain') {
-  //       if (elementAspectRatio > containerAspectRatio) {
-  //         drawHeight = containerWidth / elementAspectRatio;
-  //         offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-  //       } else {
-  //         drawWidth = containerHeight * elementAspectRatio;
-  //         offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-  //       }
-  //     }
-
-  //     return { drawWidth, drawHeight, offsetX, offsetY };
-  //   };
-
-  //   try {
-  //     // Step 1: 비디오를 캔버스에 그리기
-  //     const videoParams = calculateDrawParams(videoElement, 'cover');
-  //     if (videoParams) {
-  //       context.drawImage(
-  //         videoElement,
-  //         videoParams.offsetX,
-  //         videoParams.offsetY,
-  //         videoParams.drawWidth,
-  //         videoParams.drawHeight
-  //       );
-  //     }
-
-  //     // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
-  //     const threeParams = calculateDrawParams(threeCanvas, 'cover');
-  //     if (threeParams) {
-  //       context.drawImage(
-  //         threeCanvas,
-  //         threeParams.offsetX,
-  //         threeParams.offsetY,
-  //         threeParams.drawWidth,
-  //         threeParams.drawHeight
-  //       );
-  //     }
-
-  //     // Step 3: 최종 이미지를 PNG로 저장
-  //     offscreenCanvas.toBlob((blob) => {
-  //       if (blob) {
-  //         setFoto(blob);
-  //       }
-  //     }, 'image/png');
-  //   } catch (error) {
-  //     console.error('Error capturing image:', error);
-  //   }
-  // };
-
   const captureImage = async () => {
+    const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
     const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
       .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-    console.log('THREE,', threeCanvas, document.querySelector('#three-canvas')?.children[0]);
-    if (!threeCanvas) {
-      console.warn('Three.js canvas is not ready');
+    const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+
+    if (!container || !videoElement || !threeCanvas) {
+      console.warn('Required elements not ready');
       return;
     }
 
-    // 캔버스 크기와 해상도 설정
-    const canvasWidth = threeCanvas.width;
-    const canvasHeight = threeCanvas.height;
-    const devicePixelRatio = window.devicePixelRatio || 1; // 고해상도 지원을 위한 비율
+    // 캔버스 크기 설정
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const devicePixelRatio = window.devicePixelRatio || 1;
 
     const offscreenCanvas = document.createElement('canvas');
-    offscreenCanvas.width = canvasWidth * devicePixelRatio; // 고해상도 캔버스 폭
-    offscreenCanvas.height = canvasHeight * devicePixelRatio; // 고해상도 캔버스 높이
+    offscreenCanvas.width = containerWidth * devicePixelRatio;
+    offscreenCanvas.height = containerHeight * devicePixelRatio;
 
     const context = offscreenCanvas.getContext('2d');
     if (!context) {
@@ -417,18 +318,74 @@ export default function ArApp() {
       return;
     }
 
-    // 고해상도 설정
+    // 고해상도 지원
     context.scale(devicePixelRatio, devicePixelRatio);
 
-    try {
-      // Three.js WebGL 캔버스를 캔버스에 그리기
-      context.drawImage(threeCanvas, 0, 0, canvasWidth, canvasHeight);
+    // Helper function to calculate draw parameters
+    const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+      const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+      const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
 
-      // 최종 이미지를 PNG로 저장
+      if (elementWidth === 0 || elementHeight === 0) return null;
+
+      const elementAspectRatio = elementWidth / elementHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
+
+      let drawWidth = containerWidth;
+      let drawHeight = containerHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (objectFit === 'cover') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        } else {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        }
+      } else if (objectFit === 'contain') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        } else {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        }
+      }
+
+      return { drawWidth, drawHeight, offsetX, offsetY };
+    };
+
+    try {
+      // Step 1: 비디오를 캔버스에 그리기
+      const videoParams = calculateDrawParams(videoElement, 'cover');
+      if (videoParams) {
+        context.drawImage(
+          videoElement,
+          videoParams.offsetX,
+          videoParams.offsetY,
+          videoParams.drawWidth,
+          videoParams.drawHeight
+        );
+      }
+
+      // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
+      const threeParams = calculateDrawParams(threeCanvas, 'cover');
+      if (threeParams) {
+        context.drawImage(
+          threeCanvas,
+          threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight
+        );
+      }
+
+      // Step 3: 최종 이미지를 PNG로 저장
       offscreenCanvas.toBlob((blob) => {
-        console.log('BLOB', blob);
         if (blob) {
-          setFoto(blob); // 캡처된 이미지를 상태로 저장
+          setFoto(blob);
         }
       }, 'image/png');
     } catch (error) {
