@@ -8,12 +8,32 @@ import Capture from './assets/icons/Capture';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import { Environment, useAnimations, useGLTF } from '@react-three/drei';
 import Modal from 'react-modal';
-import { DRACOLoader } from 'three-stdlib';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
 import { ARAnchor, ARView } from './libs/react-three-mind.js';
 
 import { GLTF } from 'three-stdlib';
+
+type GLTFResult3 = GLTF & {
+  nodes: {
+    down: THREE.SkinnedMesh;
+    down001: THREE.SkinnedMesh;
+    hair: THREE.SkinnedMesh;
+    hat: THREE.SkinnedMesh;
+    head: THREE.SkinnedMesh;
+    headwear: THREE.SkinnedMesh;
+    Object001: THREE.SkinnedMesh;
+    up: THREE.SkinnedMesh;
+    Bip001_Pelvis: THREE.Bone;
+  };
+  materials: {
+    down: THREE.MeshPhysicalMaterial;
+    hair: THREE.MeshPhysicalMaterial;
+    hat: THREE.MeshPhysicalMaterial;
+    ['08 - Default']: THREE.MeshPhysicalMaterial;
+    up: THREE.MeshPhysicalMaterial;
+  };
+};
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -94,91 +114,81 @@ const customStyles = {
 
 Modal.setAppElement('#root');
 
-function Tree() {
+function Tree({
+  onRenderEnd,
+  on,
+  ...props
+}: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
-  const { nodes, materials, animations } = useGLTF('/walk_f.glb', false, false, (loader) => {
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/draco/');
-    loader.setDRACOLoader(dracoLoader);
-  });
+  const { nodes, materials, animations } = useGLTF('/tree_f.glb') as GLTFResult3;
+
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
-    if (actions) {
+    if (actions && on) {
       for (const i in actions) {
         actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
         actions[i]?.reset().play();
       }
     }
-  }, [actions]);
+  }, [on]);
 
-  // Parse the Base64 model and set nodes and materials
-
-  const [ang] = useState<[number, number, number]>([0, 0, 0]);
-  const [pos] = useState<[number, number, number]>([0, 0, 0]);
+  useEffect(() => {
+    if (nodes) onRenderEnd();
+  }, [nodes]);
 
   return (
-    nodes && (
-      <>
-        <group dispose={null} scale={[15, 15, 15]} position={pos || [0, 0, 0]} rotation={ang || [0, 0, 0]}>
-          <group name="Scene" ref={modelRef}>
-            <group name="Bip001" position={[0, 0, 0]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}>
-              {/* <group name="Bip001" position={[0.031, 0.963, -0.054]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}> */}
-              <group name="Bip001_Footsteps" position={[7.636, -96.125, -0.842]} rotation={[-2.83, 1.31, 2.829]} />
-              <skinnedMesh
-                name="down"
-                geometry={(nodes.down as THREE.Mesh).geometry}
-                material={materials['Material #0']}
-                skeleton={(nodes.down as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="down001"
-                geometry={(nodes.down001 as THREE.Mesh).geometry}
-                material={materials['Material #0']}
-                skeleton={(nodes.down001 as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="hair"
-                geometry={(nodes.hair as THREE.Mesh).geometry}
-                material={materials.hair}
-                skeleton={(nodes.hair as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="hat"
-                geometry={(nodes.hat as THREE.Mesh).geometry}
-                material={materials.hat}
-                skeleton={(nodes.hat as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="head"
-                geometry={(nodes.head as THREE.Mesh).geometry}
-                material={materials['08 - Default']}
-                skeleton={(nodes.head as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="headwear"
-                geometry={(nodes.headwear as THREE.Mesh).geometry}
-                material={materials.hat}
-                skeleton={(nodes.headwear as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="Object001"
-                geometry={(nodes.Object001 as THREE.Mesh).geometry}
-                material={materials['Material #0']}
-                skeleton={(nodes.Object001 as THREE.SkinnedMesh).skeleton}
-              />
-              <skinnedMesh
-                name="up"
-                geometry={(nodes.up as THREE.Mesh).geometry}
-                material={materials.up}
-                skeleton={(nodes.up as THREE.SkinnedMesh).skeleton}
-              />
-              <primitive object={nodes.Bip001_Pelvis} />
-            </group>
-          </group>
+    <group ref={modelRef} scale={[0.5, 0.5, 0.5]} {...props} dispose={null}>
+      <group name="Scene">
+        <group name="Bip001" position={[0.031, 0.963, -0.054]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}>
+          <group name="Bip001_Footsteps" position={[7.636, -96.125, -0.842]} rotation={[-2.83, 1.31, 2.829]} />
+          <skinnedMesh
+            name="down"
+            geometry={nodes.down.geometry}
+            material={materials.down}
+            skeleton={nodes.down.skeleton}
+          />
+          <skinnedMesh
+            name="down001"
+            geometry={nodes.down001.geometry}
+            material={materials.down}
+            skeleton={nodes.down001.skeleton}
+          />
+          <skinnedMesh
+            name="hair"
+            geometry={nodes.hair.geometry}
+            material={materials.hair}
+            skeleton={nodes.hair.skeleton}
+          />
+          <skinnedMesh
+            name="hat"
+            geometry={nodes.hat.geometry}
+            material={materials.hat}
+            skeleton={nodes.hat.skeleton}
+          />
+          <skinnedMesh
+            name="head"
+            geometry={nodes.head.geometry}
+            material={materials['08 - Default']}
+            skeleton={nodes.head.skeleton}
+          />
+          <skinnedMesh
+            name="headwear"
+            geometry={nodes.headwear.geometry}
+            material={materials.hat}
+            skeleton={nodes.headwear.skeleton}
+          />
+          <skinnedMesh
+            name="Object001"
+            geometry={nodes.Object001.geometry}
+            material={materials.down}
+            skeleton={nodes.Object001.skeleton}
+          />
+          <skinnedMesh name="up" geometry={nodes.up.geometry} material={materials.up} skeleton={nodes.up.skeleton} />
+          <primitive object={nodes.Bip001_Pelvis} />
         </group>
-      </>
-    )
+      </group>
+    </group>
   );
 }
 
@@ -192,7 +202,6 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   const { actions: sactions, mixer: smixer } = useAnimations(sanimations, shadowRef);
 
   useEffect(() => {
-    console.log('ACTIONS', actions);
     if (actions && sactions && on) {
       if (sactions.Scene) {
         if (shadowRef.current) shadowRef.current.visible = true;
@@ -222,15 +231,6 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   useEffect(() => {
     if (nodes) onRenderEnd();
   }, [nodes]);
-
-  console.log('NODES', nodes);
-  if (nodes && modelRef.current) {
-    const p = new THREE.Vector3();
-    const s = new THREE.Vector3();
-    nodes.Root_M.getWorldPosition(p);
-    nodes.Root_M.getWorldScale(s);
-    console.log('LNODDD', p, s);
-  }
 
   return (
     <group {...props} dispose={null}>
@@ -722,11 +722,10 @@ export default function ArApp() {
         imageTargets={char === 'moon' ? '/moons.mind' : char === 'moons' ? '/moon.mind' : '/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
-        maxTrack={1} // Maximum number of targets tracked simultaneously
-        filterMinCF={0.001} // 신뢰도를 더 유연하게
-        filterBeta={0.02} // 필터 반응 속도 조정
-        // missTolerance={5} // 트래킹 유지를 위해 증가
-        // warmupTolerance={10} // 초기 트래킹 허용 범위 조정
+        filterMinCF={0.01} // 신뢰도 값을 낮추어 감지 민감도 증가
+        filterBeta={0.1} // 필터 반응 속도를 더 높여 빠르게 위치 조정
+        missTolerance={2} // 트래킹 실패 허용 범위를 줄여 빠른 재탐지
+        warmupTolerance={5} // 초기 트래킹을 더 유연하게
         id="three-canvas"
         style={{
           width: '100%',
@@ -766,18 +765,23 @@ export default function ArApp() {
           </ARAnchor>
         )}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        {char === 'tree' && (
+        {char === 'trees' && (
           // @ts-ignore
           <ARAnchor
             target={0}
             onAnchorFound={() => {
-              console.log('tree found');
+              console.log('TREE found');
+              setOn(true);
+            }}
+            onAnchorLost={() => {
+              console.log('TREE lost');
+              //setOn(false);
             }}
           >
-            <Tree />
+            <Tree on={on} onRenderEnd={handleLoading} />
           </ARAnchor>
         )}
-
+        {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
         <Environment files="/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
       </ARView>
