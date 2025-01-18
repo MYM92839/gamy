@@ -768,6 +768,7 @@ export default function ArApp() {
       <ARView
         imageTargets={char === 'moon' ? '/moons.mind' : char === 'moons' ? '/moon.mind' : '/tree.mind'}
         autoplay
+        flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // 동시에 추적할 타겟 수
         filterMinCF={settings.filterMinCF} // 동적으로 설정된 값 적용
         filterBeta={settings.filterBeta} // 동적으로 설정된 값 적용
