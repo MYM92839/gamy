@@ -48,7 +48,7 @@ type GLTFResult = GLTF & {
 };
 
 const context = createContext<any>(null);
-export function Instances({ children, ...props }: PropsWithChildren) {
+export function Instances({ children, ...props }: PropsWithChildren<any>) {
   const { nodes, animations } = useGLTF('/moon_f.glb') as GLTFResult;
   const instances = useMemo(
     () =>
@@ -546,7 +546,9 @@ export default function ArApp() {
                 console.log('RABBIT lost');
               }}
             >
-              <Box position={[-0.18, -26, 40.37]} onRenderEnd={handleLoading} />
+              <Instances position={[-0.18, -26, 40.37]}>
+                <Box onRenderEnd={handleLoading} />
+              </Instances>
             </ARAnchor>
           ))}
         {/* <Box onRenderEnd={handleLoading} /> */}
