@@ -186,8 +186,8 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
       ref={modelRef}
       {...props}
       scale={[0.02, 0.02, 0.02]}
-      position={[-1, -0.2, -1]}
-      rotation={[0, Math.PI / 2, 0]}
+      position={[-0.8, -0.3, -1]}
+      rotation={[0, Math.PI / 2.5, 0]}
       dispose={null}
     >
       <group name="Scene">
