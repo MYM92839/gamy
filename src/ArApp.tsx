@@ -420,7 +420,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
           scale={10.177}
         />
       </group>
-      {/*  ///// */}
+      {/*  ////// */}
       <group
         name="Scene"
         ref={modelRef}
