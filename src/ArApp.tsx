@@ -804,44 +804,42 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        <Center scale={[1, 1, 1]} position={[0, -2, 0]}>
-          {(char === 'moon' || char === 'moons') && (
-            // @ts-ignore
-            <ARAnchor
-              target={0}
-              onAnchorFound={() => {
-                console.log('RABBIT found');
-                setOn(true);
-              }}
-              onAnchorLost={() => {
-                console.log('RABBIT lost');
-                //setOn(false);
-              }}
-            >
-              <Box onRenderEnd={handleLoading} on={on} />
-            </ARAnchor>
-          )}
-          <Box onRenderEnd={handleLoading} on={on} />
+        {(char === 'moon' || char === 'moons') && (
+          // @ts-ignore
+          <ARAnchor
+            target={0}
+            onAnchorFound={() => {
+              console.log('RABBIT found');
+              setOn(true);
+            }}
+            onAnchorLost={() => {
+              console.log('RABBIT lost');
+              //setOn(false);
+            }}
+          >
+            <Box onRenderEnd={handleLoading} on={on} />
+          </ARAnchor>
+        )}
+        {/* <Box onRenderEnd={handleLoading} on={on} /> */}
 
-          {char === 'trees' && (
-            // @ts-ignore
-            <ARAnchor
-              target={0}
-              onAnchorFound={() => {
-                console.log('TREE found');
-                setOn(true);
-              }}
-              onAnchorLost={() => {
-                console.log('TREE lost');
-                //setOn(false);
-              }}
-            >
-              <CircularMask />
+        {char === 'trees' && (
+          // @ts-ignore
+          <ARAnchor
+            target={0}
+            onAnchorFound={() => {
+              console.log('TREE found');
+              setOn(true);
+            }}
+            onAnchorLost={() => {
+              console.log('TREE lost');
+              //setOn(false);
+            }}
+          >
+            <CircularMask />
 
-              <Tree on={on} onRenderEnd={handleLoading} />
-            </ARAnchor>
-          )}
-        </Center>
+            <Tree on={on} onRenderEnd={handleLoading} />
+          </ARAnchor>
+        )}
         {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
         <Environment files="/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
