@@ -268,7 +268,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         name="Scene"
         ref={shadowRef}
         dispose={null}
-        scale={[0.005, 0.005, 0.005]}
+        scale={[0.5, 0.5, 0.5]}
         position={[0.1, 0.25, 0]}
         rotation={[0, Math.PI / 3, 0]}
       >
@@ -432,7 +432,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         name="Scene"
         ref={modelRef}
         visible={false}
-        scale={[0.008, 0.008, 0.008]}
+        scale={[0.8, 0.8, 0.8]}
         position={[-0.45, 0, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
@@ -783,7 +783,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 10],
+          position: [0, 0, 1000],
         }}
         gl={{
           antialias: true,
