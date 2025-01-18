@@ -256,7 +256,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   }, [nodes]);
 
   return (
-    <group {...props} dispose={null}>
+    <group {...props} position={[0, 0, -100]} dispose={null}>
       <group
         name="Scene"
         ref={shadowRef}
