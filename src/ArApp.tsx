@@ -776,7 +776,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 100],
+          position: [0, 0, 1000],
         }}
         gl={{
           antialias: true,
@@ -800,7 +800,7 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        <Center scale={[0.01, 0.01, 0.01]}>
+        <Center >
           {(char === 'moon' || char === 'moons') && (
             // @ts-ignore
             <ARAnchor
