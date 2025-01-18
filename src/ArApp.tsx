@@ -256,7 +256,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   }, [nodes]);
 
   return (
-    <group {...props} dispose={null} position={[0, 0, -10000]}>
+    <group {...props} dispose={null}>
       <group
         name="Scene"
         ref={shadowRef}
@@ -768,6 +768,7 @@ export default function ArApp() {
         detectionScale={settings.detectionScale} // 동적으로 설정된 값 적용
         missTolerance={5} // 트래킹 실패 허용 시간
         warmupTolerance={7} // 초기 트래킹 유연성
+        scale={0.01}
         id="three-canvas"
         style={{
           width: '100%',
@@ -776,7 +777,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 1000],
+          position: [0, 0, 100],
           far: 99999999,
         }}
         gl={{
@@ -818,7 +819,7 @@ export default function ArApp() {
             <Box onRenderEnd={handleLoading} on={on} />
           </ARAnchor>
         )}
-        {/* <Box onRenderEnd={handleLoading} /> */}
+        <Box onRenderEnd={handleLoading} />
         {char === 'trees' && (
           // @ts-ignore
           <ARAnchor
