@@ -138,14 +138,7 @@ function Tree({
   }, [nodes]);
 
   return (
-    <group
-      ref={modelRef}
-      scale={[0.5, 0.5, 0.5]}
-      position={[0.3, 0, 0]}
-      rotation={[0, Math.PI / 1.2, 0]}
-      {...props}
-      dispose={null}
-    >
+    <group ref={modelRef} scale={[0.5, 0.5, 0.5]} position={[0.35, 0, 0]} rotation={[0, 0, 0]} {...props} dispose={null}>
       <group name="Scene">
         <group name="Bip001" position={[0.031, 0.963, -0.054]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}>
           <group name="Bip001_Footsteps" position={[7.636, -96.125, -0.842]} rotation={[-2.83, 1.31, 2.829]} />
