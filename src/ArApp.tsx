@@ -770,7 +770,7 @@ export default function ArApp() {
         // warmupTolerance={7} // 초기 트래킹 유연성
         // filterMinCF={1}
         filterBeta={10000}
-        missTolerance={0}
+        missTolerance={5}
         warmupTolerance={0}
         id="three-canvas"
         style={{
@@ -804,7 +804,7 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        <Center>
+        <Center scale={[0.1, 0.1, 0.1]}>
           {(char === 'moon' || char === 'moons') && (
             // @ts-ignore
             <ARAnchor
