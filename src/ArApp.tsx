@@ -47,38 +47,6 @@ type GLTFResult = GLTF & {
   };
 };
 
-const context = createContext<any>(null);
-export function Instances({ children, ...props }: PropsWithChildren<any>) {
-  const { nodes, animations } = useGLTF('/moon_f.glb') as GLTFResult;
-  const instances = useMemo(
-    () =>
-      ({
-        BrowGEO: nodes.Brow_GEO001,
-        IncisorGEO: nodes.Incisor_GEO001,
-        LEyeBallGEO: nodes.L_EyeBall_GEO001,
-        LEyeHighLightGEO: nodes.L_EyeHighLight_GEO001,
-        LowergumGEO: nodes.Lower_gum_GEO001,
-        LowerTeethGEO: nodes.Lower_Teeth_GEO001,
-        REyeBallGEO: nodes.R_EyeBall_GEO001,
-        REyeHighLightGEO: nodes.R_EyeHighLight_GEO001,
-        RabbitXgenGEO: nodes.Rabbit_Xgen_GEO001,
-        TongueGEO: nodes.Tongue_GEO001,
-        UppergumGEO: nodes.Upper_gum_GEO001,
-        UpperTeethGEO: nodes.Upper_Teeth_GEO001,
-        LIrisGEO: nodes.L_Iris_GEO001,
-        RIrisGEO: nodes.R_Iris_GEO001,
-      } as unknown as NODE),
-    [nodes]
-  );
-  return (
-    <Merged meshes={instances} {...props}>
-      {(instances: NODE) => (
-        <context.Provider value={{ instances, Root_M: nodes.Root_M, animations }} children={children} />
-      )}
-    </Merged>
-  );
-}
-
 const customStyles = {
   overlay: {
     zIndex: 999,
@@ -190,13 +158,7 @@ function Tree() {
 
 function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void }) {
   const modelRef = useRef<THREE.Group>(null);
-  const { instances, Root_M, animations } = useContext(context);
-
-  // const { nodes, animations } = useGLTF('/moon_f.glb', false, false, (loader) => {
-  //   const dracoLoader = new DRACOLoader();
-  //   dracoLoader.setDecoderPath('/draco/');
-  //   loader.setDRACOLoader(dracoLoader);
-  // }) as GLTFResult;
+  const { nodes, materials, animations } = useGLTF('/moon_f.glb') as GLTFResult;
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
@@ -210,11 +172,11 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   }, [actions]);
 
   useEffect(() => {
-    if (instances) onRenderEnd();
-  }, [instances]);
+    if (nodes) onRenderEnd();
+  }, [nodes]);
 
-  console.log('NODES', instances);
-  if (instances && modelRef.current) {
+  console.log('NODES', nodes);
+  if (nodes && modelRef.current) {
     const p = new THREE.Vector3();
     modelRef.current.getWorldPosition(p);
     console.log('LNODDD', p);
@@ -225,22 +187,90 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
       <group name="Scene">
         <group name="Group001">
           <group name="DeformationSystem001">
-            <instances.BrowGEO name="Brow_GEO001" />
-            <instances.IncisorGEO name="Incisor_GEO001" />
-            <instances.LEyeBallGEO name="L_EyeBall_GEO001" />
-            <instances.LEyeHighLightGEO name="L_EyeHighLight_GEO001" />
-            <instances.LowergumGEO name="Lower_gum_GEO001" />
-            <instances.LowerTeethGEO name="Lower_Teeth_GEO001" />
-            <instances.REyeBallGEO name="R_EyeBall_GEO001" />
-            <instances.REyeHighLightGEO name="R_EyeHighLight_GEO001" />
-            <instances.RabbitXgenGEO name="Rabbit_Xgen_GEO001" />
-            <instances.TongueGEO name="Tongue_GEO001" />
-            <instances.UppergumGEO name="Upper_gum_GEO001" />
-            <instances.UpperTeethGEO name="Upper_Teeth_GEO001" />
-            <primitive object={Root_M} />
+            <skinnedMesh
+              name="Brow_GEO001"
+              geometry={nodes.Brow_GEO001.geometry}
+              material={materials['Motion_aa_Eyelash_M_LMBT.001']}
+              skeleton={nodes.Brow_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Incisor_GEO001"
+              geometry={nodes.Incisor_GEO001.geometry}
+              material={materials['Motion_Mouth_M_BLNN.001']}
+              skeleton={nodes.Incisor_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="L_EyeBall_GEO001"
+              geometry={nodes.L_EyeBall_GEO001.geometry}
+              material={materials['Motion_Eye_M_LMBT.001']}
+              skeleton={nodes.L_EyeBall_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="L_EyeHighLight_GEO001"
+              geometry={nodes.L_EyeHighLight_GEO001.geometry}
+              material={materials['Motion_EyeHighLight_M_LMBT.001']}
+              skeleton={nodes.L_EyeHighLight_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Lower_gum_GEO001"
+              geometry={nodes.Lower_gum_GEO001.geometry}
+              material={materials['Motion_Mouth_M_BLNN.001']}
+              skeleton={nodes.Lower_gum_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Lower_Teeth_GEO001"
+              geometry={nodes.Lower_Teeth_GEO001.geometry}
+              material={materials['Motion_Mouth_M_BLNN.001']}
+              skeleton={nodes.Lower_Teeth_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="R_EyeBall_GEO001"
+              geometry={nodes.R_EyeBall_GEO001.geometry}
+              material={materials['Motion_Eye_M_LMBT.001']}
+              skeleton={nodes.R_EyeBall_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="R_EyeHighLight_GEO001"
+              geometry={nodes.R_EyeHighLight_GEO001.geometry}
+              material={materials['Motion_EyeHighLight_M_LMBT.001']}
+              skeleton={nodes.R_EyeHighLight_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Rabbit_Xgen_GEO001"
+              geometry={nodes.Rabbit_Xgen_GEO001.geometry}
+              material={materials['Motion_aa_Body_M_BLNN.001']}
+              skeleton={nodes.Rabbit_Xgen_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Tongue_GEO001"
+              geometry={nodes.Tongue_GEO001.geometry}
+              material={materials['Motion_Mouth_M_BLNN.001']}
+              skeleton={nodes.Tongue_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Upper_gum_GEO001"
+              geometry={nodes.Upper_gum_GEO001.geometry}
+              material={materials['Motion_Mouth_M_BLNN.001']}
+              skeleton={nodes.Upper_gum_GEO001.skeleton}
+            />
+            <skinnedMesh
+              name="Upper_Teeth_GEO001"
+              geometry={nodes.Upper_Teeth_GEO001.geometry}
+              material={materials['Motion_Mouth_M_BLNN.001']}
+              skeleton={nodes.Upper_Teeth_GEO001.skeleton}
+            />
+            <primitive object={nodes.Root_M} />
           </group>
         </group>
-        <instances.LIrisGEO name="L_Iris_GEO001" position={[0, 26.939, 1.844]} scale={7.71} />
+        <mesh
+          name="L_Iris_GEO001"
+          castShadow
+          receiveShadow
+          geometry={nodes.L_Iris_GEO001.geometry}
+          material={materials['Motion_Iris_M_BLNN.001']}
+          position={[0, 26.939, 1.844]}
+          scale={7.71}
+        />
       </group>
     </group>
   );
@@ -503,9 +533,7 @@ export default function ArApp() {
                 console.log('RABBIT lost');
               }}
             >
-              <Instances position={[-0.18, -26, 40.37]}>
-                <Box onRenderEnd={handleLoading} />
-              </Instances>
+              <Box onRenderEnd={handleLoading} />
             </ARAnchor>
           ))}
         {/* <Box onRenderEnd={handleLoading} /> */}
