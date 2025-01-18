@@ -182,7 +182,14 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   }
 
   return (
-    <group ref={modelRef} {...props} scale={[0.05, 0.05, 0.05]} position={[0, 0, -1.5]} dispose={null}>
+    <group
+      ref={modelRef}
+      {...props}
+      scale={[0.05, 0.05, 0.05]}
+      position={[0, 0, -1]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      dispose={null}
+    >
       <group name="Scene">
         <group name="Group001">
           <group name="DeformationSystem001">
