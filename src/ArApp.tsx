@@ -1,50 +1,85 @@
 // import { useFrame } from '@react-three/fiber';
-import { useEffect, useRef, useState } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import * as THREE from 'three';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, useAnimations, useGLTF } from '@react-three/drei';
+import { Environment, Merged, useAnimations, useGLTF } from '@react-three/drei';
 import Modal from 'react-modal';
 import { DRACOLoader } from 'three-stdlib';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
 import { ARAnchor, ARView } from './libs/react-three-mind.js';
 
-import { GLTF } from 'three-stdlib'
+import { GLTF } from 'three-stdlib';
+
+type NODE = {
+  [key: string]: JSX.IntrinsicElements['mesh'];
+};
 
 type GLTFResult = GLTF & {
   nodes: {
-    Brow_GEO: THREE.SkinnedMesh
-    Incisor_GEO: THREE.SkinnedMesh
-    L_EyeBall_GEO: THREE.SkinnedMesh
-    L_EyeHighLight_GEO: THREE.SkinnedMesh
-    Lower_gum_GEO: THREE.SkinnedMesh
-    Lower_Teeth_GEO: THREE.SkinnedMesh
-    R_EyeBall_GEO: THREE.SkinnedMesh
-    R_EyeHighLight_GEO: THREE.SkinnedMesh
-    Rabbit_Xgen_GEO: THREE.SkinnedMesh
-    Tongue_GEO: THREE.SkinnedMesh
-    Upper_gum_GEO: THREE.SkinnedMesh
-    Upper_Teeth_GEO: THREE.SkinnedMesh
-    L_Iris_GEO: THREE.Mesh
-    Root_M: THREE.Bone
-  }
+    Brow_GEO001: THREE.SkinnedMesh;
+    Incisor_GEO001: THREE.SkinnedMesh;
+    L_EyeBall_GEO001: THREE.SkinnedMesh;
+    L_EyeHighLight_GEO001: THREE.SkinnedMesh;
+    Lower_gum_GEO001: THREE.SkinnedMesh;
+    Lower_Teeth_GEO001: THREE.SkinnedMesh;
+    R_EyeBall_GEO001: THREE.SkinnedMesh;
+    R_EyeHighLight_GEO001: THREE.SkinnedMesh;
+    Rabbit_Xgen_GEO001: THREE.SkinnedMesh;
+    Tongue_GEO001: THREE.SkinnedMesh;
+    Upper_gum_GEO001: THREE.SkinnedMesh;
+    Upper_Teeth_GEO001: THREE.SkinnedMesh;
+    L_Iris_GEO001: THREE.Mesh;
+    R_Iris_GEO001: THREE.Mesh;
+    Root_M: THREE.Bone;
+  };
   materials: {
-    Motion_aa_Eyelash_M_LMBT: THREE.MeshStandardMaterial
-    Motion_Mouth_M_BLNN: THREE.MeshStandardMaterial
-    Motion_Eye_M_LMBT: THREE.MeshStandardMaterial
-    Motion_EyeHighLight_M_LMBT: THREE.MeshStandardMaterial
-    Motion_aa_Body_M_BLNN: THREE.MeshStandardMaterial
-    Motion_Iris_M_BLNN: THREE.MeshStandardMaterial
-  }
+    ['Motion_aa_Eyelash_M_LMBT.001']: THREE.MeshStandardMaterial;
+    ['Motion_Mouth_M_BLNN.001']: THREE.MeshStandardMaterial;
+    ['Motion_Eye_M_LMBT.001']: THREE.MeshStandardMaterial;
+    ['Motion_EyeHighLight_M_LMBT.001']: THREE.MeshStandardMaterial;
+    ['Motion_aa_Body_M_BLNN.001']: THREE.MeshStandardMaterial;
+    ['Motion_Iris_M_BLNN.001']: THREE.MeshStandardMaterial;
+  };
+};
+
+const context = createContext<any>(null);
+export function Instances({ children, ...props }: PropsWithChildren) {
+  const { nodes } = useGLTF('/moon.glb') as GLTFResult;
+  const instances = useMemo(
+    () =>
+      ({
+        BrowGEO: nodes.Brow_GEO001,
+        IncisorGEO: nodes.Incisor_GEO001,
+        LEyeBallGEO: nodes.L_EyeBall_GEO001,
+        LEyeHighLightGEO: nodes.L_EyeHighLight_GEO001,
+        LowergumGEO: nodes.Lower_gum_GEO001,
+        LowerTeethGEO: nodes.Lower_Teeth_GEO001,
+        REyeBallGEO: nodes.R_EyeBall_GEO001,
+        REyeHighLightGEO: nodes.R_EyeHighLight_GEO001,
+        RabbitXgenGEO: nodes.Rabbit_Xgen_GEO001,
+        TongueGEO: nodes.Tongue_GEO001,
+        UppergumGEO: nodes.Upper_gum_GEO001,
+        UpperTeethGEO: nodes.Upper_Teeth_GEO001,
+        LIrisGEO: nodes.L_Iris_GEO001,
+        RIrisGEO: nodes.R_Iris_GEO001,
+      } as unknown as NODE),
+    [nodes]
+  );
+  return (
+    <Merged meshes={instances} {...props}>
+      {(instances: NODE) => <context.Provider value={instances} children={children} />}
+    </Merged>
+  );
 }
 
 const customStyles = {
   overlay: {
-    zIndex: 999
+    zIndex: 999,
   },
   content: {
     top: '50%',
@@ -57,12 +92,11 @@ const customStyles = {
     height: '100dvh',
     padding: '8px',
     transform: 'translate(-50%, -50%)',
-    zIndex: 999
+    zIndex: 999,
   },
 };
 
 Modal.setAppElement('#root');
-
 
 function Tree() {
   const modelRef = useRef<THREE.Group>(null);
@@ -152,10 +186,11 @@ function Tree() {
   );
 }
 
-function Box({ onRenderEnd }: { onRenderEnd: () => void }) {
+function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void }) {
   const modelRef = useRef<THREE.Group>(null);
+  const instances = useContext(context);
 
-  const { nodes, materials, animations } = useGLTF('/moon_ff.glb', false, false, (loader) => {
+  const { nodes, animations } = useGLTF('/gamyoungar/moon_ff.glb', false, false, (loader) => {
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('/draco/');
     loader.setDRACOLoader(dracoLoader);
@@ -163,131 +198,73 @@ function Box({ onRenderEnd }: { onRenderEnd: () => void }) {
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
-    console.log("NODES", nodes)
+    console.log('ACTIONS', actions);
     if (actions) {
       for (const i in actions) {
-        console.log("ACTIONS", actions)
         actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
         actions[i]?.reset().play();
       }
     }
   }, [actions]);
 
-  console.log("NODES", nodes)
-  if (nodes && nodes.Root_M) {
-    const p = new THREE.Vector3()
-    nodes.Root_M.getWorldPosition(p)
-    console.log("LNODDD", p)
-  }
-  // Parse the Base64 model and set nodes and materials
+  useEffect(() => {
+    if (nodes) onRenderEnd();
+  }, [nodes]);
 
-  // const [ang] = useState<[number, number, number]>([0, 0, 0]);
-  // const [pos] = useState<[number, number, number]>([0, 0, 0]);
+  console.log('NODES', nodes);
+  if (nodes && nodes.Root_M) {
+    const p = new THREE.Vector3();
+    nodes.Root_M.getWorldPosition(p);
+    console.log('LNODDD', p);
+  }
 
   return (
-    nodes && (
-      <group ref={modelRef} dispose={null}>
-        <group name="Scene" position={[-0.3, -0.074, -0.131]} scale={[0.05, 0.05, 0.05]}>
-          <group name="DeformationSystem"
-            rotation={[Math.PI / 2, 0, 0]}
-
-          >
-            <primitive object={nodes.Root_M} />
+    nodes &&
+    instances && (
+      <group ref={modelRef} {...props} dispose={null}>
+        <group name="Scene">
+          <group name="Group001">
+            <group name="DeformationSystem001">
+              <instances.BrowGEO name="Brow_GEO001" />
+              <instances.IncisorGEO name="Incisor_GEO001" />
+              <instances.LEyeBallGEO name="L_EyeBall_GEO001" />
+              <instances.LEyeHighLightGEO name="L_EyeHighLight_GEO001" />
+              <instances.LowergumGEO name="Lower_gum_GEO001" />
+              <instances.LowerTeethGEO name="Lower_Teeth_GEO001" />
+              <instances.REyeBallGEO name="R_EyeBall_GEO001" />
+              <instances.REyeHighLightGEO name="R_EyeHighLight_GEO001" />
+              <instances.RabbitXgenGEO name="Rabbit_Xgen_GEO001" />
+              <instances.TongueGEO name="Tongue_GEO001" />
+              <instances.UppergumGEO name="Upper_gum_GEO001" />
+              <instances.UpperTeethGEO name="Upper_Teeth_GEO001" />
+              <primitive object={nodes.Root_M} />
+            </group>
+            <group name="Geometry001" scale={0.1}>
+              <group name="Rabbit_GEO_GRP001">
+                <group name="Brow_GRP001" />
+                <group name="Eye_GRP001">
+                  <group name="L_Eyeball_GEO001">
+                    <instances.LIrisGEO name="L_Iris_GEO001" scale={10} />
+                  </group>
+                  <group name="R_Eyeball_GEO001">
+                    <instances.RIrisGEO name="R_Iris_GEO001" scale={10} />
+                  </group>
+                </group>
+                <group name="Mouth_GRP001" />
+              </group>
+            </group>
+            <group name="MotionSystem001" scale={0.1}>
+              <group name="MainSystem001">
+                <group name="MainExtra2001">
+                  <group name="MainExtra1001">
+                    <group name="Main001" />
+                  </group>
+                </group>
+              </group>
+            </group>
           </group>
-          <skinnedMesh
-            onAfterRender={onRenderEnd}
-            name="Brow_GEO"
-            geometry={nodes.Brow_GEO.geometry}
-            material={materials.Motion_aa_Eyelash_M_LMBT}
-            skeleton={nodes.Brow_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Incisor_GEO"
-            geometry={nodes.Incisor_GEO.geometry}
-            material={materials.Motion_Mouth_M_BLNN}
-            skeleton={nodes.Incisor_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="L_EyeBall_GEO"
-            geometry={nodes.L_EyeBall_GEO.geometry}
-            material={materials.Motion_Eye_M_LMBT}
-            skeleton={nodes.L_EyeBall_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="L_EyeHighLight_GEO"
-            geometry={nodes.L_EyeHighLight_GEO.geometry}
-            material={materials.Motion_EyeHighLight_M_LMBT}
-            skeleton={nodes.L_EyeHighLight_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Lower_gum_GEO"
-            geometry={nodes.Lower_gum_GEO.geometry}
-            material={materials.Motion_Mouth_M_BLNN}
-            skeleton={nodes.Lower_gum_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Lower_Teeth_GEO"
-            geometry={nodes.Lower_Teeth_GEO.geometry}
-            material={materials.Motion_Mouth_M_BLNN}
-            skeleton={nodes.Lower_Teeth_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="R_EyeBall_GEO"
-            geometry={nodes.R_EyeBall_GEO.geometry}
-            material={materials.Motion_Eye_M_LMBT}
-            skeleton={nodes.R_EyeBall_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="R_EyeHighLight_GEO"
-            geometry={nodes.R_EyeHighLight_GEO.geometry}
-            material={materials.Motion_EyeHighLight_M_LMBT}
-            skeleton={nodes.R_EyeHighLight_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Rabbit_Xgen_GEO"
-            geometry={nodes.Rabbit_Xgen_GEO.geometry}
-            material={materials.Motion_aa_Body_M_BLNN}
-            skeleton={nodes.Rabbit_Xgen_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Tongue_GEO"
-            geometry={nodes.Tongue_GEO.geometry}
-            material={materials.Motion_Mouth_M_BLNN}
-            skeleton={nodes.Tongue_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Upper_gum_GEO"
-            geometry={nodes.Upper_gum_GEO.geometry}
-            material={materials.Motion_Mouth_M_BLNN}
-            skeleton={nodes.Upper_gum_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <skinnedMesh
-            name="Upper_Teeth_GEO"
-            geometry={nodes.Upper_Teeth_GEO.geometry}
-            material={materials.Motion_Mouth_M_BLNN}
-            skeleton={nodes.Upper_Teeth_GEO.skeleton}
-            rotation={[Math.PI / 2, 0, 0]}
-          />
-          <mesh
-            name="L_Iris_GEO"
-            castShadow
-            receiveShadow
-            geometry={nodes.L_Iris_GEO.geometry}
-            material={materials.Motion_Iris_M_BLNN}
-          />
         </group>
-      </group >
+      </group>
     )
   );
 }
@@ -297,7 +274,7 @@ export default function ArApp() {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
 
   function openModal() {
     setIsOpen(true);
@@ -442,7 +419,7 @@ export default function ArApp() {
   const captureImage = async () => {
     const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
       .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-    console.log("THREE,", threeCanvas, document.querySelector('#three-canvas')?.children[0])
+    console.log('THREE,', threeCanvas, document.querySelector('#three-canvas')?.children[0]);
     if (!threeCanvas) {
       console.warn('Three.js canvas is not ready');
       return;
@@ -472,7 +449,7 @@ export default function ArApp() {
 
       // 최종 이미지를 PNG로 저장
       offscreenCanvas.toBlob((blob) => {
-        console.log("BLOB", blob)
+        console.log('BLOB', blob);
         if (blob) {
           setFoto(blob); // 캡처된 이미지를 상태로 저장
         }
@@ -481,7 +458,6 @@ export default function ArApp() {
       console.error('Error capturing image:', error);
     }
   };
-
 
   useEffect(() => {
     if (foto) {
@@ -494,8 +470,8 @@ export default function ArApp() {
   }, [foto]);
 
   const handleLoading = () => {
-    if (loading) setLoading(false)
-  }
+    if (loading) setLoading(false);
+  };
 
   return (
     <>
@@ -555,10 +531,16 @@ export default function ArApp() {
         </>
       )}
 
-      {loading && <Spinner className='fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate' />}
+      {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon' ? '/moon1.mind' : char === 'moons' ? '/moons.mind' : '/tree.mind'}
+        imageTargets={
+          char === 'moon'
+            ? '/gamyoungar/moon.mind'
+            : char === 'moons'
+            ? '/gamyoungar/moons.mind'
+            : '/gamyoungar/tree.mind'
+        }
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // Maximum number of targets tracked simultaneously
@@ -576,26 +558,26 @@ export default function ArApp() {
         camera={{
           position: [0, 0, 300],
           near: 0.001,
-          far: 100000
+          far: 100000,
         }}
       >
         {/* <FrameH /> */}
-        {/*  */}
-        {char === 'moon' || char === 'moons' && (
-          // @ts-ignore
-          <ARAnchor
-            target={0}
-            onAnchorFound={() => {
-              console.log('RABBIT found!');
-            }}
-            onAnchorLost={() => {
-              console.log('RABBIT lost');
 
-            }}
-          >
-            <Box onRenderEnd={handleLoading} />
-          </ARAnchor>
-        )}
+        {char === 'moon' ||
+          (char === 'moons' && (
+            // @ts-ignore
+            <ARAnchor
+              target={0}
+              onAnchorFound={() => {
+                console.log('RABBIT found');
+              }}
+              onAnchorLost={() => {
+                console.log('RABBIT lost');
+              }}
+            >
+              <Box onRenderEnd={handleLoading} />
+            </ARAnchor>
+          ))}
         {/* <Box onRenderEnd={handleLoading} /> */}
         {char === 'tree' && (
           // @ts-ignore
