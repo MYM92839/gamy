@@ -116,7 +116,7 @@ Modal.setAppElement('#root');
 
 const CircularMask = () => (
   <group scale={[1, 1, 1]} position={[0.35, 0.48, -0.017]}>
-    <Mask id={1} colorWrite depthWrite={false}>
+    <Mask id={1} colorWrite={false} depthWrite={false}>
       <planeGeometry args={[0.6, 1]} />
     </Mask>
   </group>
