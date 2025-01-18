@@ -190,11 +190,12 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   const modelRef = useRef<THREE.Group>(null);
   const instances = useContext(context);
 
-  const { nodes, animations } = useGLTF('/moon_f.glb', false, false, (loader) => {
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/draco/');
-    loader.setDRACOLoader(dracoLoader);
-  }) as GLTFResult;
+  // const { nodes, animations } = useGLTF('/moon_f.glb', false, false, (loader) => {
+  //   const dracoLoader = new DRACOLoader();
+  //   dracoLoader.setDecoderPath('/draco/');
+  //   loader.setDRACOLoader(dracoLoader);
+  // }) as GLTFResult;
+  const { nodes, animations } = useGLTF('/moon_f.glb') as GLTFResult;
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
@@ -534,13 +535,7 @@ export default function ArApp() {
       {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={
-          char === 'moon'
-            ? '/moon.mind'
-            : char === 'moons'
-            ? '/moons.mind'
-            : '/tree.mind'
-        }
+        imageTargets={char === 'moon' ? '/moon.mind' : char === 'moons' ? '/moons.mind' : '/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // Maximum number of targets tracked simultaneously
