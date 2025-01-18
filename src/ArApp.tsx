@@ -196,7 +196,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
     if (actions && sactions && on) {
       if (sactions.Scene) {
         if (shadowRef.current) shadowRef.current.visible = true;
-          if (modelRef.current) modelRef.current.visible = false;
+        if (modelRef.current) modelRef.current.visible = false;
         sactions.Scene.reset().play();
         sactions.Scene?.setLoop(THREE.LoopOnce, 1);
         sactions.Scene.clampWhenFinished = true;
@@ -239,8 +239,8 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         ref={shadowRef}
         dispose={null}
         scale={[0.01, 0.01, 0.01]}
-        position={[-0.45, 0, -1]}
-        rotation={[0, Math.PI / 4, 0]}
+        position={[-0.4, 0.1, -1.2]}
+        rotation={[0, Math.PI / 3, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
           <group name="hammer" position={[-9.004, -49.831, 0]} scale={0}>
@@ -759,7 +759,7 @@ export default function ArApp() {
             }}
             onAnchorLost={() => {
               console.log('RABBIT lost');
-              setOn(false);
+              //setOn(false);
             }}
           >
             <Box onRenderEnd={handleLoading} on={on} />
