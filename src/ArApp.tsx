@@ -511,8 +511,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 20],
-          near: 0.00000000001,
+          position: [0, 0, 100],
         }}
       >
         {/* <FrameH /> */}
