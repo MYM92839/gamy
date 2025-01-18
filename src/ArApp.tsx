@@ -792,8 +792,8 @@ export default function ArApp() {
           // 카메라 해상도 설정
           navigator.mediaDevices.getUserMedia({
             video: {
-              width: 1920,
-              height: 1080,
+              width: 1280,
+              height: 720,
               frameRate: { ideal: 30, max: 60 },
             },
           });
