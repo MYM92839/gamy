@@ -49,7 +49,7 @@ type GLTFResult = GLTF & {
 
 const context = createContext<any>(null);
 export function Instances({ children, ...props }: PropsWithChildren) {
-  const { nodes } = useGLTF('/moon.glb') as GLTFResult;
+  const { nodes, animations } = useGLTF('/moon_f.glb') as GLTFResult;
   const instances = useMemo(
     () =>
       ({
@@ -72,7 +72,9 @@ export function Instances({ children, ...props }: PropsWithChildren) {
   );
   return (
     <Merged meshes={instances} {...props}>
-      {(instances: NODE) => <context.Provider value={instances} children={children} />}
+      {(instances: NODE) => (
+        <context.Provider value={{ instances, Root_M: nodes.Root_M, animations }} children={children} />
+      )}
     </Merged>
   );
 }
@@ -188,14 +190,13 @@ function Tree() {
 
 function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void }) {
   const modelRef = useRef<THREE.Group>(null);
-  const instances = useContext(context);
+  const { instances, Root_M, animations } = useContext(context);
 
   // const { nodes, animations } = useGLTF('/moon_f.glb', false, false, (loader) => {
   //   const dracoLoader = new DRACOLoader();
   //   dracoLoader.setDecoderPath('/draco/');
   //   loader.setDRACOLoader(dracoLoader);
   // }) as GLTFResult;
-  const { nodes, animations } = useGLTF('/moon_f.glb') as GLTFResult;
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
@@ -209,64 +210,39 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   }, [actions]);
 
   useEffect(() => {
-    if (nodes) onRenderEnd();
-  }, [nodes]);
+    if (instances) onRenderEnd();
+  }, [instances]);
 
   console.log('NODES', nodes, instances);
-  if (nodes && modelRef.current) {
+  if (instances && modelRef.current) {
     const p = new THREE.Vector3();
     modelRef.current.getWorldPosition(p);
     console.log('LNODDD', p);
   }
 
   return (
-    nodes &&
-    instances && (
-      <group ref={modelRef} {...props} dispose={null}>
-        <group name="Scene">
-          <group name="Group001">
-            <group name="DeformationSystem001">
-              <instances.BrowGEO name="Brow_GEO001" />
-              <instances.IncisorGEO name="Incisor_GEO001" />
-              <instances.LEyeBallGEO name="L_EyeBall_GEO001" />
-              <instances.LEyeHighLightGEO name="L_EyeHighLight_GEO001" />
-              <instances.LowergumGEO name="Lower_gum_GEO001" />
-              <instances.LowerTeethGEO name="Lower_Teeth_GEO001" />
-              <instances.REyeBallGEO name="R_EyeBall_GEO001" />
-              <instances.REyeHighLightGEO name="R_EyeHighLight_GEO001" />
-              <instances.RabbitXgenGEO name="Rabbit_Xgen_GEO001" />
-              <instances.TongueGEO name="Tongue_GEO001" />
-              <instances.UppergumGEO name="Upper_gum_GEO001" />
-              <instances.UpperTeethGEO name="Upper_Teeth_GEO001" />
-              <primitive object={nodes.Root_M} />
-            </group>
-            <group name="Geometry001" scale={0.1}>
-              <group name="Rabbit_GEO_GRP001">
-                <group name="Brow_GRP001" />
-                <group name="Eye_GRP001">
-                  <group name="L_Eyeball_GEO001">
-                    <instances.LIrisGEO name="L_Iris_GEO001" scale={10} />
-                  </group>
-                  <group name="R_Eyeball_GEO001">
-                    <instances.RIrisGEO name="R_Iris_GEO001" scale={10} />
-                  </group>
-                </group>
-                <group name="Mouth_GRP001" />
-              </group>
-            </group>
-            <group name="MotionSystem001" scale={0.1}>
-              <group name="MainSystem001">
-                <group name="MainExtra2001">
-                  <group name="MainExtra1001">
-                    <group name="Main001" />
-                  </group>
-                </group>
-              </group>
-            </group>
+    <group ref={modelRef} {...props} dispose={null}>
+      <group name="Scene">
+        <group name="Group001">
+          <group name="DeformationSystem001">
+            <instances.BrowGEO name="Brow_GEO001" />
+            <instances.IncisorGEO name="Incisor_GEO001" />
+            <instances.LEyeBallGEO name="L_EyeBall_GEO001" />
+            <instances.LEyeHighLightGEO name="L_EyeHighLight_GEO001" />
+            <instances.LowergumGEO name="Lower_gum_GEO001" />
+            <instances.LowerTeethGEO name="Lower_Teeth_GEO001" />
+            <instances.REyeBallGEO name="R_EyeBall_GEO001" />
+            <instances.REyeHighLightGEO name="R_EyeHighLight_GEO001" />
+            <instances.RabbitXgenGEO name="Rabbit_Xgen_GEO001" />
+            <instances.TongueGEO name="Tongue_GEO001" />
+            <instances.UppergumGEO name="Upper_gum_GEO001" />
+            <instances.UpperTeethGEO name="Upper_Teeth_GEO001" />
+            <primitive object={Root_M} />
           </group>
         </group>
+        <instances.LIrisGEO name="L_Iris_GEO001" position={[0, 26.939, 1.844]} scale={7.71} />
       </group>
-    )
+    </group>
   );
 }
 
