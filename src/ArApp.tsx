@@ -238,7 +238,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         name="Scene"
         ref={shadowRef}
         dispose={null}
-        scale={[0.01, 0.01, 0.01]}
+        scale={[0.006, 0.006, 0.006]}
         position={[0, 0.15, 0]}
         rotation={[0, Math.PI / 3, 0]}
       >
