@@ -190,7 +190,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   const modelRef = useRef<THREE.Group>(null);
   const instances = useContext(context);
 
-  const { nodes, animations } = useGLTF('/gamyoungar/moon_ff.glb', false, false, (loader) => {
+  const { nodes, animations } = useGLTF('/gamyoungar/moon_f.glb', false, false, (loader) => {
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('/draco/');
     loader.setDRACOLoader(dracoLoader);
