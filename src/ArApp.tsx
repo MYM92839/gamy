@@ -212,7 +212,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
     if (nodes) onRenderEnd();
   }, [nodes]);
 
-  console.log('NODES', nodes);
+  console.log('NODES', nodes, instances);
   if (nodes && modelRef.current) {
     const p = new THREE.Vector3();
     modelRef.current.getWorldPosition(p);
