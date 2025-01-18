@@ -180,7 +180,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   }
 
   return (
-    <group ref={modelRef} {...props} scale={[0.1, 0.1, 0.1]} position={[0, 0, 0]} dispose={null}>
+    <group ref={modelRef} {...props} scale={[1, 1, 1]} position={[0, 0, 0]} dispose={null}>
       <group name="Scene">
         <group name="Group001">
           <group name="DeformationSystem001">
@@ -524,7 +524,6 @@ export default function ArApp() {
         {(char === 'moon' || char === 'moons') && (
           // @ts-ignore
           <ARAnchor
-            visible={true}
             target={0}
             onAnchorFound={() => {
               console.log('RABBIT found');
