@@ -769,9 +769,9 @@ export default function ArApp() {
         // missTolerance={5} // 트래킹 실패 허용 시간
         // warmupTolerance={7} // 초기 트래킹 유연성
         // filterMinCF={1}
-        filterBeta={10000}
+        filterBeta={0.05}
         missTolerance={5}
-        warmupTolerance={0}
+        warmupTolerance={5}
         id="three-canvas"
         style={{
           width: '100%',
