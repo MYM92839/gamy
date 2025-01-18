@@ -6,7 +6,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
+import { Center, Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
 import Modal from 'react-modal';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
@@ -425,7 +425,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         name="Scene"
         ref={modelRef}
         visible={false}
-        scale={[0.5, 0.5, 0.5]}
+        scale={[0.05, 0.05, 0.05]}
         position={[-0.45, 0, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
@@ -768,7 +768,6 @@ export default function ArApp() {
         detectionScale={settings.detectionScale} // 동적으로 설정된 값 적용
         missTolerance={5} // 트래킹 실패 허용 시간
         warmupTolerance={7} // 초기 트래킹 유연성
-        scale={0.01}
         id="three-canvas"
         style={{
           width: '100%',
@@ -777,7 +776,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 1000],
+          position: [0, 0, 100],
         }}
         gl={{
           antialias: true,
@@ -801,42 +800,44 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
+        <Center>
+          {(char === 'moon' || char === 'moons') && (
+            // @ts-ignore
+            <ARAnchor
+              target={0}
+              onAnchorFound={() => {
+                console.log('RABBIT found');
+                setOn(true);
+              }}
+              onAnchorLost={() => {
+                console.log('RABBIT lost');
+                //setOn(false);
+              }}
+            >
+              <Box onRenderEnd={handleLoading} on={on} />
+            </ARAnchor>
+          )}
+          {/* <Box onRenderEnd={handleLoading} on={on} /> */}
 
-        {(char === 'moon' || char === 'moons') && (
-          // @ts-ignore
-          <ARAnchor
-            target={0}
-            onAnchorFound={() => {
-              console.log('RABBIT found');
-              setOn(true);
-            }}
-            onAnchorLost={() => {
-              console.log('RABBIT lost');
-              //setOn(false);
-            }}
-          >
-            <Box onRenderEnd={handleLoading} on={on} />
-          </ARAnchor>
-        )}
-        {char === 'trees' && (
-          // @ts-ignore
-          <ARAnchor
-            target={0}
-            onAnchorFound={() => {
-              console.log('TREE found');
-              setOn(true);
-            }}
-            onAnchorLost={() => {
-              console.log('TREE lost');
-              //setOn(false);
-            }}
-          >
-            <CircularMask />
+          {char === 'trees' && (
+            // @ts-ignore
+            <ARAnchor
+              target={0}
+              onAnchorFound={() => {
+                console.log('TREE found');
+                setOn(true);
+              }}
+              onAnchorLost={() => {
+                console.log('TREE lost');
+                //setOn(false);
+              }}
+            >
+              <CircularMask />
 
-            <Tree on={on} onRenderEnd={handleLoading} />
-          </ARAnchor>
-        )}
-
+              <Tree on={on} onRenderEnd={handleLoading} />
+            </ARAnchor>
+          )}
+        </Center>
         {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
         <Environment files="/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
