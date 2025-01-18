@@ -819,7 +819,7 @@ export default function ArApp() {
             <Box onRenderEnd={handleLoading} on={on} />
           </ARAnchor>
         )}
-        <Box onRenderEnd={handleLoading} />
+        {/* <Box onRenderEnd={handleLoading} /> */}
         {char === 'trees' && (
           // @ts-ignore
           <ARAnchor
