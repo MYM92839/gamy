@@ -763,11 +763,15 @@ export default function ArApp() {
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // 동시에 추적할 타겟 수
-        filterMinCF={settings.filterMinCF} // 동적으로 설정된 값 적용
-        filterBeta={settings.filterBeta} // 동적으로 설정된 값 적용
+        // filterMinCF={settings.filterMinCF} // 동적으로 설정된 값 적용
+        // filterBeta={settings.filterBeta} // 동적으로 설정된 값 적용
         detectionScale={settings.detectionScale} // 동적으로 설정된 값 적용
-        missTolerance={5} // 트래킹 실패 허용 시간
-        warmupTolerance={7} // 초기 트래킹 유연성
+        // missTolerance={5} // 트래킹 실패 허용 시간
+        // warmupTolerance={7} // 초기 트래킹 유연성
+        // filterMinCF={1}
+        filterBeta={10000}
+        missTolerance={0}
+        warmupTolerance={0}
         id="three-canvas"
         style={{
           width: '100%',
@@ -776,7 +780,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 1000],
+          position: [0, 0, 100],
         }}
         gl={{
           antialias: true,
@@ -800,7 +804,7 @@ export default function ArApp() {
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
-        <Center >
+        <Center>
           {(char === 'moon' || char === 'moons') && (
             // @ts-ignore
             <ARAnchor
