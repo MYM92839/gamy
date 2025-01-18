@@ -237,7 +237,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         dispose={null}
         scale={[0.01, 0.01, 0.01]}
         position={[-1.2, 0, -1]}
-        rotation={[0, 0, 0]}
+        rotation={[0, Math.PI, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
           <group name="hammer" position={[-9.004, -49.831, 0]} scale={0}>
@@ -395,7 +395,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         />
       </group>
       {/*  //// */}
-      <group name="Scene" ref={modelRef} scale={[0.01, 0.01, 0.01]} position={[-0.8, 0, -1]} rotation={[0, 0, 0]}>
+      <group name="Scene" ref={modelRef} scale={[0.01, 0.01, 0.01]} position={[-0.8, 0, -1]} rotation={[0, Math.PI, 0]}>
         <group name="Group001">
           <group name="DeformationSystem001">
             <skinnedMesh
@@ -715,8 +715,8 @@ export default function ArApp() {
         maxTrack={1} // Maximum number of targets tracked simultaneously
         filterMinCF={0.001} // 신뢰도를 더 유연하게
         filterBeta={0.02} // 필터 반응 속도 조정
-        missTolerance={5} // 트래킹 유지를 위해 증가
-        warmupTolerance={10} // 초기 트래킹 허용 범위 조정
+        // missTolerance={5} // 트래킹 유지를 위해 증가
+        // warmupTolerance={10} // 초기 트래킹 허용 범위 조정
         id="three-canvas"
         style={{
           width: '100%',
@@ -743,7 +743,6 @@ export default function ArApp() {
           // @ts-ignore
           <ARAnchor
             target={0}
-            position={[0, 0, 0]}
             onAnchorFound={() => {
               console.log('RABBIT found');
             }}
