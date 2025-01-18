@@ -115,7 +115,7 @@ const customStyles = {
 Modal.setAppElement('#root');
 
 const CircularMask = () => (
-  <group scale={[0.01, 0.01, 0.01]} position={[0.35, 0.48, -0.017]}>
+  <group scale={[1, 1, 1]} position={[0.35, 0.48, -0.017]}>
     <Mask id={1} colorWrite={false} depthWrite={false}>
       <planeGeometry args={[0.6, 1]} />
     </Mask>
@@ -163,7 +163,7 @@ function Tree({
   return (
     <group
       ref={modelRef}
-      scale={[0.01, 0.01, 0.01]}
+      scale={[1, 1, 1]}
       position={[0.35, 0, 0]}
       rotation={[0, 0, 0]}
       {...props}
