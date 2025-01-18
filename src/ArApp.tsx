@@ -1,12 +1,12 @@
 // import { useFrame } from '@react-three/fiber';
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import * as THREE from 'three';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, Merged, useAnimations, useGLTF } from '@react-three/drei';
+import { Environment, useAnimations, useGLTF } from '@react-three/drei';
 import Modal from 'react-modal';
 import { DRACOLoader } from 'three-stdlib';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
@@ -14,10 +14,6 @@ import Spinner from './components/Spinner.js';
 import { ARAnchor, ARView } from './libs/react-three-mind.js';
 
 import { GLTF } from 'three-stdlib';
-
-type NODE = {
-  [key: string]: JSX.IntrinsicElements['mesh'];
-};
 
 type GLTFResult = GLTF & {
   nodes: {
