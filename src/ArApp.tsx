@@ -256,7 +256,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   }, [nodes]);
 
   return (
-    <group {...props} position={[0, 0, -100]} dispose={null}>
+    <group {...props} position={[0, 0, -10]} dispose={null}>
       <group
         name="Scene"
         ref={shadowRef}
@@ -778,7 +778,6 @@ export default function ArApp() {
         }}
         camera={{
           position: [0, 0, 100],
-          far: 99999999,
         }}
         gl={{
           antialias: true,
@@ -790,8 +789,8 @@ export default function ArApp() {
           // 카메라 해상도 설정
           navigator.mediaDevices.getUserMedia({
             video: {
-              width: 1280,
-              height: 720,
+              width: 1920,
+              height: 1080,
               frameRate: { ideal: 30, max: 60 },
             },
           });
