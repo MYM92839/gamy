@@ -788,6 +788,7 @@ export default function ArApp() {
           antialias: true,
           alpha: true,
           powerPreference: 'high-performance',
+          stencil: true,
         }}
         onCameraStream={() => {
           // 카메라 해상도 설정
