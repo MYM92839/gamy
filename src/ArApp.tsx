@@ -231,14 +231,13 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
 
   return (
     <group
-      ref={modelRef}
       {...props}
       scale={[0.02, 0.02, 0.02]}
       position={[-0.8, -0.3, -1]}
-      rotation={[0, Math.PI / 2.5, 0]}
+      rotation={[0, Math.PI / 2, 0]}
       dispose={null}
     >
-      <group ref={shadowRef} {...props} dispose={null}>
+      <group ref={shadowRef} {...props} position={[0.8, 0.3, 1]} dispose={null}>
         <group name="Scene">
           <group name="rabbit_silhouette" scale={0.1}>
             <group name="hammer" position={[-9.004, -49.831, 0]} scale={0}>
@@ -397,7 +396,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         </group>
       </group>
       {/*  //// */}
-      <group name="Scene">
+      <group name="Scene" ref={modelRef}>
         <group name="Group001">
           <group name="DeformationSystem001">
             <skinnedMesh
@@ -728,6 +727,11 @@ export default function ArApp() {
         }}
         camera={{
           position: [0, 0, 10],
+        }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance',
         }}
       >
         {/* <FrameH /> */}
