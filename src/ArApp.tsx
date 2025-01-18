@@ -142,7 +142,7 @@ function Tree({
       ref={modelRef}
       scale={[0.5, 0.5, 0.5]}
       position={[0.3, 0, 0]}
-      rotation={[0, -Math.PI / 1.5, 0]}
+      rotation={[0, Math.PI / 1.2, 0]}
       {...props}
       dispose={null}
     >
