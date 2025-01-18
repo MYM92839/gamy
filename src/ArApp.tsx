@@ -6,7 +6,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, useAnimations, useGLTF } from '@react-three/drei';
+import { Environment, Plane, useAnimations, useGLTF } from '@react-three/drei';
 import Modal from 'react-modal';
 import { DRACOLoader } from 'three-stdlib';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
@@ -159,11 +159,12 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
 
   useEffect(() => {
     console.log('ACTIONS', actions);
-    if (actions) {
-      for (const i in actions) {
-        actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
-        actions[i]?.reset().play();
-      }
+    if (actions && actions.loop) {
+      actions.loop.reset().play();
+      // for (const i in actions) {
+      //   actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
+      //   actions[i]?.reset().play();
+      // }
     }
   }, [actions]);
 
@@ -174,12 +175,12 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
   console.log('NODES', nodes);
   if (nodes && modelRef.current) {
     const p = new THREE.Vector3();
-    modelRef.current.getWorldPosition(p);
+    nodes.Root_M.getWorldPosition(p);
     console.log('LNODDD', p);
   }
 
   return (
-    <group ref={modelRef} {...props} dispose={null}>
+    <group ref={modelRef} {...props} scale={[0.1, 0.1, 0.1]} position={[0, 0, 0]} dispose={null}>
       <group name="Scene">
         <group name="Group001">
           <group name="DeformationSystem001">
@@ -510,17 +511,21 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 300],
-          near: 0.001,
-          far: 100000,
+          position: [0, 0, 20],
+          near: -Infinity,
         }}
       >
         {/* <FrameH /> */}
+        <Plane args={[1, 1, 1]}>
+          <meshBasicMaterial color={'red'} />
+        </Plane>
+        <Box onRenderEnd={handleLoading} />
 
         {char === 'moon' ||
           (char === 'moons' && (
             // @ts-ignore
             <ARAnchor
+              visible={true}
               target={0}
               onAnchorFound={() => {
                 console.log('RABBIT found');
