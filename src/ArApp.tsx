@@ -784,6 +784,7 @@ export default function ArApp() {
         }}
         camera={{
           position: [0, 0, 100000],
+          far:999999
         }}
         gl={{
           antialias: true,
