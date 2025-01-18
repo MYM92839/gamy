@@ -539,10 +539,10 @@ export default function ArApp() {
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // Maximum number of targets tracked simultaneously
-        filterMinCF={0.7} // 신뢰도를 더 유연하게
-        filterBeta={500} // 필터 반응 속도 조정
+        filterMinCF={0.001} // 신뢰도를 더 유연하게
+        filterBeta={0.02} // 필터 반응 속도 조정
         missTolerance={5} // 트래킹 유지를 위해 증가
-        warmupTolerance={0} // 초기 트래킹 허용 범위 조정
+        warmupTolerance={10} // 초기 트래킹 허용 범위 조정
         id="three-canvas"
         style={{
           width: '100%',
