@@ -521,22 +521,21 @@ export default function ArApp() {
         </Plane>
         <Box onRenderEnd={handleLoading} /> */}
 
-        {char === 'moon' ||
-          (char === 'moons' && (
-            // @ts-ignore
-            <ARAnchor
-              visible={true}
-              target={0}
-              onAnchorFound={() => {
-                console.log('RABBIT found');
-              }}
-              onAnchorLost={() => {
-                console.log('RABBIT lost');
-              }}
-            >
-              <Box onRenderEnd={handleLoading} />
-            </ARAnchor>
-          ))}
+        {(char === 'moon' || char === 'moons') && (
+          // @ts-ignore
+          <ARAnchor
+            visible={true}
+            target={0}
+            onAnchorFound={() => {
+              console.log('RABBIT found');
+            }}
+            onAnchorLost={() => {
+              console.log('RABBIT lost');
+            }}
+          >
+            <Box onRenderEnd={handleLoading} />
+          </ARAnchor>
+        )}
         {/* <Box onRenderEnd={handleLoading} /> */}
         {char === 'tree' && (
           // @ts-ignore
