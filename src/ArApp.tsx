@@ -43,6 +43,36 @@ type GLTFResult = GLTF & {
   };
 };
 
+type GLTFResult2 = GLTF & {
+  nodes: {
+    Mesh028_instance_0: THREE.Mesh;
+    Mesh028_instance_1: THREE.Mesh;
+    Mesh035_instance_0: THREE.Mesh;
+    Mesh035_instance_1: THREE.Mesh;
+    Mesh039: THREE.Mesh;
+    Mesh040: THREE.Mesh;
+    Mesh038: THREE.Mesh;
+    Mesh033_instance_0: THREE.Mesh;
+    Mesh033_instance_1: THREE.Mesh;
+    Mesh041: THREE.Mesh;
+    Mesh032: THREE.Mesh;
+    Mesh030: THREE.Mesh;
+    Mesh031: THREE.Mesh;
+    cramp: THREE.Mesh;
+  };
+  materials: {
+    hammer: THREE.MeshPhysicalMaterial;
+    side_arm_01: THREE.MeshPhysicalMaterial;
+    side_ear_01: THREE.MeshPhysicalMaterial;
+    side_head: THREE.MeshPhysicalMaterial;
+    side_leg: THREE.MeshPhysicalMaterial;
+    side_tail: THREE.MeshPhysicalMaterial;
+    side_body: THREE.MeshPhysicalMaterial;
+    side_foot: THREE.MeshPhysicalMaterial;
+    cramp: THREE.MeshPhysicalMaterial;
+  };
+};
+
 const customStyles = {
   overlay: {
     zIndex: 999,
@@ -154,17 +184,35 @@ function Tree() {
 
 function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void }) {
   const modelRef = useRef<THREE.Group>(null);
-  const { nodes, materials, animations } = useGLTF('/moon_f.glb') as GLTFResult;
-  const { actions } = useAnimations(animations, modelRef);
+  const shadowRef = useRef<THREE.Group>(null);
+  const [{ nodes, materials, animations }, { nodes: snodes, materials: smaterials, animations: sanimations }] = useGLTF(
+    ['/moon_f.glb', '/smash_f.glb']
+  ) as [GLTFResult, GLTFResult2];
+  const { actions, mixer } = useAnimations(animations, modelRef);
+  const { actions: sactions, mixer: smixer } = useAnimations(sanimations, shadowRef);
 
   useEffect(() => {
     console.log('ACTIONS', actions);
-    if (actions && actions.loop) {
-      actions.loop.reset().play();
-      // for (const i in actions) {
-      //   actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
-      //   actions[i]?.reset().play();
-      // }
+    if (actions && sactions) {
+      if (sactions.Scene) {
+        sactions.Scene.reset().play();
+        sactions.Scene?.setLoop(THREE.LoopOnce, 1);
+        sactions.Scene.clampWhenFinished = true;
+        smixer.addEventListener('finished', () => {
+          if (shadowRef.current) shadowRef.current.visible = false;
+          if (actions.jump) {
+            actions.jump.reset().play();
+            actions.jump?.setLoop(THREE.LoopOnce, 1);
+            actions.jump.clampWhenFinished = true;
+            mixer.addEventListener('finished', () => {
+              if (actions.loop) {
+                actions.loop.reset().play();
+                actions.loop?.setLoop(THREE.LoopRepeat, 1);
+              }
+            });
+          }
+        });
+      }
     }
   }, [actions]);
 
@@ -190,6 +238,165 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
       rotation={[0, Math.PI / 2.5, 0]}
       dispose={null}
     >
+      <group ref={shadowRef} {...props} dispose={null}>
+        <group name="Scene">
+          <group name="rabbit_silhouette" scale={0.1}>
+            <group name="hammer" position={[-9.004, -49.831, 0]} scale={0}>
+              <mesh
+                name="Mesh028_instance_0"
+                castShadow
+                receiveShadow
+                geometry={snodes.Mesh028_instance_0.geometry}
+                material={smaterials.hammer}
+                position={[0, 16.908, 0]}
+                scale={237.178}
+              />
+            </group>
+            <group name="side_body" position={[130.715, -232.759, 0]}>
+              <group name="side_arm_01" position={[-23.36, 187.798, 0]} rotation={[0, 0, 0.217]}>
+                <group name="hammer_2" position={[-114.686, 20.255, 0]} rotation={[0, 0, -0.417]}>
+                  <mesh
+                    name="Mesh028_instance_1"
+                    castShadow
+                    receiveShadow
+                    geometry={snodes.Mesh028_instance_1.geometry}
+                    material={smaterials.hammer}
+                    position={[0, 16.908, 0]}
+                    scale={237.178}
+                  />
+                </group>
+                <mesh
+                  name="Mesh035_instance_0"
+                  castShadow
+                  receiveShadow
+                  geometry={snodes.Mesh035_instance_0.geometry}
+                  material={smaterials.side_arm_01}
+                  position={[-57.806, -36.703, 0]}
+                  scale={82.498}
+                />
+              </group>
+              <group name="side_arm_02" position={[-13.721, 182.62, 0]} rotation={[0, 0, -0.53]}>
+                <mesh
+                  name="Mesh035_instance_1"
+                  castShadow
+                  receiveShadow
+                  geometry={snodes.Mesh035_instance_1.geometry}
+                  material={smaterials.side_arm_01}
+                  position={[-57.806, -36.703, 0]}
+                  scale={82.498}
+                />
+              </group>
+              <group name="side_head" position={[-32.802, 208.305, 0]}>
+                <group name="side_ear_01" position={[7.607, 217.067, 0]}>
+                  <mesh
+                    name="Mesh039"
+                    castShadow
+                    receiveShadow
+                    geometry={snodes.Mesh039.geometry}
+                    material={smaterials.side_ear_01}
+                    position={[-41.29, 86.251, 0]}
+                    scale={99.619}
+                  />
+                </group>
+                <group name="side_ear_02" position={[-21.755, 217.067, 0]}>
+                  <mesh
+                    name="Mesh040"
+                    castShadow
+                    receiveShadow
+                    geometry={snodes.Mesh040.geometry}
+                    material={smaterials.side_ear_01}
+                    position={[-40.946, 75.98, 0]}
+                    scale={87.756}
+                  />
+                </group>
+                <mesh
+                  name="Mesh038"
+                  castShadow
+                  receiveShadow
+                  geometry={snodes.Mesh038.geometry}
+                  material={smaterials.side_head}
+                  position={[-8.617, 100.709, 0]}
+                  scale={128.569}
+                />
+              </group>
+              <group name="side_leg" position={[20.683, 35.483, 0]}>
+                <mesh
+                  name="Mesh033_instance_0"
+                  castShadow
+                  receiveShadow
+                  geometry={snodes.Mesh033_instance_0.geometry}
+                  material={smaterials.side_leg}
+                  position={[-20.186, -20.186, 0]}
+                  scale={70.98}
+                />
+              </group>
+              <group name="side_leg_2" position={[35.364, 35.483, 0]} rotation={[0, 0, 0.472]}>
+                <mesh
+                  name="Mesh033_instance_1"
+                  castShadow
+                  receiveShadow
+                  geometry={snodes.Mesh033_instance_1.geometry}
+                  material={smaterials.side_leg}
+                  position={[-20.186, -20.186, 0]}
+                  scale={70.98}
+                />
+              </group>
+              <group name="side_tail" position={[79.32, 49.651, 0]}>
+                <mesh
+                  name="Mesh041"
+                  castShadow
+                  receiveShadow
+                  geometry={snodes.Mesh041.geometry}
+                  material={smaterials.side_tail}
+                  position={[26.389, 17.234, 0]}
+                  scale={35.273}
+                />
+              </group>
+              <mesh
+                name="Mesh032"
+                castShadow
+                receiveShadow
+                geometry={snodes.Mesh032.geometry}
+                material={smaterials.side_body}
+                position={[0, 104.627, 0]}
+                scale={130.714}
+              />
+            </group>
+            <group name="side_foot" position={[73.215, -313.132, 0]}>
+              <mesh
+                name="Mesh030"
+                castShadow
+                receiveShadow
+                geometry={snodes.Mesh030.geometry}
+                material={smaterials.side_foot}
+                position={[30.47, 23.182, 0]}
+                scale={47.63}
+              />
+            </group>
+            <group name="side_foot_2" position={[125.638, -317.857, 0]}>
+              <mesh
+                name="Mesh031"
+                castShadow
+                receiveShadow
+                geometry={snodes.Mesh031.geometry}
+                material={smaterials.side_foot}
+                position={[31.789, 23.182, 0]}
+                scale={47.63}
+              />
+            </group>
+          </group>
+          <mesh
+            name="cramp"
+            castShadow
+            receiveShadow
+            geometry={snodes.cramp.geometry}
+            material={smaterials.cramp}
+            position={[-7.799, -23.038, 0]}
+            scale={10.177}
+          />
+        </group>
+      </group>
+      {/*  //// */}
       <group name="Scene">
         <group name="Group001">
           <group name="DeformationSystem001">
@@ -544,7 +751,7 @@ export default function ArApp() {
             <Box onRenderEnd={handleLoading} />
           </ARAnchor>
         )}
-        {/* <Box onRenderEnd={handleLoading} /> */}
+        <Box onRenderEnd={handleLoading} />
         {char === 'tree' && (
           // @ts-ignore
           <ARAnchor
