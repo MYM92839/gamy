@@ -6,7 +6,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, useAnimations, useGLTF } from '@react-three/drei';
+import { Environment, Plane, useAnimations, useGLTF } from '@react-three/drei';
 import Modal from 'react-modal';
 import { DRACOLoader } from 'three-stdlib';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
@@ -531,6 +531,9 @@ export default function ArApp() {
               console.log('RABBIT lost');
             }}
           >
+            <Plane args={[1, 1, 1]}>
+              <meshBasicMaterial color={'red'} />
+            </Plane>
             <Box onRenderEnd={handleLoading} />
           </ARAnchor>
         )}
