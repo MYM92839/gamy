@@ -783,7 +783,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 1000],
+          position: [0, 0, 10000],
         }}
         gl={{
           antialias: true,
