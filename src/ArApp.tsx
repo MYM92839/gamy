@@ -256,7 +256,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   }, [nodes]);
 
   return (
-    <group {...props} position={[0, 0, -10]} dispose={null}>
+    <group {...props} position={[0, 0, 0]} dispose={null}>
       <group
         name="Scene"
         ref={shadowRef}
@@ -777,7 +777,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 100],
+          position: [0, 0, 1000],
         }}
         gl={{
           antialias: true,
@@ -818,7 +818,6 @@ export default function ArApp() {
             <Box onRenderEnd={handleLoading} on={on} />
           </ARAnchor>
         )}
-        {/* <Box onRenderEnd={handleLoading} /> */}
         {char === 'trees' && (
           // @ts-ignore
           <ARAnchor
