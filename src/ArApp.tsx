@@ -6,7 +6,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, useAnimations, useGLTF } from '@react-three/drei';
+import { Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
 import Modal from 'react-modal';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
@@ -114,6 +114,14 @@ const customStyles = {
 
 Modal.setAppElement('#root');
 
+const CircularMask = () => (
+  <group scale={[1, 1, 1]} position={[0.35, 0.48, -0.017]}>
+    <Mask id={1} colorWrite depthWrite={false}>
+      <planeGeometry args={[0.6, 1]} />
+    </Mask>
+  </group>
+);
+
 function Tree({
   onRenderEnd,
   on,
@@ -121,6 +129,7 @@ function Tree({
 }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
   const { nodes, materials, animations } = useGLTF('/tree_f.glb') as GLTFResult3;
+  const stencil = useMask(1, true);
 
   const { actions } = useAnimations(animations, modelRef);
 
@@ -137,8 +146,29 @@ function Tree({
     if (nodes) onRenderEnd();
   }, [nodes]);
 
+  useEffect(() => {
+    if (stencil && modelRef.current) {
+      modelRef.current.traverse((m) => {
+        if ((m as THREE.Mesh).isMesh) {
+          ((m as THREE.Mesh).material as THREE.Material).stencilFail = stencil.stencilFail;
+          ((m as THREE.Mesh).material as THREE.Material).stencilFunc = stencil.stencilFunc;
+          ((m as THREE.Mesh).material as THREE.Material).stencilRef = stencil.stencilRef;
+          ((m as THREE.Mesh).material as THREE.Material).stencilWrite = stencil.stencilWrite;
+          ((m as THREE.Mesh).material as THREE.Material).stencilZFail = stencil.stencilZFail;
+          ((m as THREE.Mesh).material as THREE.Material).stencilZPass = stencil.stencilZPass;
+        }
+      });
+    }
+  }, [stencil]);
   return (
-    <group ref={modelRef} scale={[0.5, 0.5, 0.5]} position={[0.35, 0, 0]} rotation={[0, 0, 0]} {...props} dispose={null}>
+    <group
+      ref={modelRef}
+      scale={[0.5, 0.5, 0.5]}
+      position={[0.35, 0, 0]}
+      rotation={[0, 0, 0]}
+      {...props}
+      dispose={null}
+    >
       <group name="Scene">
         <group name="Bip001" position={[0.031, 0.963, -0.054]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}>
           <group name="Bip001_Footsteps" position={[7.636, -96.125, -0.842]} rotation={[-2.83, 1.31, 2.829]} />
@@ -773,9 +803,12 @@ export default function ArApp() {
               //setOn(false);
             }}
           >
+            <CircularMask />
+
             <Tree on={on} onRenderEnd={handleLoading} />
           </ARAnchor>
         )}
+
         {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
         <Environment files="/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
