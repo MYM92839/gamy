@@ -6,7 +6,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Center, Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
+import { Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
 import Modal from 'react-modal';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
