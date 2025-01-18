@@ -534,6 +534,11 @@ export default function ArApp() {
   const [fotoUrl, setFotoUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [on, setOn] = useState(false);
+  const [settings, setSettings] = useState({
+    filterMinCF: 0.01,
+    filterBeta: 0.02,
+    detectionScale: 1.0,
+  });
   function openModal() {
     setIsOpen(true);
     captureImage();
@@ -688,6 +693,18 @@ export default function ArApp() {
     if (loading) setLoading(false);
   };
 
+  useEffect(() => {
+    // 브라우저 감지 및 설정
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+
+    const newSettings = isSafari
+      ? { filterMinCF: 0.03, filterBeta: 0.05, detectionScale: 0.8 }
+      : { filterMinCF: 0.01, filterBeta: 0.02, detectionScale: 1.0 };
+
+    setSettings(newSettings);
+    console.log('Applied settings:', newSettings);
+  }, []);
   return (
     <>
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
@@ -751,11 +768,12 @@ export default function ArApp() {
       <ARView
         imageTargets={char === 'moon' ? '/moons.mind' : char === 'moons' ? '/moon.mind' : '/tree.mind'}
         autoplay
-        flipUserCamera={false} // Prevents automatic flipping of the user camera
-        filterMinCF={0.01} // 신뢰도 값을 낮추어 감지 민감도 증가
-        filterBeta={0.2} // 필터 반응 속도를 더 높여 빠르게 위치 조정
-        missTolerance={2} // 트래킹 실패 허용 범위를 줄여 빠른 재탐지
-        warmupTolerance={5} // 초기 트래킹을 더 유연하게
+        maxTrack={1} // 동시에 추적할 타겟 수
+        filterMinCF={settings.filterMinCF} // 동적으로 설정된 값 적용
+        filterBeta={settings.filterBeta} // 동적으로 설정된 값 적용
+        detectionScale={settings.detectionScale} // 동적으로 설정된 값 적용
+        missTolerance={5} // 트래킹 실패 허용 시간
+        warmupTolerance={7} // 초기 트래킹 유연성
         id="three-canvas"
         style={{
           width: '100%',
@@ -765,6 +783,21 @@ export default function ArApp() {
         }}
         camera={{
           position: [0, 0, 10],
+        }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance',
+        }}
+        onCameraStream={() => {
+          // 카메라 해상도 설정
+          navigator.mediaDevices.getUserMedia({
+            video: {
+              width: 1280,
+              height: 720,
+              frameRate: { ideal: 30, max: 60 },
+            },
+          });
         }}
       >
         {/* <FrameH /> */}
