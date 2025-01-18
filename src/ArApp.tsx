@@ -236,8 +236,8 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         ref={shadowRef}
         dispose={null}
         scale={[0.01, 0.01, 0.01]}
-        position={[-1.2, -0.2, -1]}
-        rotation={[0, Math.PI / 3, 0]}
+        position={[-1.2, 0, -1]}
+        rotation={[0, 0, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
           <group name="hammer" position={[-9.004, -49.831, 0]} scale={0}>
@@ -395,13 +395,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         />
       </group>
       {/*  //// */}
-      <group
-        name="Scene"
-        ref={modelRef}
-        scale={[0.01, 0.01, 0.01]}
-        position={[-0.8, -0.3, -1]}
-        rotation={[0, Math.PI / 3, 0]}
-      >
+      <group name="Scene" ref={modelRef} scale={[0.01, 0.01, 0.01]} position={[-0.8, 0, -1]} rotation={[0, 0, 0]}>
         <group name="Group001">
           <group name="DeformationSystem001">
             <skinnedMesh
