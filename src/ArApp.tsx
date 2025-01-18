@@ -551,7 +551,7 @@ export default function ArApp() {
           zIndex: 100,
         }}
         camera={{
-          position: [0, 0, 300],
+          position: [0, 0, 1],
           near: 0.001,
           far: 100000,
         }}
@@ -570,7 +570,7 @@ export default function ArApp() {
                 console.log('RABBIT lost');
               }}
             >
-              <Box onRenderEnd={handleLoading} />
+              <Box position={[-0.18, -26, 40.37]} onRenderEnd={handleLoading} />
             </ARAnchor>
           ))}
         {/* <Box onRenderEnd={handleLoading} /> */}
