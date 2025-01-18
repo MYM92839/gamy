@@ -199,7 +199,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         sactions.Scene?.setLoop(THREE.LoopOnce, 1);
         sactions.Scene.clampWhenFinished = true;
         smixer.addEventListener('finished', () => {
-          if (shadowRef.current) shadowRef.current.visible = false;
+          //   if (shadowRef.current) shadowRef.current.visible = false;
           if (actions.jump) {
             actions.jump.reset().play();
             actions.jump?.setLoop(THREE.LoopOnce, 1);
@@ -236,7 +236,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         ref={shadowRef}
         dispose={null}
         scale={[0.01, 0.01, 0.01]}
-        position={[-0.8, -0.3, -1]}
+        position={[-1.2, -0.2, -1]}
         rotation={[0, Math.PI / 2.5, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
