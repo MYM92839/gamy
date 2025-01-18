@@ -199,7 +199,8 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         sactions.Scene?.setLoop(THREE.LoopOnce, 1);
         sactions.Scene.clampWhenFinished = true;
         smixer.addEventListener('finished', () => {
-          //   if (shadowRef.current) shadowRef.current.visible = false;
+          if (shadowRef.current) shadowRef.current.visible = false;
+          if (modelRef.current) modelRef.current.visible = true;
           if (actions.jump) {
             actions.jump.reset().play();
             actions.jump?.setLoop(THREE.LoopOnce, 1);
@@ -236,7 +237,7 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
         ref={shadowRef}
         dispose={null}
         scale={[0.01, 0.01, 0.01]}
-        position={[-0.45, -0.1, -1]}
+        position={[-0.45, 0, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
@@ -398,8 +399,9 @@ function Box({ onRenderEnd, ...props }: JSX.IntrinsicElements['group'] & { onRen
       <group
         name="Scene"
         ref={modelRef}
+        visible={false}
         scale={[0.01, 0.01, 0.01]}
-        position={[-0.45, -0.1, -1]}
+        position={[-0.45, 0, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
         <group name="Group001">
@@ -743,7 +745,7 @@ export default function ArApp() {
         {/* <Plane args={[1, 1, 1]}>
           <meshBasicMaterial color={'red'} />
         </Plane>*/}
-        <Box onRenderEnd={handleLoading} />
+        {/* <Box onRenderEnd={handleLoading} /> */}
 
         {(char === 'moon' || char === 'moons') && (
           // @ts-ignore
