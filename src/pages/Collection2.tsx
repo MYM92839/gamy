@@ -10,7 +10,7 @@ export default function Collection2() {
   }, [scannedResult])
 
   const handleDownload = (): void => {
-    const url = '/imgs/relic.png'
+    const url = '/gamyoungar/imgs/relic.png'
     const link = document.createElement("a");
     link.download = `camera-frame-${new Date().getTime()}.png`;
     link.href = url;

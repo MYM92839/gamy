@@ -128,7 +128,7 @@ function Tree({
   ...props
 }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
-  const { nodes, materials, animations } = useGLTF('/tree_f.glb') as GLTFResult3;
+  const { nodes, materials, animations } = useGLTF('/gamyoungar/tree_f.glb') as GLTFResult3;
   const stencil = useMask(1, true);
 
   const { actions } = useAnimations(animations, modelRef);
@@ -226,7 +226,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
   const [{ nodes, materials, animations }, { nodes: snodes, materials: smaterials, animations: sanimations }] = useGLTF(
-    ['/moon_f.glb', '/smash_f.glb']
+    ['/gamyoungar/moon_f.glb', '/gamyoungar/smash_f.glb']
   ) as [GLTFResult, GLTFResult2];
   const { actions, mixer } = useAnimations(animations, modelRef);
   const { actions: sactions, mixer: smixer } = useAnimations(sanimations, shadowRef);
@@ -766,7 +766,7 @@ export default function ArApp() {
       {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon' ? '/moons1.mind' : char === 'moons' ? '/moons1.mind' : '/tree.mind'}
+        imageTargets={char === 'moon' ? '/gamyoungar/moons1.mind' : char === 'moons' ? '/gamyoungar/moons1.mind' : '/gamyoungar/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // 동시에 추적할 타겟 수
