@@ -115,7 +115,7 @@ const customStyles = {
 Modal.setAppElement('#root');
 
 const CircularMask = () => (
-  <group scale={[1, 1, 1]} position={[0, 0.48, 1]}>
+  <group scale={[1, 1, 1]} position={[0, 0.48, 0]}>
     <Mask id={1} colorWrite={false} depthWrite={false}>
       <planeGeometry args={[0.6, 1]} />
     </Mask>
@@ -130,16 +130,26 @@ function Tree({
   const modelRef = useRef<THREE.Group>(null);
   const { nodes, materials, animations } = useGLTF('/gamyoungar/tree_f.glb', true, true) as GLTFResult3;
   const stencil = useMask(1, true);
-
+  const [mask, setMask] = useState(true);
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
+    let id: string | number | NodeJS.Timeout | undefined;
     if (actions && on) {
       for (const i in actions) {
-        actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
-        actions[i]?.reset().play();
+        if (actions[i]) {
+          actions[i]?.setLoop(THREE.LoopOnce, 1);
+          actions[i].clampWhenFinished = true;
+          actions[i]?.reset().play();
+          id = setTimeout(() => {
+            setMask(false);
+          }, 2000);
+        }
       }
     }
+    return () => {
+      if (id) clearTimeout(id);
+    };
   }, [on]);
 
   useEffect(() => {
@@ -148,22 +158,32 @@ function Tree({
 
   useEffect(() => {
     if (stencil && modelRef.current) {
-      modelRef.current.traverse((m) => {
-        if ((m as THREE.Mesh).isMesh) {
-          ((m as THREE.Mesh).material as THREE.Material).stencilFail = stencil.stencilFail;
-          ((m as THREE.Mesh).material as THREE.Material).stencilFunc = stencil.stencilFunc;
-          ((m as THREE.Mesh).material as THREE.Material).stencilRef = stencil.stencilRef;
-          ((m as THREE.Mesh).material as THREE.Material).stencilWrite = stencil.stencilWrite;
-          ((m as THREE.Mesh).material as THREE.Material).stencilZFail = stencil.stencilZFail;
-          ((m as THREE.Mesh).material as THREE.Material).stencilZPass = stencil.stencilZPass;
-        }
-      });
+      if (mask) {
+        modelRef.current.traverse((m) => {
+          if ((m as THREE.Mesh).isMesh) {
+            ((m as THREE.Mesh).material as THREE.Material).stencilFail = stencil.stencilFail;
+            ((m as THREE.Mesh).material as THREE.Material).stencilFunc = stencil.stencilFunc;
+            ((m as THREE.Mesh).material as THREE.Material).stencilRef = stencil.stencilRef;
+            ((m as THREE.Mesh).material as THREE.Material).stencilWrite = stencil.stencilWrite;
+            ((m as THREE.Mesh).material as THREE.Material).stencilZFail = stencil.stencilZFail;
+            ((m as THREE.Mesh).material as THREE.Material).stencilZPass = stencil.stencilZPass;
+            ((m as THREE.Mesh).material as THREE.Material).needsUpdate = true;
+          }
+        });
+      } else {
+        modelRef.current.traverse((m) => {
+          if ((m as THREE.Mesh).isMesh) {
+            ((m as THREE.Mesh).material as THREE.Material).stencilRef = 999;
+            ((m as THREE.Mesh).material as THREE.Material).needsUpdate = true;
+          }
+        });
+      }
     }
-  }, [stencil]);
+  }, [stencil, mask]);
   return (
     <group
       ref={modelRef}
-      scale={[0.5, 0.5, 0.5]}
+      scale={[0.4, 0.4, 0.4]}
       position={[0, 0, 0]}
       rotation={[0, Math.PI / 4, 0]}
       {...props}
@@ -433,7 +453,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         ref={modelRef}
         visible={true}
         scale={[0.015, 0.015, 0.015]}
-        position={[-0.45, -0.9, -1]}
+        position={[-0.45, -1, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
         <group name="Group001">
@@ -704,6 +724,25 @@ export default function ArApp() {
 
     setSettings(newSettings);
     console.log('Applied settings:', newSettings);
+
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        width: 1280,
+        height: 720,
+        frameRate: { ideal: 30, max: 60 },
+        facingMode: 'environment',
+        advanced: [
+          { width: { exact: 2560 } },
+          { width: { exact: 1920 } },
+          { width: { exact: 1280 } },
+          { width: { exact: 1024 } },
+          { width: { exact: 900 } },
+          { width: { exact: 800 } },
+          { width: { exact: 640 } },
+          { width: { exact: 320 } },
+        ],
+      },
+    });
   }, []);
   return (
     <>
@@ -800,16 +839,6 @@ export default function ArApp() {
           alpha: true,
           powerPreference: 'high-performance',
           stencil: true,
-        }}
-        onCameraStream={() => {
-          // 카메라 해상도 설정
-          navigator.mediaDevices.getUserMedia({
-            video: {
-              width: 1280,
-              height: 720,
-              frameRate: { ideal: 30, max: 60 },
-            },
-          });
         }}
       >
         {/* <FrameH /> */}
