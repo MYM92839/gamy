@@ -805,13 +805,7 @@ export default function ArApp() {
       {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={
-          char === 'moon'
-            ? '/moons1.mind'
-            : char === 'moons'
-            ? '/moons1.mind'
-            : '/tree.mind'
-        }
+        imageTargets={char === 'moon' ? '/moons1.mind' : char === 'moons' ? '/moons1.mind' : '/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // 동시에 추적할 타겟 수
@@ -837,14 +831,15 @@ export default function ArApp() {
         gl={{
           antialias: true,
           alpha: true,
+          preserveDrawingBuffer: true, // This ensures the WebGL content remains accessible
           powerPreference: 'high-performance',
           stencil: true,
         }}
       >
         {/* <FrameH /> */}
         {/* <Plane args={[1, 1, 1]}>
-          <meshBasicMaterial color={'red'} />
-        </Plane>*/}
+            <meshBasicMaterial color={'red'} />
+          </Plane>*/}
         {/* <Box onRenderEnd={handleLoading} /> */}
         {(char === 'moon' || char === 'moons') && (
           // @ts-ignore
