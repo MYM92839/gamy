@@ -167,12 +167,14 @@ function Tree({
             ((m as THREE.Mesh).material as THREE.Material).stencilWrite = stencil.stencilWrite;
             ((m as THREE.Mesh).material as THREE.Material).stencilZFail = stencil.stencilZFail;
             ((m as THREE.Mesh).material as THREE.Material).stencilZPass = stencil.stencilZPass;
+            ((m as THREE.Mesh).material as THREE.Material).needsUpdate = true;
           }
         });
       } else {
         modelRef.current.traverse((m) => {
           if ((m as THREE.Mesh).isMesh) {
             ((m as THREE.Mesh).material as THREE.Material).stencilRef = 999;
+            ((m as THREE.Mesh).material as THREE.Material).needsUpdate = true;
           }
         });
       }
