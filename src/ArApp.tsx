@@ -183,7 +183,7 @@ function Tree({
   return (
     <group
       ref={modelRef}
-      scale={[0.5, 0.5, 0.5]}
+      scale={[0.4, 0.4, 0.4]}
       position={[0, 0, 0]}
       rotation={[0, Math.PI / 4, 0]}
       {...props}
