@@ -453,7 +453,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         ref={modelRef}
         visible={true}
         scale={[0.015, 0.015, 0.015]}
-        position={[-0.45, -0.9, -1]}
+        position={[-0.45, -1, -1]}
         rotation={[0, Math.PI / 4, 0]}
       >
         <group name="Group001">
