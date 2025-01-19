@@ -14,6 +14,16 @@ import { ARAnchor, ARView } from './libs/react-three-mind.js';
 
 import { GLTF } from 'three-stdlib';
 
+// 커스텀 로딩 매니저 설정
+THREE.DefaultLoadingManager.setURLModifier((url) => {
+  // 텍스처 경로를 재설정하거나 다른 URL로 대체
+  // if (url.includes('blob:')) {
+  //   console.warn(`Replacing blob URL: ${url}`);
+  //   return url.replace('blob:https://www.wonju.go.kr', 'blob:https://www.wonju.go.kr/gamyoungar');
+  // }
+  return url; // 그대로 로드
+});
+
 type GLTFResult3 = GLTF & {
   nodes: {
     down: THREE.SkinnedMesh;
@@ -128,7 +138,7 @@ function Tree({
   ...props
 }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
-  const { nodes, materials, animations } = useGLTF('/gamyoungar/tree_f.glb') as GLTFResult3;
+  const { nodes, materials, animations } = useGLTF('/gamyoungar/tree_f.glb', true, true) as GLTFResult3;
   const stencil = useMask(1, true);
 
   const { actions } = useAnimations(animations, modelRef);
@@ -161,14 +171,7 @@ function Tree({
     }
   }, [stencil]);
   return (
-    <group
-      ref={modelRef}
-      scale={[0.5, 0.5, 0.5]}
-      position={[0, 0, 0]}
-      rotation={[0, 0, 0]}
-      {...props}
-      dispose={null}
-    >
+    <group ref={modelRef} scale={[0.5, 0.5, 0.5]} position={[0, 0, 0]} rotation={[0, 0, 0]} {...props} dispose={null}>
       <group name="Scene">
         <group name="Bip001" position={[0.031, 0.963, -0.054]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}>
           <group name="Bip001_Footsteps" position={[7.636, -96.125, -0.842]} rotation={[-2.83, 1.31, 2.829]} />
@@ -766,7 +769,13 @@ export default function ArApp() {
       {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon' ? '/gamyoungar/moons1.mind' : char === 'moons' ? '/gamyoungar/moons1.mind' : '/gamyoungar/tree.mind'}
+        imageTargets={
+          char === 'moon'
+            ? '/gamyoungar/moons1.mind'
+            : char === 'moons'
+            ? '/gamyoungar/moons1.mind'
+            : '/gamyoungar/tree.mind'
+        }
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // 동시에 추적할 타겟 수
@@ -847,7 +856,7 @@ export default function ArApp() {
           </ARAnchor>
         )}
         {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
-        <Environment files="/HDRI_01.exr" preset={undefined} />
+        <Environment files="/gamyoungar/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
       </ARView>
     </>

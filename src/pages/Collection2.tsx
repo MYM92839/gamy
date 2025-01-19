@@ -21,13 +21,13 @@ export default function Collection2() {
 
   return (
     <div className="w-full h-full  min-h-[874px] relative">
-      <img className="absolute top-0 w-full" src="/imgs/top_image.png" />
+      <img className="absolute top-0 w-full" src="/gamyoungar/imgs/top_image.png" />
       <div className="absolute inset-0 px-[24px]">
-        <img className="mt-[60px] mx-auto" src="/imgs/title.png" />
+        <img className="mt-[60px] mx-auto" src="/gamyoungar/imgs/title.png" />
         <div className="mt-[109px] font-semibold text-[#EBF0E8] text-[16px] mx-auto text-center">수집하신 유물을 볼 수 있어요</div>
 
         <div className="w-full aspect-square mt-[20px]">
-          <BtnImg title={`유물 ${name}`} src="/imgs/relic.png" isActive />
+          <BtnImg title={`유물 ${name}`} src="/gamyoungar/imgs/relic.png" isActive />
 
         </div>
 
@@ -59,6 +59,6 @@ export default function Collection2() {
 
 
       </div>
-      <img className="absolute bottom-0 w-full" src="/imgs/bottom_image.png" />
+      <img className="absolute bottom-0 w-full" src="/gamyoungar/imgs/bottom_image.png" />
     </div>)
 }
