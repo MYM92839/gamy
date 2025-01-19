@@ -14,16 +14,6 @@ import { ARAnchor, ARView } from './libs/react-three-mind.js';
 
 import { GLTF } from 'three-stdlib';
 
-// 커스텀 로딩 매니저 설정
-THREE.DefaultLoadingManager.setURLModifier((url) => {
-  // 텍스처 경로를 재설정하거나 다른 URL로 대체
-  // if (url.includes('blob:')) {
-  //   console.warn(`Replacing blob URL: ${url}`);
-  //   return url.replace('blob:https://www.wonju.go.kr', 'blob:https://www.wonju.go.kr/gamyoungar');
-  // }
-  return url; // 그대로 로드
-});
-
 type GLTFResult3 = GLTF & {
   nodes: {
     down: THREE.SkinnedMesh;
@@ -125,7 +115,7 @@ const customStyles = {
 Modal.setAppElement('#root');
 
 const CircularMask = () => (
-  <group scale={[1, 1, 1]} position={[0, 0.48, -0.017]}>
+  <group scale={[1, 1, 1]} position={[0, 0.48, 1]}>
     <Mask id={1} colorWrite={false} depthWrite={false}>
       <planeGeometry args={[0.6, 1]} />
     </Mask>
@@ -171,7 +161,14 @@ function Tree({
     }
   }, [stencil]);
   return (
-    <group ref={modelRef} scale={[0.5, 0.5, 0.5]} position={[0, 0, 0]} rotation={[0, 0, 0]} {...props} dispose={null}>
+    <group
+      ref={modelRef}
+      scale={[0.5, 0.5, 0.5]}
+      position={[0, 0, 0]}
+      rotation={[0, Math.PI / 4, 0]}
+      {...props}
+      dispose={null}
+    >
       <group name="Scene">
         <group name="Bip001" position={[0.031, 0.963, -0.054]} rotation={[-3.106, -1.323, 3.097]} scale={0.01}>
           <group name="Bip001_Footsteps" position={[7.636, -96.125, -0.842]} rotation={[-2.83, 1.31, 2.829]} />
