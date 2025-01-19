@@ -289,7 +289,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         ref={shadowRef}
         dispose={null}
         scale={[0.015, 0.015, 0.015]}
-        position={[0.1, -0.2, -1]}
+        position={[0.1, -0.2, -0.5]}
         rotation={[0, Math.PI / 3, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
