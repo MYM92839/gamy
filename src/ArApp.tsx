@@ -260,7 +260,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
         sactions.Scene?.setLoop(THREE.LoopOnce, 1);
         sactions.Scene.clampWhenFinished = true;
         smixer.addEventListener('finished', () => {
-          if (shadowRef.current) shadowRef.current.visible = false;
+          // if (shadowRef.current) shadowRef.current.visible = false;
           if (modelRef.current) modelRef.current.visible = true;
           if (actions.jump) {
             actions.jump.reset().play();
