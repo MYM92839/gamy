@@ -338,7 +338,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
             className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
           >
             <source
-              src={`/gamyoungar/${char}.mp4`}
+              src={`/${char}.mp4`}
               type="video/mp4"
               onError={(e) => {
                 console.error("Overlay video error:", e);

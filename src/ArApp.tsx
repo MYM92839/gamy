@@ -128,7 +128,7 @@ function Tree({
   ...props
 }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
-  const { nodes, materials, animations } = useGLTF('/gamyoungar/tree_f.glb', true, true) as GLTFResult3;
+  const { nodes, materials, animations } = useGLTF('/tree_f.glb', true, true) as GLTFResult3;
   const stencil = useMask(1, true);
   const [mask, setMask] = useState(true);
   const { actions } = useAnimations(animations, modelRef);
@@ -246,7 +246,7 @@ function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { o
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
   const [{ nodes, materials, animations }, { nodes: snodes, materials: smaterials, animations: sanimations }] = useGLTF(
-    ['/gamyoungar/moon_f.glb', '/gamyoungar/smash_f.glb']
+    ['/moon_f.glb', '/smash_f.glb']
   ) as [GLTFResult, GLTFResult2];
   const { actions, mixer } = useAnimations(animations, modelRef);
   const { actions: sactions, mixer: smixer } = useAnimations(sanimations, shadowRef);
@@ -807,10 +807,10 @@ export default function ArApp() {
       <ARView
         imageTargets={
           char === 'moon'
-            ? '/gamyoungar/moons1.mind'
+            ? '/moons1.mind'
             : char === 'moons'
-            ? '/gamyoungar/moons1.mind'
-            : '/gamyoungar/tree.mind'
+            ? '/moons1.mind'
+            : '/tree.mind'
         }
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
@@ -882,7 +882,7 @@ export default function ArApp() {
           </ARAnchor>
         )}
         {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
-        <Environment files="/gamyoungar/HDRI_01.exr" preset={undefined} />
+        <Environment files="/HDRI_01.exr" preset={undefined} />
         {/* <Effects /> */}
       </ARView>
     </>

@@ -71,16 +71,16 @@ export default function Collection() {
 
   return (
     <div className="w-full h-full  min-h-[874px] relative">
-      <img className="absolute top-0 w-full" src="/gamyoungar/imgs/top_image.png" />
+      <img className="absolute top-0 w-full" src="/imgs/top_image.png" />
       <div className="absolute inset-0 px-[24px]">
-        <img className="mt-[60px] mx-auto" src="/gamyoungar/imgs/title.png" />
+        <img className="mt-[60px] mx-auto" src="/imgs/title.png" />
         <div className="mt-[109px] font-semibold text-[#EBF0E8] text-[16px] mx-auto text-center">수집하신 유물을 볼 수 있어요</div>
 
         <div className="w-full gap-[20px] aspect-square grid grid-cols-2 grid-rows-2 mt-[20px]">
-          <BtnImg title="유물 1" src="/gamyoungar/imgs/relic.png" isActive={one} />
-          <BtnImg title="유물 2" src="/gamyoungar/imgs/relic.png" isActive={two} />
-          <BtnImg title="유물 3" src="/gamyoungar/imgs/relic.png" isActive={three} />
-          <BtnImg title="유물 4" src="/gamyoungar/imgs/relic.png" isActive={four} />
+          <BtnImg title="유물 1" src="/imgs/relic.png" isActive={one} />
+          <BtnImg title="유물 2" src="/imgs/relic.png" isActive={two} />
+          <BtnImg title="유물 3" src="/imgs/relic.png" isActive={three} />
+          <BtnImg title="유물 4" src="/imgs/relic.png" isActive={four} />
         </div>
 
         {one && two && three && four && <div className="w-full mt-[28px] z-10 flex relative items-center justify-center">
@@ -111,6 +111,6 @@ export default function Collection() {
 
 
       </div>
-      <img className="absolute bottom-0 w-full" src="/gamyoungar/imgs/bottom_image.png" />
+      <img className="absolute bottom-0 w-full" src="/imgs/bottom_image.png" />
     </div>)
 }
