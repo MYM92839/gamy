@@ -115,7 +115,7 @@ const customStyles = {
 Modal.setAppElement('#root');
 
 const CircularMask = () => (
-  <group scale={[1, 1, 1]} position={[0, 0.48, 1]}>
+  <group scale={[1, 1, 1]} position={[0, 0.48, -1]}>
     <Mask id={1} colorWrite={false} depthWrite={false}>
       <planeGeometry args={[0.6, 1]} />
     </Mask>
