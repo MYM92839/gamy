@@ -143,6 +143,7 @@ function Tree({
         setMask(false);
       }, 2000);
       mixer.addEventListener('finished', () => {
+        actions.idle?.setLoop(THREE.LoopRepeat, Infinity)
         actions.idle?.reset().play()
       })
     }
