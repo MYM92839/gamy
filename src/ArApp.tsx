@@ -131,21 +131,20 @@ function Tree({
   const { nodes, materials, animations } = useGLTF('/tree_f.glb', true, true) as GLTFResult3;
   const stencil = useMask(1, true);
   const [mask, setMask] = useState(true);
-  const { actions } = useAnimations(animations, modelRef);
+  const { actions, mixer } = useAnimations(animations, modelRef);
 
   useEffect(() => {
     let id: string | number | NodeJS.Timeout | undefined;
-    if (actions && on) {
-      for (const i in actions) {
-        if (actions[i]) {
-          actions[i]?.setLoop(THREE.LoopOnce, 1);
-          actions[i].clampWhenFinished = true;
-          actions[i]?.reset().play();
-          id = setTimeout(() => {
-            setMask(false);
-          }, 2000);
-        }
-      }
+    if (actions && on && actions.walk) {
+      actions.walk.setLoop(THREE.LoopOnce, 1)
+      actions.walk.clampWhenFinished = true
+      actions.walk?.reset().play()
+      id = setTimeout(() => {
+        setMask(false);
+      }, 2000);
+      mixer.addEventListener('finished', () => {
+        actions.idle?.reset().play()
+      })
     }
     return () => {
       if (id) clearTimeout(id);
