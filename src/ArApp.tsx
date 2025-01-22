@@ -805,7 +805,7 @@ export default function ArApp() {
       {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon' ? '/moon1.mind' : char === 'moons' ? '/moon2.mind' : '/tree.mind'}
+        imageTargets={char === 'moon' ? '/moon3.mind' : char === 'moons' ? '/moon4.mind' : '/tree.mind'}
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // 동시에 추적할 타겟 수
