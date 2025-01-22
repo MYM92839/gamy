@@ -13,38 +13,38 @@ import { DRACOLoader } from 'three-stdlib';
 import Spinner from './components/Spinner.js';
 import { ARAnchor, ARView } from './libs/react-three-mind.js';
 
-import { GLTF } from 'three-stdlib'
+import { GLTF } from 'three-stdlib';
 
 type GLTFResult = GLTF & {
   nodes: {
-    Brow_GEO: THREE.SkinnedMesh
-    Incisor_GEO: THREE.SkinnedMesh
-    L_EyeBall_GEO: THREE.SkinnedMesh
-    L_EyeHighLight_GEO: THREE.SkinnedMesh
-    Lower_gum_GEO: THREE.SkinnedMesh
-    Lower_Teeth_GEO: THREE.SkinnedMesh
-    R_EyeBall_GEO: THREE.SkinnedMesh
-    R_EyeHighLight_GEO: THREE.SkinnedMesh
-    Rabbit_Xgen_GEO: THREE.SkinnedMesh
-    Tongue_GEO: THREE.SkinnedMesh
-    Upper_gum_GEO: THREE.SkinnedMesh
-    Upper_Teeth_GEO: THREE.SkinnedMesh
-    L_Iris_GEO: THREE.Mesh
-    Root_M: THREE.Bone
-  }
+    Brow_GEO: THREE.SkinnedMesh;
+    Incisor_GEO: THREE.SkinnedMesh;
+    L_EyeBall_GEO: THREE.SkinnedMesh;
+    L_EyeHighLight_GEO: THREE.SkinnedMesh;
+    Lower_gum_GEO: THREE.SkinnedMesh;
+    Lower_Teeth_GEO: THREE.SkinnedMesh;
+    R_EyeBall_GEO: THREE.SkinnedMesh;
+    R_EyeHighLight_GEO: THREE.SkinnedMesh;
+    Rabbit_Xgen_GEO: THREE.SkinnedMesh;
+    Tongue_GEO: THREE.SkinnedMesh;
+    Upper_gum_GEO: THREE.SkinnedMesh;
+    Upper_Teeth_GEO: THREE.SkinnedMesh;
+    L_Iris_GEO: THREE.Mesh;
+    Root_M: THREE.Bone;
+  };
   materials: {
-    Motion_aa_Eyelash_M_LMBT: THREE.MeshStandardMaterial
-    Motion_Mouth_M_BLNN: THREE.MeshStandardMaterial
-    Motion_Eye_M_LMBT: THREE.MeshStandardMaterial
-    Motion_EyeHighLight_M_LMBT: THREE.MeshStandardMaterial
-    Motion_aa_Body_M_BLNN: THREE.MeshStandardMaterial
-    Motion_Iris_M_BLNN: THREE.MeshStandardMaterial
-  }
-}
+    Motion_aa_Eyelash_M_LMBT: THREE.MeshStandardMaterial;
+    Motion_Mouth_M_BLNN: THREE.MeshStandardMaterial;
+    Motion_Eye_M_LMBT: THREE.MeshStandardMaterial;
+    Motion_EyeHighLight_M_LMBT: THREE.MeshStandardMaterial;
+    Motion_aa_Body_M_BLNN: THREE.MeshStandardMaterial;
+    Motion_Iris_M_BLNN: THREE.MeshStandardMaterial;
+  };
+};
 
 const customStyles = {
   overlay: {
-    zIndex: 999
+    zIndex: 999,
   },
   content: {
     top: '50%',
@@ -57,12 +57,11 @@ const customStyles = {
     height: '100dvh',
     padding: '8px',
     transform: 'translate(-50%, -50%)',
-    zIndex: 999
+    zIndex: 999,
   },
 };
 
 Modal.setAppElement('#root');
-
 
 function Tree() {
   const modelRef = useRef<THREE.Group>(null);
@@ -163,21 +162,21 @@ function Box({ onRenderEnd }: { onRenderEnd: () => void }) {
   const { actions } = useAnimations(animations, modelRef);
 
   useEffect(() => {
-    console.log("NODES", nodes)
+    console.log('NODES', nodes);
     if (actions) {
       for (const i in actions) {
-        console.log("ACTIONS", actions)
+        console.log('ACTIONS', actions);
         actions[i]?.setLoop(THREE.LoopRepeat, Infinity);
         actions[i]?.reset().play();
       }
     }
   }, [actions]);
 
-  console.log("NODES", nodes)
+  console.log('NODES', nodes);
   if (nodes && nodes.Root_M) {
-    const p = new THREE.Vector3()
-    nodes.Root_M.getWorldPosition(p)
-    console.log("LNODDD", p)
+    const p = new THREE.Vector3();
+    nodes.Root_M.getWorldPosition(p);
+    console.log('LNODDD', p);
   }
   // Parse the Base64 model and set nodes and materials
 
@@ -188,10 +187,7 @@ function Box({ onRenderEnd }: { onRenderEnd: () => void }) {
     nodes && (
       <group ref={modelRef} dispose={null}>
         <group name="Scene" position={[-0.3, -0.074, -0.131]} scale={[0.05, 0.05, 0.05]}>
-          <group name="DeformationSystem"
-            rotation={[Math.PI / 2, 0, 0]}
-
-          >
+          <group name="DeformationSystem" rotation={[Math.PI / 2, 0, 0]}>
             <primitive object={nodes.Root_M} />
           </group>
           <skinnedMesh
@@ -287,7 +283,7 @@ function Box({ onRenderEnd }: { onRenderEnd: () => void }) {
             material={materials.Motion_Iris_M_BLNN}
           />
         </group>
-      </group >
+      </group>
     )
   );
 }
@@ -297,7 +293,7 @@ export default function ArApp() {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
 
   function openModal() {
     setIsOpen(true);
@@ -442,7 +438,7 @@ export default function ArApp() {
   const captureImage = async () => {
     const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
       .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-    console.log("THREE,", threeCanvas, document.querySelector('#three-canvas')?.children[0])
+    console.log('THREE,', threeCanvas, document.querySelector('#three-canvas')?.children[0]);
     if (!threeCanvas) {
       console.warn('Three.js canvas is not ready');
       return;
@@ -472,7 +468,7 @@ export default function ArApp() {
 
       // 최종 이미지를 PNG로 저장
       offscreenCanvas.toBlob((blob) => {
-        console.log("BLOB", blob)
+        console.log('BLOB', blob);
         if (blob) {
           setFoto(blob); // 캡처된 이미지를 상태로 저장
         }
@@ -481,7 +477,6 @@ export default function ArApp() {
       console.error('Error capturing image:', error);
     }
   };
-
 
   useEffect(() => {
     if (foto) {
@@ -494,8 +489,8 @@ export default function ArApp() {
   }, [foto]);
 
   const handleLoading = () => {
-    if (loading) setLoading(false)
-  }
+    if (loading) setLoading(false);
+  };
 
   return (
     <>
@@ -555,10 +550,16 @@ export default function ArApp() {
         </>
       )}
 
-      {loading && <Spinner className='fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate' />}
+      {loading && <Spinner className="fixed top-[calc(50%-15px)] left-[calc(50%-15px)] w-8 h-8 z-[9999] isolate" />}
       {/* @ts-ignore */}
       <ARView
-        imageTargets={char === 'moon1' ? '/gamyoungar/moon1.mind' : char === 'moons' ? '/gamyoungar/moons2.mind' : '/gamyoungar/tree.mind'}
+        imageTargets={
+          char === 'moon1'
+            ? '/gamyoungar/moon1.mind'
+            : char === 'moons'
+            ? '/gamyoungar/moons2.mind'
+            : '/gamyoungar/tree.mind'
+        }
         autoplay
         flipUserCamera={false} // Prevents automatic flipping of the user camera
         maxTrack={1} // Maximum number of targets tracked simultaneously
@@ -576,26 +577,26 @@ export default function ArApp() {
         camera={{
           position: [0, 0, 300],
           near: 0.001,
-          far: 100000
+          far: 100000,
         }}
       >
         {/* <FrameH /> */}
-
-        {char === 'moon1' || char === 'moons' && (
-          // @ts-ignore
-          <ARAnchor
-            target={0}
-            onAnchorFound={() => {
-              console.log('RABBIT found');
-            }}
-            onAnchorLost={() => {
-              console.log('RABBIT lost');
-
-            }}
-          >
-            <Box onRenderEnd={handleLoading} />
-          </ARAnchor>
-        )}
+        {/*  */}
+        {char === 'moon1' ||
+          (char === 'moons' && (
+            // @ts-ignore
+            <ARAnchor
+              target={0}
+              onAnchorFound={() => {
+                console.log('RABBIT found');
+              }}
+              onAnchorLost={() => {
+                console.log('RABBIT lost');
+              }}
+            >
+              <Box onRenderEnd={handleLoading} />
+            </ARAnchor>
+          ))}
         {/* <Box onRenderEnd={handleLoading} /> */}
         {char === 'tree' && (
           // @ts-ignore
