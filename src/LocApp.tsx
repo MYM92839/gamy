@@ -3,16 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as LocAR from 'locar';  // 타입 선언 필요할 수 있음
 
-/** 권한 상태: 아직 모름, 허용됨, 거부됨 */
-type PermissionStatus = 'idle' | 'granted' | 'denied';
+type PermissionState = 'idle' | 'granted' | 'denied';
 
-/** 모든 권한을 합친 상태 */
-interface Permissions {
-  stream: MediaStream | null;
-  location: PermissionStatus;
-  orientation: PermissionStatus;
-  camera: PermissionStatus;
-}
 
 const LocationPrompt: React.FC = () => {
   const [permission, setPermission] = useState<PermissionState>('idle');
