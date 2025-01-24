@@ -193,7 +193,7 @@ const LocApp = function () {
         const cubeMesh = new THREE.Mesh(cubeGeo, cubeMat);
 
         // locar.add(mesh, longitude, latitude, altitude, properties)
-        locar.add(cubeMesh, 127.9499967, 37.3482205, 0, { name: 'Red Box' });
+        locar.add(cubeMesh, 127.9499501, 37.3481715, 0, { name: 'Red Box' });
 
         // 최초 위치 배치 후 다시 안 부르도록
         firstPosition = false;
