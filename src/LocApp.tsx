@@ -21,6 +21,17 @@ const LocationPrompt: React.FC = () => {
     camera: 'idle',
   });
 
+  // ARScene 표시 여부
+  const allGranted =
+    permissions.location === 'granted' &&
+    permissions.orientation === 'granted' &&
+    permissions.camera === 'granted';
+
+  const anyDenied =
+    permissions.location === 'denied' ||
+    permissions.orientation === 'denied' ||
+    permissions.camera === 'denied';
+
   /**
    * 권한 결과를 업데이트하는 헬퍼
    */
@@ -32,19 +43,19 @@ const LocationPrompt: React.FC = () => {
   };
 
   /**
-   * 위치 권한 요청
+   * 1) 위치 권한 요청
    */
   const requestLocationPermission = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            console.log('Location granted:', pos);
+            console.log('[Location] granted:', pos);
             setPermissionState('location', 'granted');
             resolve();
           },
           (err) => {
-            console.error('Location error or denied:', err);
+            console.error('[Location] denied or error:', err);
             setPermissionState('location', 'denied');
             reject(err);
           }
@@ -58,134 +69,106 @@ const LocationPrompt: React.FC = () => {
   };
 
   /**
-   * 방향 센서(자이로) 권한 요청 (iOS 13+)
-   * - 안드로이드/데스크톱 Chrome은 별도 요청 없이 가능할 때도 있음.
+   * 2) 방향 센서(자이로) 권한 요청 (iOS 13+)
+   * - 안드로이드/데스크톱 Chrome 등은 별도 요청 없이 가능한 경우도 있음.
    */
   const requestOrientationPermission = async (): Promise<void> => {
-    // iOS 13+ 에서는 DeviceOrientationEvent.requestPermission() 필요
-    const hasOrientationEvent = (typeof DeviceOrientationEvent !== 'undefined');
-    const needsRequest = hasOrientationEvent && typeof (DeviceOrientationEvent as any).requestPermission === 'function';
+    const hasOrientationEvent = typeof DeviceOrientationEvent !== 'undefined';
+    const needsRequest =
+      hasOrientationEvent &&
+      typeof (DeviceOrientationEvent as any).requestPermission === 'function';
 
     if (needsRequest) {
+      // iOS 13+ 에서는 DeviceOrientationEvent.requestPermission() 필요
       try {
         const response = await (DeviceOrientationEvent as any).requestPermission();
         if (response === 'granted') {
+          console.log('[Orientation] granted');
           setPermissionState('orientation', 'granted');
         } else {
+          console.log('[Orientation] denied');
           setPermissionState('orientation', 'denied');
           throw new Error('Orientation denied');
         }
       } catch (error) {
-        console.error('Orientation permission error:', error);
+        console.error('[Orientation] permission error:', error);
         setPermissionState('orientation', 'denied');
         throw error;
       }
     } else {
-      // 별도 권한 요청이 필요 없는 환경
+      // 별도 권한 요청 필요 없는 환경
+      console.log('[Orientation] no permission needed');
       setPermissionState('orientation', 'granted');
     }
   };
 
   /**
-   * 카메라 권한 요청
+   * 3) 카메라 권한 요청
    * - WebRTC API (navigator.mediaDevices.getUserMedia) 사용.
    */
   const requestCameraPermission = async (): Promise<void> => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.warn('Camera not supported in this browser');
+      console.warn('[Camera] not supported in this browser');
       setPermissionState('camera', 'denied');
       throw new Error('Camera not supported');
     }
 
     try {
-      // 후면 카메라 사용 (facingMode: "environment")
+      // 후면 카메라 요청 (facingMode: "environment")
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { exact: 'environment' } },
-        // audio: false, // 필요없으면 생략
       });
-      // 스트림 얻기 성공 → 카메라 권한 허용
-      console.log('Camera stream granted:', stream);
+      console.log('[Camera] granted:', stream);
       setPermissionState('camera', 'granted');
-      // 카메라 스트림은 LocAR.WebcamRenderer에서 다시 요청할 것이므로,
-      // 여기서는 사용하지 않아도 됨. 미리 권한만 받아놓는 것.
-      // stream.getTracks().forEach((track) => track.stop());  // 필요 시 즉시 해제
+      // 여기서 바로 stream을 사용하거나 정지할 수 있음. (LocAR.WebcamRenderer가 다시 사용할 예정)
+      // stream.getTracks().forEach((track) => track.stop());
     } catch (err) {
-      console.error('Camera permission denied or error:', err);
+      console.error('[Camera] permission denied or error:', err);
       setPermissionState('camera', 'denied');
       throw err;
     }
   };
 
   /**
-   * 페이지 로드 시점에 모든 권한 요청
-   * (일부 브라우저에서는 사용자 제스처 없다고 막힐 수 있음)
+   * "AR 시작하기" 버튼 클릭 시, 3가지 권한을 순차 요청
    */
-  useEffect(() => {
-    (async () => {
-      try {
-        await requestLocationPermission();
-      } catch (err) {
-        // 위치 권한 거부된 경우
-      }
+  const handleStartAR = async () => {
+    try {
+      // (1) 위치
+      await requestLocationPermission();
+      // (2) 방향 센서
+      await requestOrientationPermission();
+      // (3) 카메라
+      await requestCameraPermission();
+      // 여기까지 오면 allGranted = true 일 가능성 높음
+    } catch (err) {
+      console.error('[handleStartAR] Some permission was denied or error:', err);
+      // 하나라도 거부되면 anyDenied = true 가 됨
+    }
+  };
 
-      try {
-        await requestOrientationPermission();
-      } catch (err) {
-        // 방향 권한 거부된 경우
-      }
-
-      try {
-        await requestCameraPermission();
-      } catch (err) {
-        // 카메라 권한 거부된 경우
-      }
-    })();
-  }, []);
-
-  /**
-   * 3개 권한 모두 granted인지 체크
-   */
-  const allGranted =
-    permissions.location === 'granted' &&
-    permissions.orientation === 'granted' &&
-    permissions.camera === 'granted';
-
-  const anyDenied =
-    permissions.location === 'denied' ||
-    permissions.orientation === 'denied' ||
-    permissions.camera === 'denied';
-
-  // 1) 대기 중 상태 (3개 모두 결정되지 않은 경우)
-  const stillChecking = Object.values(permissions).includes('idle');
-
-  if (stillChecking) {
-    return (
-      <div style={{ textAlign: 'center', marginTop: 50 }}>
-        권한 요청 중입니다...
-      </div>
-    );
-  }
-
-  // 2) 하나라도 거부됨
-  if (anyDenied) {
-    return (
-      <div style={{ textAlign: 'center', marginTop: 50 }}>
-        <h3>권한이 거부되었습니다.</h3>
-        <p>위치 / 센서 / 카메라 권한 모두 허용해야 AR이 가능합니다.</p>
-        <p>브라우저나 OS 설정에서 권한을 다시 허용해 주세요.</p>
-      </div>
-    );
-  }
-
-  // 3) 모두 허용됨
+  // 권한이 전부 granted면 ARScene 렌더
   if (allGranted) {
     return <LocApp />;
   }
 
-  // 혹시 모를 기타 케이스
+  // 만약 하나라도 거부됐다면
+  if (anyDenied) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: 50 }}>
+        <h3>권한이 거부되었습니다.</h3>
+        <p>위치 / 센서 / 카메라 권한이 모두 허용되어야 AR이 가능합니다.</p>
+        <p>브라우저나 OS 설정에서 권한을 다시 허용한 뒤, 페이지 새로고침 해주세요.</p>
+      </div>
+    );
+  }
+
+  // 아직 클릭 안 했거나, 권한 요청 전
   return (
     <div style={{ textAlign: 'center', marginTop: 50 }}>
-      알 수 없는 권한 상태입니다: {JSON.stringify(permissions)}
+      <h2>AR 권한 요청</h2>
+      <p>AR 기능을 사용하기 위해 위치 / 자이로(방향) / 카메라 권한이 필요합니다.</p>
+      <button onClick={handleStartAR}>AR 시작하기</button>
     </div>
   );
 };
@@ -233,9 +216,10 @@ const LocApp = function () {
     // -----------------------------------
     const locar = new LocAR.LocationBased(scene, camera);
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
+    // 카메라(웹캠) 배경을 AR로 사용
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    // AR 오브젝트 예: 특정 좌표(경도, 위도)에 빨간 박스
+    // 예: 특정 좌표(경도, 위도)에 빨간 박스
     const boxGeo = new THREE.BoxGeometry(20, 20, 20);
     const boxMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const boxMesh = new THREE.Mesh(boxGeo, boxMat);
