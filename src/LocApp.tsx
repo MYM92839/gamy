@@ -143,10 +143,6 @@ function requestCameraPermission(): Promise<MediaStream> {
 
 export default LocationPrompt
 
-
-interface ARSceneProps {
-  stream: MediaStream;
-}
 /**
  * GPS 기반 AR을 보여주는 컴포넌트 예시
  */
