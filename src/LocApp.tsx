@@ -182,7 +182,7 @@ const LocApp = function () {
     let firstPosition = true;
 
     // gpsupdate가 처음 발생(초기 위치 파악)했을 때 AR 오브젝트 추가
-    locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
+    locar.on('gpsupdate', (pos: GeolocationPosition) => {
       if (firstPosition) {
         console.log('Got initial GPS position:', pos.coords);
         // 이제 오브젝트를 배치해도 에러가 안 납니다.
