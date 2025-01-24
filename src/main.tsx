@@ -26,7 +26,7 @@ const router = createBrowserRouter([
         element: <Collection2 />
       },
       {
-        path: 'test',
+        path: 'test/:id',
         element: <LocApp />
       },
       {
