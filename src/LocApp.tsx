@@ -245,7 +245,7 @@ const LocApp = function ({ stream }: ARSceneProps) {
     // LocAR.WebcamRenderer가 "environment" 스트림을 자동으로 열 수도 있는데,
     // 우리는 이미 'stream'을 갖고 있으므로, 필요하다면 아래처럼 수동 설정 가능:
     const cam = new LocAR.WebcamRenderer(renderer);
-    cam.setStream(stream);
+    //  cam.setStream(stream);
     // ※ locar 라이브러리에 따라 setStream() API 지원 여부가 다를 수 있으니 확인 필요
 
     // 예시로 특정 좌표(경도, 위도)에 빨간 박스 배치
