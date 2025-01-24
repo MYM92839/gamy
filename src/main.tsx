@@ -26,6 +26,10 @@ const router = createBrowserRouter([
         element: <Collection2 />
       },
       {
+        path: 'test',
+        element: <LocApp />
+      },
+      {
         path: 'photo',
         element: <Photo />,
         children: [
@@ -42,10 +46,7 @@ const router = createBrowserRouter([
         path: 'art/:char',
         element: <MindApp />
       },
-      {
-        path: 'test',
-        element: <LocApp />
-      },
+
       {
         path: 'frame/:char',
         element: <FrameApp />
