@@ -14,6 +14,7 @@ import PhotoChar from './pages/PhotoChar.tsx';
 import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
 import MindApp from './MindApp.tsx';
+import LocApp from './LocApp.tsx';
 
 const router = createBrowserRouter([
   {
@@ -32,6 +33,10 @@ const router = createBrowserRouter([
           { path: 'rabbit', element: <PhotoRabbit /> },
           { path: 'character', element: <PhotoChar /> }
         ]
+      },
+      {
+        path: 'test',
+        element: <LocApp />
       },
       {
         path: 'ar/:char',
