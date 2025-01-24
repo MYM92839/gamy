@@ -188,7 +188,7 @@ const LocApp = function () {
         // 이제 오브젝트를 배치해도 에러가 안 납니다.
 
         // 예: 경도=127.9494864, 위도=37.3490689 지점에 빨간 박스
-        const cubeGeo = new THREE.BoxGeometry(20, 20, 20);
+        const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
         const cubeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         const cubeMesh = new THREE.Mesh(cubeGeo, cubeMat);
 
