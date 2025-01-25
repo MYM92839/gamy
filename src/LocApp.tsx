@@ -131,10 +131,14 @@ const LocApp: React.FC = () => {
   const [isStabilizing, setIsStabilizing] = useState(true);
 
   // 사용자 GPS 좌표 (실시간)
-  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
+  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
+    null
+  );
 
   // 오브젝트 최종 배치 좌표 (고정)
-  const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number } | null>(null);
+  const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
+    null
+  );
 
   useEffect(() => {
     let animationId = 0;
@@ -169,22 +173,30 @@ const LocApp: React.FC = () => {
     // ============== 3) GPS 안정화 로직 ==============
     let isObjectPlaced = false;
     let stableStartTime = 0;
+    let initialAltitude: number | null = null;
 
     // 설정 값들
     const ACCURACY_THRESHOLD = 10; // 10m 이하
-    const DIST_THRESHOLD = 2; // 1m 이하 이동이면 "거의 안 움직임"
+    const DIST_THRESHOLD = 1; // 1m 이하 이동이면 "거의 안 움직임"
     const STABLE_DURATION_MS = 3000; // 3초
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      const { latitude, longitude, accuracy } = pos.coords;
+      const { latitude, longitude, accuracy, altitude } = pos.coords;
+
+      if (initialAltitude === null && altitude !== null) {
+        initialAltitude = altitude;
+      }
+
+      const adjustedAlt = altitude !== null ? altitude - (initialAltitude || 0) : 0;
+      const objectAlt = adjustedAlt;
 
       // (A) **항상** 현재 사용자 좌표는 갱신
-      setUserCoord({ lat: latitude, lon: longitude });
+      setUserCoord({ lat: latitude, lon: longitude, alt: objectAlt });
 
       // (B) "안정화(오브젝트 배치)"가 아직 안 끝났다면 기존 로직 수행
       if (!isObjectPlaced) {
         console.log(
-          `GPS update -> lat=${latitude}, lon=${longitude}, acc=${accuracy}, dist=${distMoved}`
+          `GPS update -> lat=${latitude}, lon=${longitude}, alt=${adjustedAlt}, acc=${accuracy}, dist=${distMoved}`
         );
 
         // 안정 여부
@@ -199,8 +211,8 @@ const LocApp: React.FC = () => {
             if (stableElapsed >= STABLE_DURATION_MS) {
               // 안정 확정 -> 오브젝트 배치
               console.log('[Stable] Placing object...');
-              placeRedBox(locar, longitude, latitude);
-              setObjectCoord({ lat: latitude, lon: longitude });
+              placeRedBox(locar, longitude, latitude, objectAlt);
+              setObjectCoord({ lat: latitude, lon: longitude, alt: objectAlt });
               isObjectPlaced = true;
               setIsStabilizing(false);
             }
@@ -273,13 +285,13 @@ const LocApp: React.FC = () => {
         <div>
           <strong>내 위치:</strong>{' '}
           {userCoord
-            ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}`
+            ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}, alt: ${userCoord.alt || '---'}`
             : '---, ---'}
         </div>
         <div>
           <strong>오브젝트 위치:</strong>{' '}
           {objectCoord
-            ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}`
+            ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}, alt: ${objectCoord.alt || '---'}`
             : '---, ---'}
         </div>
       </div>
@@ -287,14 +299,13 @@ const LocApp: React.FC = () => {
   );
 };
 
-function placeRedBox(locar: any, lon: number, lat: number) {
-  console.log(`placeRedBox at lon=${lon}, lat=${lat}`);
+function placeRedBox(locar: any, lon: number, lat: number, alt: number | null) {
+  console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
   // 박스 크기 설정
   const geo = new THREE.BoxGeometry(5, 5, 5);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  // 고도를 항상 0으로 설정하여 눈높이를 기준으로 배치
-  const objectAlt = 0;
-  locar.add(mesh, lon, lat, objectAlt, { name: 'Flat Box' });
+  // 고도를 사용자 고도 기준으로 조정하여 배치
+  locar.add(mesh, lon, lat, alt || 0, { name: 'Adjusted Box' });
 }
