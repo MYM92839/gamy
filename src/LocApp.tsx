@@ -122,13 +122,8 @@ const LocationPrompt: React.FC = () => {
   );
 };
 
-
 export default LocationPrompt;
 
-
-/**
- * LocAR + Three.js AR 로직
- */
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -136,10 +131,14 @@ const LocApp: React.FC = () => {
   const [isStabilizing, setIsStabilizing] = useState(true);
 
   // 사용자 GPS 좌표 (실시간)
-  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
+  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
+    null
+  );
 
   // 오브젝트 최종 배치 좌표 (고정)
-  const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number } | null>(null);
+  const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
+    null
+  );
 
   useEffect(() => {
     let animationId = 0;
@@ -176,21 +175,22 @@ const LocApp: React.FC = () => {
     let stableStartTime = 0;
 
     // 설정 값들
-    const ACCURACY_THRESHOLD = 10; // 20m 이하
-    const DIST_THRESHOLD = 1;      // 2m 이하 이동이면 "거의 안 움직임"
+    const ACCURACY_THRESHOLD = 10; // 10m 이하
+    const DIST_THRESHOLD = 1; // 1m 이하 이동이면 "거의 안 움직임"
     const STABLE_DURATION_MS = 3000; // 3초
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      const { latitude, longitude, accuracy } = pos.coords;
+      const { latitude, longitude, accuracy, altitude } = pos.coords;
 
-      // (A) **항상** 현재 사용자 좌표는 갱신하여
-      //     -> 카메라가 계속 업데이트되도록 한다.
-      setUserCoord({ lat: latitude, lon: longitude });
+      const newal = pos.coords.altitude !== null ? pos.coords.altitude : undefined;
 
-      // (B) "안정화(오브젝트 배치)"가 아직 안 끝났다면, 기존 로직 수행
+      // (A) **항상** 현재 사용자 좌표는 갱신
+      setUserCoord({ lat: latitude, lon: longitude, alt: newal });
+
+      // (B) "안정화(오브젝트 배치)"가 아직 안 끝났다면 기존 로직 수행
       if (!isObjectPlaced) {
         console.log(
-          `GPS update -> lat=${latitude}, lon=${longitude}, acc=${accuracy}, dist=${distMoved}`
+          `GPS update -> lat=${latitude}, lon=${longitude}, alt=${altitude}, acc=${accuracy}, dist=${distMoved}`
         );
 
         // 안정 여부
@@ -205,8 +205,8 @@ const LocApp: React.FC = () => {
             if (stableElapsed >= STABLE_DURATION_MS) {
               // 안정 확정 -> 오브젝트 배치
               console.log('[Stable] Placing object...');
-              placeRedBox(locar, longitude, latitude);
-              setObjectCoord({ lat: latitude, lon: longitude });
+              placeRedBox(locar, longitude, latitude, altitude);
+              setObjectCoord({ lat: latitude, lon: longitude, alt: newal });
               isObjectPlaced = true;
               setIsStabilizing(false);
             }
@@ -215,9 +215,6 @@ const LocApp: React.FC = () => {
           stableStartTime = 0;
         }
       }
-      // (C) 만약 오브젝트가 이미 배치된 경우,
-      //     여전히 userCoord는 계속 업데이트되고,
-      //     locar도 내부적으로 카메라 위치를 반영해 "사용자 이동"을 표현
     });
 
     // ============== 4) GPS 시작 ==============
@@ -282,13 +279,13 @@ const LocApp: React.FC = () => {
         <div>
           <strong>내 위치:</strong>{' '}
           {userCoord
-            ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}`
+            ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}, alt: ${userCoord.alt || '---'}`
             : '---, ---'}
         </div>
         <div>
           <strong>오브젝트 위치:</strong>{' '}
           {objectCoord
-            ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}`
+            ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}, alt: ${objectCoord.alt || '---'}`
             : '---, ---'}
         </div>
       </div>
@@ -296,17 +293,18 @@ const LocApp: React.FC = () => {
   );
 };
 
-function placeRedBox(locar: any, lon: number, lat: number) {
-  console.log(`placeRedBox at lon=${lon}, lat=${lat}`);
-  // 박스 크기를 5x5x5 (5미터 정육면체)
+function placeRedBox(locar: any, lon: number, lat: number, alt: number | null) {
+  console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
+  // 박스 크기 설정
   const geo = new THREE.BoxGeometry(5, 5, 5);
-  // 더 눈에 띄게 노란색
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  // 고도(altitude)를 2m로 설정 → 땅 위 2m에 배치
-  locar.add(mesh, lon, lat, 2, { name: 'Big Yellow Box' });
+  // 오브젝트의 고도를 사용자 고도 기준으로 설정
+  const objectAlt = alt !== null ? alt + 2 : 2; // 사용자 고도보다 2m 위에 배치
+  locar.add(mesh, lon, lat, objectAlt, { name: 'Big Yellow Box' });
 }
+
 
 
 // export default LocApp;
