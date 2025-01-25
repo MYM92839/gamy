@@ -175,9 +175,12 @@ const LocApp: React.FC = () => {
     let stableStartTime = 0;
     let initialAltitude: number | null = null;
 
+    // 추가: 박스의 Mesh 참조를 유지하기 위한 변수
+    let boxMesh: THREE.Mesh | null = null;
+
     // 설정 값들
     const ACCURACY_THRESHOLD = 10; // 10m 이하
-    const DIST_THRESHOLD = 3; // 1m 이하 이동이면 "거의 안 움직임"
+    const DIST_THRESHOLD = 1; // 1m 이하 이동이면 "거의 안 움직임"
     const STABLE_DURATION_MS = 3000; // 3초
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
@@ -188,10 +191,14 @@ const LocApp: React.FC = () => {
       }
 
       const adjustedAlt = altitude !== null ? altitude - (initialAltitude || 0) : 0;
-      const objectAlt = adjustedAlt;
 
-      // (A) **항상** 현재 사용자 좌표는 갱신
-      setUserCoord({ lat: latitude, lon: longitude, alt: objectAlt });
+      // 사용자 위치 업데이트
+      setUserCoord({ lat: latitude, lon: longitude, alt: adjustedAlt });
+
+      // 박스가 배치된 이후에도 고도를 따라가기 위해 계속 업데이트
+      if (boxMesh) {
+        boxMesh.position.y = adjustedAlt; // y 위치 업데이트
+      }
 
       // (B) "안정화(오브젝트 배치)"가 아직 안 끝났다면 기존 로직 수행
       if (!isObjectPlaced) {
@@ -211,8 +218,8 @@ const LocApp: React.FC = () => {
             if (stableElapsed >= STABLE_DURATION_MS) {
               // 안정 확정 -> 오브젝트 배치
               console.log('[Stable] Placing object...');
-              placeRedBox(locar, longitude, latitude, objectAlt);
-              setObjectCoord({ lat: latitude, lon: longitude, alt: objectAlt });
+              boxMesh = placeRedBox(locar, longitude, latitude, adjustedAlt);
+              setObjectCoord({ lat: latitude, lon: longitude, alt: adjustedAlt });
               isObjectPlaced = true;
               setIsStabilizing(false);
             }
@@ -299,13 +306,17 @@ const LocApp: React.FC = () => {
   );
 };
 
-function placeRedBox(locar: any, lon: number, lat: number, alt: number | null) {
+// 박스를 생성하고 Mesh를 반환하도록 수정
+function placeRedBox(locar: any, lon: number, lat: number, alt: number): THREE.Mesh {
   console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
   // 박스 크기 설정
   const geo = new THREE.BoxGeometry(1, 1, 1);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  // 고도를 사용자 고도 기준으로 조정하여 배치
-  locar.add(mesh, lon, lat, alt || 0, { name: 'Adjusted Box' });
+  // 고도 조정을 포함해 박스를 locar에 추가
+  locar.add(mesh, lon, lat, alt, { name: '1m² Box' });
+
+  // 박스 Mesh 반환
+  return mesh;
 }
