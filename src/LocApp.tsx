@@ -7,28 +7,29 @@ type PermissionState = 'idle' | 'granted' | 'denied';
 const LocationPrompt: React.FC = () => {
   const [permission, setPermission] = useState<PermissionState>('idle');
 
-  function requestCameraPermission(): Promise<MediaStream> {
+  async function requestCameraPermission(): Promise<MediaStream> {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       return Promise.reject(new Error('[Camera] getUserMedia not supported'));
     }
-    return navigator.mediaDevices
-      .getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      })
-      .catch((envErr) => {
-        console.warn('[Camera] environment error:', envErr);
-        return navigator.mediaDevices.getUserMedia({
+    try {
+      return await navigator.mediaDevices
+        .getUserMedia({
           video: {
-            facingMode: { ideal: 'user' },
+            facingMode: { ideal: 'environment' },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
         });
+    } catch (envErr) {
+      console.warn('[Camera] environment error:', envErr);
+      return await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       });
+    }
   }
 
   const handleStartAR = () => {
