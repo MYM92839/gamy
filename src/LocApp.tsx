@@ -181,7 +181,7 @@ const LocApp: React.FC = () => {
         return;
       }
 
-      setUserCoord({ lat: latitude, lon: longitude, alt: adjustedAlt });
+      setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
 
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
@@ -193,7 +193,7 @@ const LocApp: React.FC = () => {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
             console.log('[Stable] Placing object...');
-            boxMesh = placeRedBox(locar, longitude, latitude, adjustedAlt);
+            boxMesh = placeRedBox(locar, longitude, latitude, 0);
             setObjectCoord({ lat: latitude, lon: longitude });
             isObjectPlaced = true;
             setIsStabilizing(false);
@@ -278,7 +278,7 @@ const LocApp: React.FC = () => {
 
 function placeRedBox(locar: any, lon: number, lat: number, alt: number): THREE.Mesh {
   console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
-  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
