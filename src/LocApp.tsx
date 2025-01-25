@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as LocAR from 'locar';
 
-
 type PermissionState = 'idle' | 'granted' | 'denied';
 
 const LocationPrompt: React.FC = () => {
@@ -123,61 +122,24 @@ const LocationPrompt: React.FC = () => {
   );
 };
 
+
 export default LocationPrompt;
 
-// 최대 몇 개의 위치를 저장할지
-const MAX_HISTORY = 5;
-
-// meter 단위 거리 계산 (Haversine Formula)
-function getDistanceM(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6378137; // 지구 반지름 (m)
-  const dLat = ((lat2 - lat1) * Math.PI) / 180.0;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180.0;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // 미터
-}
-
-// 최근 N개의 위도경도 평균 계산
-function computeAverage(positions: Array<{ lat: number; lon: number }>) {
-  let sumLat = 0;
-  let sumLon = 0;
-  positions.forEach((pos) => {
-    sumLat += pos.lat;
-    sumLon += pos.lon;
-  });
-  return {
-    lat: sumLat / positions.length,
-    lon: sumLon / positions.length,
-  };
-}
 
 /**
  * LocAR + Three.js AR 로직
- * - 최근 5개 좌표 슬라이딩 윈도우 -> 평균 -> 오차/변위가 작으면 안정
  */
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 보정중 여부
+  // 보정(안정화) 진행 여부
   const [isStabilizing, setIsStabilizing] = useState(true);
 
-  // 사용자 GPS 좌표 (수시로 업데이트, '필터링 후'가 아니라 '실제 raw')
+  // 사용자 GPS 좌표 (실시간)
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
 
-  // 오브젝트 최종 배치 좌표
+  // 오브젝트 최종 배치 좌표 (고정)
   const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number } | null>(null);
-
-  // 최근 n개 위치 저장 (raw)
-  const positionsHistory = useRef<Array<{ lat: number; lon: number }>>([]);
-
-  // 마지막 '평균 좌표'
-  const [avgCoord, setAvgCoord] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     let animationId = 0;
@@ -209,75 +171,53 @@ const LocApp: React.FC = () => {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    // ============== 3) GPS 안정화 + 이동평균 로직 ==============
+    // ============== 3) GPS 안정화 로직 ==============
     let isObjectPlaced = false;
     let stableStartTime = 0;
 
-    // 조건들
-    const ACCURACY_THRESHOLD = 20; // 20m 이하
-    const MOVE_THRESHOLD = 1;      // 평균 좌표가 1m 이하로만 이동하면 안정
-    const STABLE_DURATION_MS = 3000; // (Wi-Fi 고려 등, 여기선 3초 고정 예시)
+    // 설정 값들
+    const ACCURACY_THRESHOLD = 10; // 20m 이하
+    const DIST_THRESHOLD = 1;      // 2m 이하 이동이면 "거의 안 움직임"
+    const STABLE_DURATION_MS = 3000; // 3초
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      if (isObjectPlaced) return;
-
       const { latitude, longitude, accuracy } = pos.coords;
-      // RAW 좌표를 표시
+
+      // (A) **항상** 현재 사용자 좌표는 갱신하여
+      //     -> 카메라가 계속 업데이트되도록 한다.
       setUserCoord({ lat: latitude, lon: longitude });
 
-      // 오차가 너무 크면 굳이 history에 넣어봐야 노이즈가 크니, 그래도 넣긴 넣되
-      // if (accuracy > 50) return; // 완전히 무시 가능. 여기서는 일단 넣자.
+      // (B) "안정화(오브젝트 배치)"가 아직 안 끝났다면, 기존 로직 수행
+      if (!isObjectPlaced) {
+        console.log(
+          `GPS update -> lat=${latitude}, lon=${longitude}, acc=${accuracy}, dist=${distMoved}`
+        );
 
-      // (1) 새 위치를 history에 추가
-      positionsHistory.current.push({ lat: latitude, lon: longitude });
-      // (2) 길이가 MAX_HISTORY 초과 시 가장 오래된 것 제거
-      if (positionsHistory.current.length > MAX_HISTORY) {
-        positionsHistory.current.shift();
-      }
+        // 안정 여부
+        const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
+        const isMovedSmall = distMoved <= DIST_THRESHOLD;
 
-      // (3) 이동 평균(슬라이딩 윈도우) 계산
-      const avg = computeAverage(positionsHistory.current);
-      setAvgCoord(avg);
-
-      console.log(
-        `[GPS update] lat=${latitude.toFixed(6)}, lon=${longitude.toFixed(6)}, acc=${accuracy}, histLen=${positionsHistory.current.length}`
-      );
-      console.log(` -> Average: lat=${avg.lat.toFixed(6)}, lon=${avg.lon.toFixed(6)}`);
-
-      // (4) 오차 / 평균 이동 체크
-      // - accuracy <= ACCURACY_THRESHOLD
-      // - 평균 좌표가 최근 업데이트에서 크게 변하지 않는지
-      //   -> ex) 이전 avgCoord와의 거리 <= MOVE_THRESHOLD
-      const isAccurate = accuracy <= ACCURACY_THRESHOLD;
-
-      let isMovedSmall = false;
-      if (avgCoord) {
-        // 이전 평균(avgCoord)와 현재 avg의 거리
-        const distAvg = getDistanceM(avgCoord.lat, avgCoord.lon, avg.lat, avg.lon);
-        isMovedSmall = distAvg <= MOVE_THRESHOLD;
-      } else {
-        // 초기라 평균값이 없으면 바로 false
-        isMovedSmall = false;
-      }
-
-      if (isAccurate && isMovedSmall) {
-        if (stableStartTime === 0) {
-          stableStartTime = Date.now();
-        } else {
-          const stableElapsed = Date.now() - stableStartTime;
-          if (stableElapsed >= STABLE_DURATION_MS) {
-            // ★ 안정 확정
-            console.log('[Stable] Placing object at average coords');
-            placeRedBox(locar, avg.lon, avg.lat);
-            setObjectCoord({ lat: avg.lat, lon: avg.lon });
-            setIsStabilizing(false);
-            isObjectPlaced = true;
+        if (isAccurateEnough && isMovedSmall) {
+          if (stableStartTime === 0) {
+            stableStartTime = Date.now();
+          } else {
+            const stableElapsed = Date.now() - stableStartTime;
+            if (stableElapsed >= STABLE_DURATION_MS) {
+              // 안정 확정 -> 오브젝트 배치
+              console.log('[Stable] Placing object...');
+              placeRedBox(locar, longitude, latitude);
+              setObjectCoord({ lat: latitude, lon: longitude });
+              isObjectPlaced = true;
+              setIsStabilizing(false);
+            }
           }
+        } else {
+          stableStartTime = 0;
         }
-      } else {
-        // 안정 조건 충족 못하면 다시 리셋
-        stableStartTime = 0;
       }
+      // (C) 만약 오브젝트가 이미 배치된 경우,
+      //     여전히 userCoord는 계속 업데이트되고,
+      //     locar도 내부적으로 카메라 위치를 반영해 "사용자 이동"을 표현
     });
 
     // ============== 4) GPS 시작 ==============
@@ -300,14 +240,13 @@ const LocApp: React.FC = () => {
       }
       cancelAnimationFrame(animationId);
     };
-  }, [avgCoord]);
+  }, []);
 
   return (
     <div
       ref={containerRef}
       style={{ width: '100%', height: '100%', position: 'relative' }}
     >
-      {/* 보정 중 표시 */}
       {isStabilizing && (
         <div
           style={{
@@ -341,19 +280,13 @@ const LocApp: React.FC = () => {
         }}
       >
         <div>
-          <strong>내 위치(RAW):</strong>{' '}
+          <strong>내 위치:</strong>{' '}
           {userCoord
             ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}`
             : '---, ---'}
         </div>
         <div>
-          <strong>평균 좌표:</strong>{' '}
-          {avgCoord
-            ? `${avgCoord.lat.toFixed(6)}, ${avgCoord.lon.toFixed(6)}`
-            : '---, ---'}
-        </div>
-        <div>
-          <strong>오브젝트:</strong>{' '}
+          <strong>오브젝트 위치:</strong>{' '}
           {objectCoord
             ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}`
             : '---, ---'}
@@ -363,14 +296,14 @@ const LocApp: React.FC = () => {
   );
 };
 
-/** 오브젝트(빨간 박스)를 (lon, lat)에 배치 */
+/** 오브젝트 배치 함수 */
 function placeRedBox(locar: any, lon: number, lat: number) {
+  console.log(`placeRedBox at lon=${lon}, lat=${lat}`);
   const geo = new THREE.BoxGeometry(1, 1, 1);
   const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const mesh = new THREE.Mesh(geo, mat);
   locar.add(mesh, lon, lat, 0, { name: 'Red Box' });
 }
-
 
 
 // export default LocApp;
