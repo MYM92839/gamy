@@ -157,7 +157,7 @@ const LocApp: React.FC = () => {
 
     let isObjectPlaced = false;
     let stableStartTime = 0;
-    let initialAltitude: number | null = null;
+    // let initialAltitude: number | null = null;
     let boxMesh: THREE.Mesh | null = null;
 
     const ACCURACY_THRESHOLD = 10;
@@ -166,29 +166,29 @@ const LocApp: React.FC = () => {
     const STABLE_DURATION_MS = 3000;
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      const { latitude, longitude, accuracy, altitude } = pos.coords;
+      const { latitude, longitude, accuracy } = pos.coords;
 
-      // 초기 고도 설정
-      if (initialAltitude === null) {
-        initialAltitude = altitude !== null ? altitude : 0;
-      }
+      // // 초기 고도 설정
+      // if (initialAltitude === null) {
+      //   initialAltitude = altitude !== null ? altitude : 0;
+      // }
 
-      // 현재 고도에서 기준 고도를 빼 상대 고도 계산
-      const adjustedAlt = altitude !== null ? altitude - initialAltitude : 0;
+      // // 현재 고도에서 기준 고도를 빼 상대 고도 계산
+      // const adjustedAlt = altitude !== null ? altitude - initialAltitude : 0;
 
-      // 유저 고도 값 반영
-      const objectAlt = -adjustedAlt;
+      // // 유저 고도 값 반영
+      // const objectAlt = -adjustedAlt;
 
-      if (isObjectPlaced) {
-        // 오브젝트 고도를 유저 고도의 음수로 업데이트
-        if (boxMesh) {
-          boxMesh.position.y = objectAlt;
-        }
-        return;
-      }
+      // if (isObjectPlaced) {
+      //   // 오브젝트 고도를 유저 고도의 음수로 업데이트
+      //   if (boxMesh) {
+      //     boxMesh.position.y = objectAlt;
+      //   }
+      //   return;
+      // }
 
       // 초기 오브젝트 배치
-      setUserCoord({ lat: latitude, lon: longitude, alt: adjustedAlt });
+      setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
 
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
@@ -200,7 +200,7 @@ const LocApp: React.FC = () => {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
             console.log('[Stable] Placing object...');
-            boxMesh = placeRedBox(locar, longitude, latitude, objectAlt);
+            boxMesh = placeRedBox(locar, longitude, latitude, 0);
             setObjectCoord({ lat: latitude, lon: longitude });
             isObjectPlaced = true;
             setIsStabilizing(false);
@@ -290,7 +290,7 @@ function placeRedBox(locar: any, lon: number, lat: number, alt: number): THREE.M
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  locar.add(mesh, lon, lat, alt, { name: '1m² Box' });
+  locar.add(mesh, lon, lat, alt - 1, { name: '1m² Box' });
 
   return mesh;
 }
