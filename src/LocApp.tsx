@@ -177,7 +177,7 @@ const LocApp: React.FC = () => {
 
     // 설정 값들
     const ACCURACY_THRESHOLD = 10; // 10m 이하
-    const DIST_THRESHOLD = 1; // 1m 이하 이동이면 "거의 안 움직임"
+    const DIST_THRESHOLD = 3; // 1m 이하 이동이면 "거의 안 움직임"
     const STABLE_DURATION_MS = 3000; // 3초
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
@@ -302,7 +302,7 @@ const LocApp: React.FC = () => {
 function placeRedBox(locar: any, lon: number, lat: number, alt: number | null) {
   console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
   // 박스 크기 설정
-  const geo = new THREE.BoxGeometry(5, 5, 5);
+  const geo = new THREE.BoxGeometry(1, 1, 1);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
