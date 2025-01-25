@@ -257,7 +257,7 @@ const LocApp: React.FC = () => {
  */
 function placeRedBox(locar: any, lon: number, lat: number) {
   console.log(`placeRedBox at lon:${lon}, lat:${lat}`);
-  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const geo = new THREE.BoxGeometry(10, 10, 10);
   const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const mesh = new THREE.Mesh(geo, mat);
   locar.add(mesh, lon, lat, 0, { name: 'Red Box' });
