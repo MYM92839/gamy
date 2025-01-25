@@ -296,13 +296,16 @@ const LocApp: React.FC = () => {
   );
 };
 
-/** 오브젝트 배치 함수 */
 function placeRedBox(locar: any, lon: number, lat: number) {
   console.log(`placeRedBox at lon=${lon}, lat=${lat}`);
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  // 박스 크기를 5x5x5 (5미터 정육면체)
+  const geo = new THREE.BoxGeometry(5, 5, 5);
+  // 더 눈에 띄게 노란색
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
-  locar.add(mesh, lon, lat, 0, { name: 'Red Box' });
+
+  // 고도(altitude)를 2m로 설정 → 땅 위 2m에 배치
+  locar.add(mesh, lon, lat, 2, { name: 'Big Yellow Box' });
 }
 
 
