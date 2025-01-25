@@ -168,20 +168,20 @@ const LocApp: React.FC = () => {
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy, altitude } = pos.coords;
 
-      if (initialAltitude === null && altitude !== null) {
-        initialAltitude = altitude;
+      if (initialAltitude === null) {
+        initialAltitude = altitude !== null ? altitude : 0;
       }
 
-      const adjustedAlt = altitude !== null ? altitude - (initialAltitude || 0) : 0;
+      const adjustedAlt = altitude !== null ? altitude - initialAltitude : 0;
 
       if (isObjectPlaced) {
         if (boxMesh && altitude !== null && Math.abs(altitude - (boxMesh.position.y || 0)) <= ALTITUDE_THRESHOLD) {
-          boxMesh.position.y = altitude;
+          boxMesh.position.y = adjustedAlt;
         }
         return;
       }
 
-      setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
+      setUserCoord({ lat: latitude, lon: longitude, alt: adjustedAlt });
 
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
@@ -193,7 +193,7 @@ const LocApp: React.FC = () => {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
             console.log('[Stable] Placing object...');
-            boxMesh = placeRedBox(locar, longitude, latitude, 0);
+            boxMesh = placeRedBox(locar, longitude, latitude, adjustedAlt);
             setObjectCoord({ lat: latitude, lon: longitude });
             isObjectPlaced = true;
             setIsStabilizing(false);
@@ -278,11 +278,11 @@ const LocApp: React.FC = () => {
 
 function placeRedBox(locar: any, lon: number, lat: number, alt: number): THREE.Mesh {
   console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
-  const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+  const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  locar.add(mesh, lon, lat, alt - 1, { name: '1m² Box' });
+  locar.add(mesh, lon, lat, alt, { name: '1m² Box' });
 
   return mesh;
 }
