@@ -7,29 +7,28 @@ type PermissionState = 'idle' | 'granted' | 'denied';
 const LocationPrompt: React.FC = () => {
   const [permission, setPermission] = useState<PermissionState>('idle');
 
-  async function requestCameraPermission(): Promise<MediaStream> {
+  function requestCameraPermission(): Promise<MediaStream> {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       return Promise.reject(new Error('[Camera] getUserMedia not supported'));
     }
-    try {
-      return await navigator.mediaDevices
-        .getUserMedia({
+    return navigator.mediaDevices
+      .getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      })
+      .catch((envErr) => {
+        console.warn('[Camera] environment error:', envErr);
+        return navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: 'environment' },
+            facingMode: { ideal: 'user' },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
         });
-    } catch (envErr) {
-      console.warn('[Camera] environment error:', envErr);
-      return await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'user' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
       });
-    }
   }
 
   const handleStartAR = () => {
@@ -262,5 +261,8 @@ function placeRedBox(locar: any, lon: number, lat: number) {
   const mesh = new THREE.Mesh(geo, mat);
   locar.add(mesh, lon, lat, 0, { name: 'Red Box' });
 }
+
+// export default LocApp;
+
 
 // export default LocApp
