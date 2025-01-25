@@ -162,25 +162,32 @@ const LocApp: React.FC = () => {
 
     const ACCURACY_THRESHOLD = 10;
     const DIST_THRESHOLD = 1;
-    const ALTITUDE_THRESHOLD = 1;
+    // const ALTITUDE_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy, altitude } = pos.coords;
 
+      // 초기 고도 설정
       if (initialAltitude === null) {
         initialAltitude = altitude !== null ? altitude : 0;
       }
 
+      // 현재 고도에서 기준 고도를 빼 상대 고도 계산
       const adjustedAlt = altitude !== null ? altitude - initialAltitude : 0;
 
+      // 유저 고도 값 반영
+      const objectAlt = -adjustedAlt;
+
       if (isObjectPlaced) {
-        if (boxMesh && altitude !== null && Math.abs(altitude - (boxMesh.position.y || 0)) <= ALTITUDE_THRESHOLD) {
-          boxMesh.position.y = adjustedAlt;
+        // 오브젝트 고도를 유저 고도의 음수로 업데이트
+        if (boxMesh) {
+          boxMesh.position.y = objectAlt;
         }
         return;
       }
 
+      // 초기 오브젝트 배치
       setUserCoord({ lat: latitude, lon: longitude, alt: adjustedAlt });
 
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
@@ -193,7 +200,7 @@ const LocApp: React.FC = () => {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
             console.log('[Stable] Placing object...');
-            boxMesh = placeRedBox(locar, longitude, latitude, adjustedAlt);
+            boxMesh = placeRedBox(locar, longitude, latitude, objectAlt);
             setObjectCoord({ lat: latitude, lon: longitude });
             isObjectPlaced = true;
             setIsStabilizing(false);
@@ -203,6 +210,7 @@ const LocApp: React.FC = () => {
         stableStartTime = 0;
       }
     });
+
 
     locar.startGps();
 
