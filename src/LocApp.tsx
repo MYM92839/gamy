@@ -124,16 +124,23 @@ const LocationPrompt: React.FC = () => {
 
 export default LocationPrompt;
 
+
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ■ 보정 상태를 표시할 state: true면 "보정 중", false면 "보정 완료"
+  // 보정중 여부
   const [isStabilizing, setIsStabilizing] = useState(true);
+
+  // 사용자 GPS 좌표 (수시로 업데이트)
+  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
+
+  // 오브젝트 최종 배치 좌표 (고정)
+  const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     let animationId = 0;
 
-    // ============== 1) Three.js 세팅 ==============
+    // ============== 1) Three.js 초기화 ==============
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       80,
@@ -164,15 +171,19 @@ const LocApp: React.FC = () => {
     let isObjectPlaced = false;
     let stableStartTime = 0;
 
-    let wifiAvailable = true; // 퍼블릭 Wi-Fi 있다고 가정
-    const ACCURACY_THRESHOLD = 20; // 20m 이하
-    const DIST_THRESHOLD = 2;      // 2m 이하
+    // 예: Wi-Fi 있는지 여부
+    let wifiAvailable = true;
+    const ACCURACY_THRESHOLD = 20;
+    const DIST_THRESHOLD = 2;
     const STABLE_DURATION_MS = wifiAvailable ? 3000 : 5000;
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       if (isObjectPlaced) return;
 
       const { latitude, longitude, accuracy } = pos.coords;
+      // userCoord에 현재 위치 저장
+      setUserCoord({ lat: latitude, lon: longitude });
+
       console.log(
         `GPS update -> lat:${latitude}, lon:${longitude}, acc:${accuracy}, dist:${distMoved}`
       );
@@ -187,11 +198,11 @@ const LocApp: React.FC = () => {
         } else {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
-            // ★ 안정 확정
+            // 안정 확정
             placeRedBox(locar, longitude, latitude);
             isObjectPlaced = true;
-            // 보정 완료 -> 문구 숨기기
-            setIsStabilizing(false);
+            setObjectCoord({ lat: latitude, lon: longitude }); // 오브젝트 좌표 기록
+            setIsStabilizing(false); // 보정 완료
           }
         }
       } else {
@@ -225,11 +236,7 @@ const LocApp: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-      }}
+      style={{ width: '100%', height: '100%', position: 'relative' }}
     >
       {isStabilizing && (
         <div
@@ -242,25 +249,53 @@ const LocApp: React.FC = () => {
             color: '#fff',
             padding: '10px 20px',
             borderRadius: '8px',
+            zIndex: 10,
           }}
         >
           보정 중입니다...
         </div>
       )}
+
+      {/* 좌표 정보 표시 (왼쪽 상단에 고정) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          background: 'rgba(255,255,255,0.7)',
+          color: '#000',
+          padding: '8px',
+          borderRadius: '4px',
+          zIndex: 20,
+          fontSize: '14px',
+        }}
+      >
+        <div>
+          <strong>내 위치:</strong>{' '}
+          {userCoord
+            ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}`
+            : '---, ---'}
+        </div>
+        <div>
+          <strong>오브젝트 위치:</strong>{' '}
+          {objectCoord
+            ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}`
+            : '---, ---'}
+        </div>
+      </div>
     </div>
   );
 };
 
-/**
- * 특정 좌표(경도, 위도)에 빨간 박스 배치
- */
 function placeRedBox(locar: any, lon: number, lat: number) {
   console.log(`placeRedBox at lon:${lon}, lat:${lat}`);
-  const geo = new THREE.BoxGeometry(10, 10, 10);
+  const geo = new THREE.BoxGeometry(1, 1, 1);
   const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const mesh = new THREE.Mesh(geo, mat);
+  // locar.add(mesh, 경도, 위도, 고도, {props})
   locar.add(mesh, lon, lat, 0, { name: 'Red Box' });
 }
+
 
 // export default LocApp;
 
