@@ -157,35 +157,19 @@ const LocApp: React.FC = () => {
 
     let isObjectPlaced = false;
     let stableStartTime = 0;
-    // let initialAltitude: number | null = null;
     let boxMesh: THREE.Mesh | null = null;
 
     const ACCURACY_THRESHOLD = 10;
     const DIST_THRESHOLD = 1;
-    // const ALTITUDE_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
+      // 위치가 확정되었다면 이후 업데이트 중단
+      if (isObjectPlaced) {
+        return;
+      }
+
       const { latitude, longitude, accuracy } = pos.coords;
-
-      // // 초기 고도 설정
-      // if (initialAltitude === null) {
-      //   initialAltitude = altitude !== null ? altitude : 0;
-      // }
-
-      // // 현재 고도에서 기준 고도를 빼 상대 고도 계산
-      // const adjustedAlt = altitude !== null ? altitude - initialAltitude : 0;
-
-      // // 유저 고도 값 반영
-      // const objectAlt = -adjustedAlt;
-
-      // if (isObjectPlaced) {
-      //   // 오브젝트 고도를 유저 고도의 음수로 업데이트
-      //   if (boxMesh) {
-      //     boxMesh.position.y = objectAlt;
-      //   }
-      //   return;
-      // }
 
       // 초기 오브젝트 배치
       setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
@@ -210,6 +194,7 @@ const LocApp: React.FC = () => {
         stableStartTime = 0;
       }
     });
+
 
 
     locar.startGps();
