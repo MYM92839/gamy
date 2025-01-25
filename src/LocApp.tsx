@@ -1,26 +1,41 @@
-// ARScene.tsx
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import * as LocAR from 'locar';  // 타입 선언 필요할 수 있음
+import * as LocAR from 'locar';
 
 type PermissionState = 'idle' | 'granted' | 'denied';
-
 
 const LocationPrompt: React.FC = () => {
   const [permission, setPermission] = useState<PermissionState>('idle');
 
-  /**
-   * "AR 시작하기" 버튼 클릭 → 3가지 권한 요청
-   * 1) 자이로(방향 센서)
-   * 2) 위치
-   * 3) 카메라
-   */
+  function requestCameraPermission(): Promise<MediaStream> {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return Promise.reject(new Error('[Camera] getUserMedia not supported'));
+    }
+    return navigator.mediaDevices
+      .getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      })
+      .catch((envErr) => {
+        console.warn('[Camera] environment error:', envErr);
+        return navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+      });
+  }
+
   const handleStartAR = () => {
     console.log('[AR] Starting permission chain...');
 
-    // --- (1) 자이로(방향 센서) 권한 ---
+    // 1) 자이로 권한
     const orientationPromise = new Promise<void>((resolve, reject) => {
-      // iOS 13+ 에서는 DeviceOrientationEvent.requestPermission() 필요
       const hasOrientationEvent = typeof DeviceOrientationEvent !== 'undefined';
       const needsRequest =
         hasOrientationEvent &&
@@ -41,14 +56,13 @@ const LocationPrompt: React.FC = () => {
             reject(err);
           });
       } else {
-        // 안드로이드/데스크톱 크롬 등은 별도 권한 없이 가능
         console.log('[Orientation] no permission needed');
         resolve();
       }
     });
 
     orientationPromise
-      // --- (2) 위치 권한 ---
+      // 2) 위치 권한
       .then(() => {
         return new Promise<void>((resolve, reject) => {
           if (!('geolocation' in navigator)) {
@@ -61,35 +75,33 @@ const LocationPrompt: React.FC = () => {
             },
             (err) => {
               reject(err);
-            }
+            },
+            { enableHighAccuracy: true }
           );
         });
       })
-
-      // --- (3) 카메라 권한 (후면 먼저 → 실패 시 전면 fallback) ---
+      // 3) 카메라 권한
       .then(() => {
         return requestCameraPermission();
       })
-
-      // --- 모두 성공 ---
+      // 모두 성공
       .then((stream) => {
         console.log('[Camera] granted!', stream);
         setPermission('granted');
       })
-
-      // --- 하나라도 실패 ---
+      // 하나라도 실패
       .catch((err) => {
         console.error('[AR chain] permission error:', err);
         setPermission('denied');
       });
   };
 
-  // 권한 OK → ARScene 렌더
+  // 권한 OK → LocApp
   if (permission === 'granted') {
     return <LocApp />;
   }
 
-  // 거부됨
+  // 권한 거부
   if (permission === 'denied') {
     return (
       <div style={{ textAlign: 'center', marginTop: 50 }}>
@@ -100,7 +112,7 @@ const LocationPrompt: React.FC = () => {
     );
   }
 
-  // 대기 상태
+  // 대기(초기)
   return (
     <div style={{ textAlign: 'center', marginTop: 50 }}>
       <h2>AR 권한 요청</h2>
@@ -110,48 +122,18 @@ const LocationPrompt: React.FC = () => {
   );
 };
 
-/**
- * 카메라 권한 요청 (후면 우선, 실패 시 전면 Fallback)
- */
-function requestCameraPermission(): Promise<MediaStream> {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    return Promise.reject(new Error('[Camera] getUserMedia not supported'));
-  }
+export default LocationPrompt;
 
-  // 후면 카메라 시도
-  return navigator.mediaDevices
-    .getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-    })
-    .catch((envErr) => {
-      console.warn('[Camera] environment error:', envErr);
-      // 전면 카메라 Fallback
-      return navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'user' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
-    });
-}
-
-export default LocationPrompt
-
-/**
- * GPS 기반 AR을 보여주는 컴포넌트 예시
- */
-const LocApp = function () {
+const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // ■ 보정 상태를 표시할 state: true면 "보정 중", false면 "보정 완료"
+  const [isStabilizing, setIsStabilizing] = useState(true);
 
   useEffect(() => {
     let animationId = 0;
 
-    // ============== 1) Three.js 초기화 ==============
+    // ============== 1) Three.js 세팅 ==============
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       80,
@@ -178,35 +160,53 @@ const LocApp = function () {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    // ============== 3) GPS 업데이트 핸들러 등록 ==============
-    let firstPosition = true;
+    // ============== 3) GPS 안정화 로직 ==============
+    let isObjectPlaced = false;
+    let stableStartTime = 0;
 
-    // gpsupdate가 처음 발생(초기 위치 파악)했을 때 AR 오브젝트 추가
-    locar.on('gpsupdate', (pos: GeolocationPosition) => {
-      if (firstPosition) {
-        console.log('Got initial GPS position:', pos.coords);
-        // 이제 오브젝트를 배치해도 에러가 안 납니다.
+    let wifiAvailable = true; // 퍼블릭 Wi-Fi 있다고 가정
+    const ACCURACY_THRESHOLD = 20; // 20m 이하
+    const DIST_THRESHOLD = 2;      // 2m 이하
+    const STABLE_DURATION_MS = wifiAvailable ? 3000 : 5000;
 
-        // 예: 경도=127.9494864, 위도=37.3490689 지점에 빨간 박스
-        const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
-        const cubeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const cubeMesh = new THREE.Mesh(cubeGeo, cubeMat);
+    locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
+      if (isObjectPlaced) return;
 
-        // locar.add(mesh, longitude, latitude, altitude, properties)
-        locar.add(cubeMesh, 127.9499836, 37.3481923, 0, { name: 'Red Box' });
+      const { latitude, longitude, accuracy } = pos.coords;
+      console.log(
+        `GPS update -> lat:${latitude}, lon:${longitude}, acc:${accuracy}, dist:${distMoved}`
+      );
 
-        // 최초 위치 배치 후 다시 안 부르도록
-        firstPosition = false;
+      const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
+      const isMovedSmall = distMoved <= DIST_THRESHOLD;
+
+      if (isAccurateEnough && isMovedSmall) {
+        // 안정 후보
+        if (stableStartTime === 0) {
+          stableStartTime = Date.now();
+        } else {
+          const stableElapsed = Date.now() - stableStartTime;
+          if (stableElapsed >= STABLE_DURATION_MS) {
+            // ★ 안정 확정
+            placeRedBox(locar, longitude, latitude);
+            isObjectPlaced = true;
+            // 보정 완료 -> 문구 숨기기
+            setIsStabilizing(false);
+          }
+        }
+      } else {
+        // 불안정 -> 리셋
+        stableStartTime = 0;
       }
     });
 
-    // GPS 활성화
+    // ============== 4) GPS 시작 ==============
     locar.startGps();
 
-    // ============== 4) 렌더 루프 ==============
+    // ============== 5) 애니메이션 루프 ==============
     const animate = () => {
-      cam.update();          // 카메라(실사) 백그라운드 업데이트
-      deviceControls.update(); // 자이로 센서 반영
+      cam.update();
+      deviceControls.update();
       renderer.render(scene, camera);
       animationId = requestAnimationFrame(animate);
     };
@@ -222,9 +222,44 @@ const LocApp = function () {
     };
   }, []);
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+      }}
+    >
+      {isStabilizing && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: '#fff',
+            padding: '10px 20px',
+            borderRadius: '8px',
+          }}
+        >
+          보정 중입니다...
+        </div>
+      )}
+    </div>
+  );
 };
 
-
+/**
+ * 특정 좌표(경도, 위도)에 빨간 박스 배치
+ */
+function placeRedBox(locar: any, lon: number, lat: number) {
+  console.log(`placeRedBox at lon:${lon}, lat:${lat}`);
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const mesh = new THREE.Mesh(geo, mat);
+  locar.add(mesh, lon, lat, 0, { name: 'Red Box' });
+}
 
 // export default LocApp
