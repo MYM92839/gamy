@@ -282,7 +282,7 @@ function placeRedBox(locar: any, lon: number, lat: number, alt: number): THREE.M
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  locar.add(mesh, lon, lat, alt, { name: '1m² Box' });
+  locar.add(mesh, lon, lat, alt - 1, { name: '1m² Box' });
 
   return mesh;
 }
