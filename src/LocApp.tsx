@@ -145,6 +145,9 @@ const LocApp: React.FC = () => {
       0.001,
       1000
     );
+    camera.position.set(0, 0, 5); // 카메라를 원점에서 약간 뒤로 이동
+    camera.lookAt(0, 0, 0); // 카메라가 원점을 바라보도록 설정
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -191,7 +194,8 @@ const LocApp: React.FC = () => {
               baseCoordRef.current = { x: baseUTM.x, y: baseUTM.y };
 
               if (locarRef.current) {
-                placeRedBox(locarRef.current, baseUTM.x, baseUTM.y);
+                // 오브젝트를 기준 위치에 배치 (상대 좌표로 설정)
+                placeRedBox(locarRef.current, 0, 0);
               }
               setObjectCoord({ lat: latitude, lon: longitude });
               isObjectPlacedRef.current = true;
@@ -292,10 +296,10 @@ const LocApp: React.FC = () => {
 };
 
 /**
- * Places a red box at the specified UTM coordinates.
+ * Places a red box at the specified relative coordinates.
  * @param locar - The LocAR.LocationBased instance.
- * @param x - UTM Easting (meters).
- * @param y - UTM Northing (meters).
+ * @param x - Relative Easting (meters) from the base location.
+ * @param y - Relative Northing (meters) from the base location.
  * @returns The placed THREE.Mesh object.
  */
 function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
@@ -311,7 +315,6 @@ function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
 
   return mesh;
 }
-
 
 /**
  * Converts latitude and longitude to UTM coordinates with automatic zone calculation.
