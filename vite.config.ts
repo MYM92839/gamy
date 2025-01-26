@@ -4,4 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: '/', // CSP에서 이미 허용된 경로로 변경
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ['threex'],
+    },
+  },
 });
