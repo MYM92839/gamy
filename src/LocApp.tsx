@@ -89,12 +89,15 @@ const LocApp: React.FC = () => {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    const updateObjectPosition = (lat: number, lon: number) => {
-      if (boxRef.current && objectCoordRef.current) {
-        const deltaLon = (lon - objectCoordRef.current.lon) * 111320;
-        const deltaLat = (lat - objectCoordRef.current.lat) * 110574;
-        boxRef.current.position.set(deltaLon, deltaLat, 0);
-      }
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371e3; // Earth radius in meters
+      const φ1 = (lat1 * Math.PI) / 180;
+      const φ2 = (lat2 * Math.PI) / 180;
+      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+      const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // Distance in meters
     };
 
     locar.on('gpsupdate', (pos: GeolocationPosition) => {
@@ -117,8 +120,8 @@ const LocApp: React.FC = () => {
         } else {
           stableStartTime = 0;
         }
-      } else {
-        updateObjectPosition(latitude, longitude);
+      } else if (objectCoordRef.current && getDistance(latitude, longitude, objectCoordRef.current.lat, objectCoordRef.current.lon) > DIST_THRESHOLD) {
+        boxRef.current?.position.set((longitude - objectCoordRef.current.lon) * 111320, (latitude - objectCoordRef.current.lat) * 110574, 0);
       }
     });
 
