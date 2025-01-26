@@ -47,9 +47,11 @@ const LocationPrompt: React.FC = () => {
   }
 
   return (
-    <div style={{ textAlign: 'center', marginTop: 50 }}>
-      <h2>AR 권한 요청</h2>
-      <button onClick={handleStartAR}>AR 시작하기</button>
+    <div className="text-center mt-12">
+      <h2 className="text-xl font-bold">AR 권한 요청</h2>
+      <button className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md" onClick={handleStartAR}>
+        AR 시작하기
+      </button>
     </div>
   );
 };
@@ -81,7 +83,7 @@ const ARApp: React.FC = () => {
 
     const mindarThree = new MindARThree({
       container: containerRef.current,
-      imageTargetSrc: "/card.mind"
+      imageTargetSrc: "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind"
     });
 
     const mindarAnchor = mindarThree.addAnchor(0);
@@ -123,8 +125,6 @@ const ARApp: React.FC = () => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude };
 
-      console.log(`[GPS] Lat: ${latitude}, Lon: ${longitude}, Accuracy: ${accuracy}`);
-
       if (accuracy <= ACCURACY_THRESHOLD) {
         if (state === 'calibrating' && Date.now() - stableStartTimeRef.current >= STABLE_DURATION_MS) {
           setState('stabilized');
@@ -144,17 +144,6 @@ const ARApp: React.FC = () => {
           setState('viewing');
         }
       }
-
-      if (state === 'viewing' && correctedCoordRef.current) {
-        const distanceToUser = getDistanceFromLatLonInMeters(
-          latitude,
-          longitude,
-          correctedCoordRef.current.lat,
-          correctedCoordRef.current.lon
-        );
-        const scaleFactor = Math.max(0.1, 5 / distanceToUser);
-        boxRef.current?.scale.set(scaleFactor, scaleFactor, scaleFactor);
-      }
     });
 
     const animate = () => {
@@ -172,25 +161,13 @@ const ARApp: React.FC = () => {
   }, [state]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
-      <h2>MindAR + LocAR 연동 테스트</h2>
-      <p>현재 상태: {state}</p>
-      {state === 'calibrating' && <p>보정 중입니다...</p>}
-      {state === 'stabilized' && <p>위치가 보정되었습니다.</p>}
-      {state === 'viewing' && <p>오브젝트를 관찰 중입니다.</p>}
+    <div ref={containerRef} className="w-full h-screen relative">
+      <h2 className="absolute top-5 left-5 text-lg font-bold text-white bg-gray-800 p-2 rounded">
+        MindAR + LocAR 테스트
+      </h2>
+      <p className="absolute top-14 left-5 text-sm text-gray-300">
+        현재 상태: {state}
+      </p>
     </div>
   );
 };
-
-function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3;
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
