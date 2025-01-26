@@ -117,6 +117,7 @@ const LocationPrompt: React.FC = () => {
 
 export default LocationPrompt;
 
+
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -139,6 +140,8 @@ const LocApp: React.FC = () => {
     let animationId = 0;
 
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff); // 흰색 배경으로 설정
+
     const camera = new THREE.PerspectiveCamera(
       80,
       window.innerWidth / window.innerHeight,
@@ -165,35 +168,58 @@ const LocApp: React.FC = () => {
     const locar = new LocAR.LocationBased(scene, camera);
     locarRef.current = locar;
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
-    const cam = new LocAR.WebcamRenderer(renderer);
+    const camRenderer = new LocAR.WebcamRenderer(renderer);
 
     const ACCURACY_THRESHOLD = 10; // GPS 정확도 (미터)
     const STABLE_DURATION_MS = 3000; // 안정화 기간 (밀리초)
 
-    const handleGpsUpdate = (pos: GeolocationPosition, distMoved: number) => {
+    let previousPosition: GeolocationPosition | null = null;
+
+    const handleGpsUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude, accuracy } = pos.coords;
+
+      console.log('[GPS Update] Latitude:', latitude, 'Longitude:', longitude, 'Accuracy:', accuracy);
 
       // Update user coordinates
       setUserCoord({ lat: latitude, lon: longitude });
 
+      let distMoved = 0;
+      if (previousPosition) {
+        distMoved = getDistanceFromLatLonInMeters(
+          previousPosition.coords.latitude,
+          previousPosition.coords.longitude,
+          latitude,
+          longitude
+        );
+        console.log('[Distance Moved] meters:', distMoved);
+      }
+      previousPosition = pos;
+
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
       const isMovedSmall = distMoved <= DIST_THRESHOLDRef.current;
+
+      console.log('[Condition Check] isAccurateEnough:', isAccurateEnough, 'isMovedSmall:', isMovedSmall);
 
       if (!isObjectPlacedRef.current) {
         // 객체가 아직 배치되지 않은 상태
         if (isAccurateEnough && isMovedSmall) {
           if (stableStartTimeRef.current === 0) {
             stableStartTimeRef.current = Date.now();
+            console.log('[Stable Start] Start time set:', stableStartTimeRef.current);
           } else {
             const stableElapsed = Date.now() - stableStartTimeRef.current;
+            console.log('[Stable Check] Stable Elapsed:', stableElapsed, 'Threshold:', STABLE_DURATION_MS);
             if (stableElapsed >= STABLE_DURATION_MS) {
               console.log('[Stable] Placing object...');
 
-              // 기준 위치 설정 및 변환
-              const baseUTM = latLonToUTM(latitude, longitude);
-              baseCoordRef.current = { x: baseUTM.x, y: baseUTM.y };
+              if (!baseCoordRef.current) {
+                // 기준 위치 설정 및 변환
+                const baseUTM = latLonToUTM(latitude, longitude);
+                console.log('[UTM Conversion] Base X:', baseUTM.x, 'Base Y:', baseUTM.y, 'Zone:', baseUTM.zone);
+                baseCoordRef.current = { x: baseUTM.x, y: baseUTM.y };
+              }
 
-              if (locarRef.current) {
+              if (locarRef.current && baseCoordRef.current) {
                 // 오브젝트를 기준 위치에 배치 (상대 좌표로 설정)
                 placeRedBox(locarRef.current, 0, 0);
               }
@@ -203,14 +229,16 @@ const LocApp: React.FC = () => {
 
               // DIST_THRESHOLD을 0으로 설정
               DIST_THRESHOLDRef.current = 0;
+
+              console.log('[Object Placed] isStabilizing set to false');
             }
           }
         } else {
           stableStartTimeRef.current = 0;
+          console.log('[Stabilization Reset] Movement or accuracy not sufficient');
         }
       } else {
         // 객체가 이미 배치된 상태
-        // 사용자의 움직임에 따라 객체의 위치를 조정할 필요가 있는지 검사
         if (distMoved > DIST_THRESHOLDRef.current && baseCoordRef.current) {
           console.log('[Movement Detected] Potentially updating object position...');
           // 실제로는 객체의 위치를 업데이트하지 않고, 기준 위치를 유지
@@ -224,7 +252,7 @@ const LocApp: React.FC = () => {
     locar.startGps();
 
     const animate = () => {
-      cam.update();
+      camRenderer.update();
       deviceControls.update();
       renderer.render(scene, camera);
       animationId = requestAnimationFrame(animate);
@@ -316,6 +344,29 @@ function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
   return mesh;
 }
 
+/**
+ * Calculates the distance between two latitude/longitude points in meters.
+ * @param lat1 - Latitude of point 1 in degrees.
+ * @param lon1 - Longitude of point 1 in degrees.
+ * @param lat2 - Latitude of point 2 in degrees.
+ * @param lon2 - Longitude of point 2 in degrees.
+ * @returns Distance in meters.
+ */
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // 지구 반경 (미터)
+  const φ1 = lat1 * Math.PI / 180; // 라디안으로 변환
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  const distance = R * c; // 미터 단위 거리
+  return distance;
+}
 /**
  * Converts latitude and longitude to UTM coordinates with automatic zone calculation.
  * @param lat - Latitude in degrees.
