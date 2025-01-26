@@ -163,132 +163,133 @@ const LocApp: React.FC = () => {
   }
 
   useEffect(() => {
-    try {
-      // Three.js + LocAR 초기화
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xcccccc); // 배경 색상 설정
 
-      const camera = new THREE.PerspectiveCamera(
-        80,
-        window.innerWidth / window.innerHeight,
-        0.001,
-        1000
-      );
-      camera.position.set(0, 0, 5); // 카메라 위치 고정
+    // Three.js + LocAR 초기화
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xcccccc); // 배경 색상 설정
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const camera = new THREE.PerspectiveCamera(
+      80,
+      window.innerWidth / window.innerHeight,
+      0.001,
+      1000
+    );
+    camera.position.set(0, 0, 5); // 카메라 위치 고정
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    if (containerRef.current) {
+      containerRef.current.appendChild(renderer.domElement);
+    }
+
+    // 좌표계 시각화
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+
+    const gridHelper = new THREE.GridHelper(100, 100);
+    scene.add(gridHelper);
+
+    const onResize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      log('Window resized and camera updated.');
+    };
+    window.addEventListener('resize', onResize);
 
-      if (containerRef.current) {
-        containerRef.current.appendChild(renderer.domElement);
-      }
+    // LocAR 초기화
+    const locar = new LocAR.LocationBased(scene, camera);
+    const cam = new LocAR.WebcamRenderer(renderer); // cam 변수 선언 및 초기화
 
-      // 좌표계 시각화
-      const axesHelper = new THREE.AxesHelper(5);
-      scene.add(axesHelper);
+    const ACCURACY_THRESHOLD = 10; // 미터 단위
+    const STABLE_DURATION_MS = 3000; // 밀리초 단위
 
-      const gridHelper = new THREE.GridHelper(100, 100);
-      scene.add(gridHelper);
+    const handleGpsUpdate = (pos: GeolocationPosition) => {
+      try {
+        const { latitude, longitude, accuracy } = pos.coords;
 
-      const onResize = () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        log('Window resized and camera updated.');
-      };
-      window.addEventListener('resize', onResize);
+        // 거리 계산
+        let distanceMoved = 0;
+        if (prevUserCoordRef.current) {
+          distanceMoved = getDistanceFromLatLonInMeters(
+            prevUserCoordRef.current.lat,
+            prevUserCoordRef.current.lon,
+            latitude,
+            longitude
+          );
+        }
+        prevUserCoordRef.current = { lat: latitude, lon: longitude };
 
-      // LocAR 초기화
-      const locar = new LocAR.LocationBased(scene, camera);
-      const cam = new LocAR.WebcamRenderer(renderer); // cam 변수 선언 및 초기화
+        setUserCoord({ lat: latitude, lon: longitude });
+        log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distanceMoved.toFixed(2)}m`);
 
-      const ACCURACY_THRESHOLD = 10; // 미터 단위
-      const STABLE_DURATION_MS = 3000; // 밀리초 단위
+        if (isObjectPlacedRef.current && objectCoord) {
+          // LocAR이 위도/경도를 직접 처리한다고 가정
+          locar.updateObjectPosition(objectCoord.id, latitude, longitude, 1); // 고도 1로 설정
+          log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
+          return;
+        }
 
-      const handleGpsUpdate = (pos: GeolocationPosition) => {
-        try {
-          const { latitude, longitude, accuracy } = pos.coords;
-
-          // 거리 계산
-          let distanceMoved = 0;
-          if (prevUserCoordRef.current) {
-            distanceMoved = getDistanceFromLatLonInMeters(
-              prevUserCoordRef.current.lat,
-              prevUserCoordRef.current.lon,
-              latitude,
-              longitude
-            );
-          }
-          prevUserCoordRef.current = { lat: latitude, lon: longitude };
-
-          setUserCoord({ lat: latitude, lon: longitude });
-          log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distanceMoved.toFixed(2)}m`);
-
-          if (isObjectPlacedRef.current && objectCoord) {
-            // LocAR이 위도/경도를 직접 처리한다고 가정
-            locar.updateObjectPosition(objectCoord.id, latitude, longitude, 1); // 고도 1로 설정
-            log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
-            return;
-          }
-
-          if (accuracy <= ACCURACY_THRESHOLD && distanceMoved <= DIST_THRESHOLD_REF.current) {
-            if (stableStartTimeRef.current === 0) {
-              stableStartTimeRef.current = Date.now();
-              log('Stabilization started');
-            } else {
-              const stableElapsed = Date.now() - stableStartTimeRef.current;
-              log(`Stabilization elapsed: ${stableElapsed}ms`);
-
-              if (stableElapsed >= STABLE_DURATION_MS) {
-                const objId = placeRedBox(locar, longitude, latitude, log);
-                setObjectCoord({ id: objId, lat: latitude, lon: longitude });
-                isObjectPlacedRef.current = true;
-                setIsStabilizing(false);
-
-                DIST_THRESHOLD_REF.current = 0;
-                log('Object placed and stabilization completed');
-              }
-            }
+        if (accuracy <= ACCURACY_THRESHOLD && distanceMoved <= DIST_THRESHOLD_REF.current) {
+          if (stableStartTimeRef.current === 0) {
+            stableStartTimeRef.current = Date.now();
+            log('Stabilization started');
           } else {
-            stableStartTimeRef.current = 0;
-            log('Stabilization reset');
+            const stableElapsed = Date.now() - stableStartTimeRef.current;
+            log(`Stabilization elapsed: ${stableElapsed}ms`);
+
+            if (stableElapsed >= STABLE_DURATION_MS) {
+              const objId = placeRedBox(locar, longitude, latitude, log);
+              setObjectCoord({ id: objId, lat: latitude, lon: longitude });
+              isObjectPlacedRef.current = true;
+              setIsStabilizing(false);
+
+              DIST_THRESHOLD_REF.current = 0;
+              log('Object placed and stabilization completed');
+            }
           }
-        } catch (error) {
-          log(`Error in handleGpsUpdate: ${(error as Error).message}`);
+        } else {
+          stableStartTimeRef.current = 0;
+          log('Stabilization reset');
         }
-      };
+      } catch (error) {
+        log(`Error in handleGpsUpdate: ${(error as Error).message}`);
+      }
+    };
 
-      locar.on('gpsupdate', handleGpsUpdate);
+    locar.on('gpsupdate', handleGpsUpdate);
 
-      locar.startGps();
+    locar.startGps();
 
-      // 애니메이션 루프
-      const animate = () => {
-        requestAnimationFrame(animate);
-        try {
-          cam.update(); // cam 사용
-          renderer.render(scene, camera);
+    // 애니메이션 루프
+    const animate = () => {
+      requestAnimationFrame(animate);
+      try {
+        cam.update(); // cam 사용
+        renderer.render(scene, camera);
 
-          const currentTime = Date.now();
-          if (currentTime - lastLogTimeRef.current >= 1000) { // 1초 간격
-            log(`Camera Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-            log(`Camera Rotation: (${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}, ${camera.rotation.z.toFixed(2)})`);
-            lastLogTimeRef.current = currentTime;
-          }
-        } catch (error) {
-          log(`Error in animate loop: ${(error as Error).message}`);
+        const currentTime = Date.now();
+        if (currentTime - lastLogTimeRef.current >= 1000) { // 1초 간격
+          log(`Camera Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
+          log(`Camera Rotation: (${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}, ${camera.rotation.z.toFixed(2)})`);
+          lastLogTimeRef.current = currentTime;
         }
-      };
-      animate();
+      } catch (error) {
+        log(`Error in animate loop: ${(error as Error).message}`);
+      }
+    };
+    animate();
 
-      return () => {
-        window.removeEventListener('resize', onResize);
-        if (containerRef.current) {
-          containerRef.current.removeChild(renderer.domElement);
-        }
-        locar.off('gpsupdate', handleGpsUpdate); // 이벤트 리스너 정리
-      };
-    }, []); // 빈 의존성 배열로 한 번만 실행
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+      locar.off('gpsupdate', handleGpsUpdate); // 이벤트 리스너 정리
+    };
+  }, []); // 빈 의존성 배열로 한 번만 실행
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
