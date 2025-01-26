@@ -93,12 +93,12 @@ const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isStabilizing, setIsStabilizing] = useState(true);
-
-  // 사용자 좌표
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
-
-  // 오브젝트(고정) 좌표
   const [objectCoord, setObjectCoord] = useState<ObjectCoord | null>(null);
+
+  const isObjectPlacedRef = useRef(false);
+  const stableStartTimeRef = useRef(0);
+  const DIST_THRESHOLD_REF = useRef(1);
 
   useEffect(() => {
     // Three.js + LocAR 초기화
@@ -122,11 +122,6 @@ const LocApp: React.FC = () => {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    let isObjectPlaced = false;
-    let stableStartTime = 0;
-
-    // 초기엔 1m 기준
-    let DIST_THRESHOLD = 1;
     const ACCURACY_THRESHOLD = 10;
     const STABLE_DURATION_MS = 3000;
 
@@ -134,10 +129,9 @@ const LocApp: React.FC = () => {
       const { latitude, longitude, accuracy } = pos.coords;
       setUserCoord({ lat: latitude, lon: longitude });
 
-      // 1) 이미 오브젝트 배치된 상태 => 작은 이동이라도 반영
-      if (isObjectPlaced && objectCoord) {
-        // distMoved는 고려 안함 => 작은 이동도 반영
-        // lat/lon 차이 -> 미터 변환
+      console.log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distMoved}`);
+
+      if (isObjectPlacedRef.current && objectCoord) {
         const latDiff = latitude - objectCoord.lat;
         const lonDiff = longitude - objectCoord.lon;
 
@@ -148,36 +142,39 @@ const LocApp: React.FC = () => {
         const latDiffM = latDiff * metersPerLatDeg;
         const lonDiffM = lonDiff * metersPerLonDeg;
 
-        // x=lon, z=-lat
+        console.log(`Lat Diff (m): ${latDiffM}, Lon Diff (m): ${lonDiffM}`);
+
         const relativeX = lonDiffM;
         const relativeZ = -latDiffM;
 
+        console.log(`Updating Object Position to: X=${relativeX}, Z=${relativeZ}`);
+
         locar.updateObjectPosition(objectCoord.id, relativeX, relativeZ, 0);
 
-        // threshold 바꿔도 이미 안정화 끝났으므로 상관 X
         return;
       }
 
-      // 2) 오브젝트 배치 전 (안정화 로직)
-      if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
-        if (stableStartTime === 0) {
-          stableStartTime = Date.now();
+      if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD_REF.current) {
+        if (stableStartTimeRef.current === 0) {
+          stableStartTimeRef.current = Date.now();
+          console.log('Stabilization started');
         } else {
-          const stableElapsed = Date.now() - stableStartTime;
+          const stableElapsed = Date.now() - stableStartTimeRef.current;
+          console.log(`Stabilization elapsed: ${stableElapsed}ms`);
+
           if (stableElapsed >= STABLE_DURATION_MS) {
-            // 오브젝트 한 번 배치
             const objId = placeRedBox(locar, longitude, latitude);
             setObjectCoord({ id: objId, lat: latitude, lon: longitude });
-            isObjectPlaced = true;
+            isObjectPlacedRef.current = true;
             setIsStabilizing(false);
 
-            // 안정화 끝 => distMoved 무시
-            // -> distThreshold = 0.1 (원한다면 이 시점에 바꾸기 가능)
-            DIST_THRESHOLD = 0;
+            DIST_THRESHOLD_REF.current = 0;
+            console.log('Object placed and stabilization completed');
           }
         }
       } else {
-        stableStartTime = 0;
+        stableStartTimeRef.current = 0;
+        console.log('Stabilization reset');
       }
     });
 
@@ -197,7 +194,7 @@ const LocApp: React.FC = () => {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [objectCoord]);
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
