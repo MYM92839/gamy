@@ -85,6 +85,7 @@ export default LocationPrompt;
 
 
 
+
 interface ObjectCoord {
   id: string;
   lat: number;
@@ -135,25 +136,11 @@ const LocApp: React.FC = () => {
       console.log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distMoved}`);
 
       if (isObjectPlacedRef.current && objectCoord) {
-        const latDiff = latitude - objectCoord.lat;
-        const lonDiff = longitude - objectCoord.lon;
+        // LocAR이 좌표 변환을 처리한다고 가정
+        // 상대 좌표 계산 없이 직접 업데이트
+        locar.updateObjectPosition(objectCoord.id, latitude, longitude, 0); // altitude는 필요 시 조정
 
-        const metersPerLatDeg = 111320;
-        const cosLat = Math.cos((latitude * Math.PI) / 180);
-        const metersPerLonDeg = 111320 * cosLat;
-
-        const latDiffM = latDiff * metersPerLatDeg;
-        const lonDiffM = lonDiff * metersPerLonDeg;
-
-        console.log(`Lat Diff (deg): ${latDiff}, Lon Diff (deg): ${lonDiff}`);
-        console.log(`Lat Diff (m): ${latDiffM}, Lon Diff (m): ${lonDiffM}`);
-
-        const relativeX = lonDiffM;
-        const relativeZ = -latDiffM;
-
-        console.log(`Relative Coordinates: X=${relativeX}, Z=${relativeZ}`);
-
-        locar.updateObjectPosition(objectCoord.id, relativeX, relativeZ, 0);
+        console.log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
 
         return;
       }
@@ -263,7 +250,7 @@ function placeRedBox(locar: any, lon: number, lat: number): string {
 
   // 고도를 0으로 설정 (필요 시 조정)
   locar.add(mesh, lon, lat, 0, {
-    name: '1m² Box',
+    name: '1m³ Box',
     id: objId,
   });
 
