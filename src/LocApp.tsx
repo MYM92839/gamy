@@ -128,7 +128,7 @@ const LocApp: React.FC = () => {
   // Refs to manage persistent state across renders
   const isObjectPlacedRef = useRef(false);
   const stableStartTimeRef = useRef(0);
-  const locarRef = useRef<LocAR.LocationBased | null>(null);
+  const locarRef = useRef<any | null>(null);
 
   // Ref for DIST_THRESHOLD to allow dynamic updates
   const DIST_THRESHOLDRef = useRef(0.00001); // 0.00001 degrees (~1.11 meters)
