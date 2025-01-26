@@ -71,6 +71,7 @@ export default LocationPrompt;
 
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [, setUpdateUI] = useState(false);
   const userCoordRef = useRef<{ lat: number; lon: number; alt?: number } | null>(null);
   const objectCoordRef = useRef<{ lat: number; lon: number; alt?: number } | null>(null);
   const boxRef = useRef<THREE.Mesh | null>(null);
@@ -97,6 +98,7 @@ const LocApp: React.FC = () => {
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
+      setUpdateUI((prev) => !prev); // Force UI update
 
       if (!isObjectPlaced) {
         if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
