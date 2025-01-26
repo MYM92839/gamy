@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as LocAR from 'locar';
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js';
+import * as tf from '@tensorflow/tfjs';
 
 type PermissionState = 'idle' | 'granted' | 'denied';
 
@@ -28,16 +29,10 @@ const LocationPrompt: React.FC = () => {
     navigator.geolocation.getCurrentPosition(
       () => {
         requestCameraPermission()
-          .then(() => {
-            setPermission('granted');
-          })
-          .catch(() => {
-            setPermission('denied');
-          });
+          .then(() => setPermission('granted'))
+          .catch(() => setPermission('denied'));
       },
-      () => {
-        setPermission('denied');
-      },
+      () => setPermission('denied'),
       { enableHighAccuracy: true }
     );
   };
@@ -70,100 +65,108 @@ const ARApp: React.FC = () => {
   const STABLE_DURATION_MS = 3000;
   const ACCURACY_THRESHOLD = 10;
   const stableStartTimeRef = useRef(0);
-  const animationFrameRef = useRef<number | null>(null);
 
   const markerCoord = { lat: 37.3411707, lon: 127.0649522 };
 
   useEffect(() => {
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    containerRef.current?.appendChild(renderer.domElement);
+    const initAR = async () => {
+      await tf.setBackend('webgl');
+      await tf.ready();
+      console.log('TensorFlow.js backend initialized.');
 
-    const mindarThree = new MindARThree({
-      container: containerRef.current,
-      imageTargetSrc: "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind"
-    });
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      containerRef.current?.appendChild(renderer.domElement);
 
-    const mindarAnchor = mindarThree.addAnchor(0);
+      const mindarThree = new MindARThree({
+        container: containerRef.current!,
+        imageTargetSrc: 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind',
+      });
 
-    mindarAnchor.onTargetFound = () => {
-      console.log('Marker found! Calibrating GPS...');
-      setState('calibrating');
-      stableStartTimeRef.current = Date.now();
+      const mindarAnchor = mindarThree.addAnchor(0);
 
-      if (userCoordRef.current) {
-        const latOffset = markerCoord.lat - userCoordRef.current.lat;
-        const lonOffset = markerCoord.lon - userCoordRef.current.lon;
-
-        correctedCoordRef.current = {
-          lat: userCoordRef.current.lat + latOffset,
-          lon: userCoordRef.current.lon + lonOffset,
-        };
-
-        console.log(`GPS corrected to: ${correctedCoordRef.current.lat}, ${correctedCoordRef.current.lon}`);
-        setState('stabilized');
-
-        const cube = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshBasicMaterial({ color: 0xff0000 })
-        );
-        cube.position.set(0, 0, -5);
-        mindarAnchor.group.add(cube);
-        boxRef.current = cube;
-        console.log('Cube added to scene');
-      }
-    };
-
-    mindarThree.start();
-
-    const locar = new LocAR.LocationBased(scene, camera);
-    locar.startGps();
-
-    locar.on('gpsupdate', (pos: GeolocationPosition) => {
-      const { latitude, longitude, accuracy } = pos.coords;
-      userCoordRef.current = { lat: latitude, lon: longitude };
-
-      if (accuracy <= ACCURACY_THRESHOLD) {
-        if (state === 'calibrating' && Date.now() - stableStartTimeRef.current >= STABLE_DURATION_MS) {
-          setState('stabilized');
-        }
-      } else {
+      mindarAnchor.onTargetFound = () => {
+        console.log('Marker found! Calibrating GPS...');
+        setState('calibrating');
         stableStartTimeRef.current = Date.now();
-      }
 
-      if (state === 'stabilized') {
-        const deltaLon = (longitude - correctedCoordRef.current!.lon) * 111320;
-        const deltaLat = (latitude - correctedCoordRef.current!.lat) * 110574;
-        const distance = Math.sqrt(deltaLon ** 2 + deltaLat ** 2);
+        if (userCoordRef.current) {
+          const latOffset = markerCoord.lat - userCoordRef.current.lat;
+          const lonOffset = markerCoord.lon - userCoordRef.current.lon;
 
-        if (distance > DIST_THRESHOLD.current) {
-          boxRef.current?.position.set(deltaLon, deltaLat, 0);
-          DIST_THRESHOLD.current = 0.00001;
-          setState('viewing');
+          correctedCoordRef.current = {
+            lat: userCoordRef.current.lat + latOffset,
+            lon: userCoordRef.current.lon + lonOffset,
+          };
+
+          console.log(`GPS corrected to: ${correctedCoordRef.current.lat}, ${correctedCoordRef.current.lon}`);
+          setState('stabilized');
+
+          const cube = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshBasicMaterial({ color: 0xff0000 })
+          );
+          cube.position.set(0, 0, -5);
+          mindarAnchor.group.add(cube);
+          boxRef.current = cube;
+          console.log('Cube added to scene');
         }
-      }
-    });
+      };
 
-    const animate = () => {
-      renderer.render(scene, camera);
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-    animate();
+      await mindarThree.start();
+      console.log('MindAR started successfully');
 
-    return () => {
-      mindarThree.stop();
-      locar.stopGps();
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      containerRef.current?.removeChild(renderer.domElement);
+      const locar = new LocAR.LocationBased(scene, camera);
+      locar.startGps();
+
+      locar.on('gpsupdate', (pos: GeolocationPosition) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        userCoordRef.current = { lat: latitude, lon: longitude };
+
+        if (accuracy <= ACCURACY_THRESHOLD) {
+          if (state === 'calibrating' && Date.now() - stableStartTimeRef.current >= STABLE_DURATION_MS) {
+            setState('stabilized');
+          }
+        } else {
+          stableStartTimeRef.current = Date.now();
+        }
+
+        if (state === 'stabilized' && correctedCoordRef.current) {
+          const deltaLon = (longitude - correctedCoordRef.current.lon) * 111320;
+          const deltaLat = (latitude - correctedCoordRef.current.lat) * 110574;
+          const distance = Math.sqrt(deltaLon ** 2 + deltaLat ** 2);
+
+          if (distance > DIST_THRESHOLD.current) {
+            boxRef.current?.position.set(deltaLon, deltaLat, 0);
+            DIST_THRESHOLD.current = 0.00001;
+            setState('viewing');
+          }
+        }
+      });
+
+      const animate = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      animate();
+
+      return () => {
+        mindarThree.stop();
+        locar.stopGps();
+        renderer.dispose();
+        scene.clear();
+      };
     };
+
+    initAR().catch(console.error);
   }, [state]);
 
   return (
-    <div ref={containerRef} className="w-full h-screen relative">
+    <div ref={containerRef} className="w-full h-screen relative bg-black">
       <h2 className="absolute top-5 left-5 text-lg font-bold text-white bg-gray-800 p-2 rounded">
-        MindAR + LocAR 테스트
+        MindAR + LocAR 연동 테스트
       </h2>
       <p className="absolute top-14 left-5 text-sm text-gray-300">
         현재 상태: {state}
