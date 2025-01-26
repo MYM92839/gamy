@@ -73,7 +73,7 @@ const LocApp: React.FC = () => {
   let stableStartTime = 0;
   let isObjectPlaced = false;
   const STABLE_DURATION_MS = 3000;
-  const ACCURACY_THRESHOLD = 15;
+  const ACCURACY_THRESHOLD = 10;
   let DIST_THRESHOLD = 1;
 
   useEffect(() => {
@@ -101,13 +101,19 @@ const LocApp: React.FC = () => {
             stableStartTime = Date.now();
           } else if (Date.now() - stableStartTime >= STABLE_DURATION_MS) {
             objectCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
-            boxRef.current = placeRedBox(locar, longitude, latitude);
+            boxRef.current = placeRedBox(locar, longitude, latitude - (5 / 110574));
             isObjectPlaced = true;
             DIST_THRESHOLD = 0.0001;
             setIsStabilizing(false);
           }
         } else {
           stableStartTime = 0;
+        }
+      } else if (objectCoordRef.current) {
+        const deltaLon = (longitude - objectCoordRef.current.lon) * 111320;
+        const deltaLat = (latitude - objectCoordRef.current.lat) * 110574;
+        if (Math.abs(deltaLon) > DIST_THRESHOLD || Math.abs(deltaLat) > DIST_THRESHOLD) {
+          boxRef.current?.position.set(deltaLon, deltaLat, 0);
         }
       }
     });
