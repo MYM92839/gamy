@@ -159,8 +159,9 @@ const LocApp: React.FC = () => {
     // let boxMesh: THREE.Mesh | null = null;
 
     const ACCURACY_THRESHOLD = 10;
-    const DIST_THRESHOLD = 0.1;
     const STABLE_DURATION_MS = 3000;
+
+    let DIST_THRESHOLD = 1; // 처음에는 1미터
 
     // 'gpsupdate' 핸들러에서 수정
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
@@ -175,6 +176,9 @@ const LocApp: React.FC = () => {
         const relativeLon = longitude - (objectCoord?.lon || longitude);
 
         locar.updateObjectPosition(objectCoord?.id, relativeLat, relativeLon, 0);
+
+        // 이후에는 DIST_THRESHOLD를 10센치로 낮춤
+        DIST_THRESHOLD = 0.1;
         return;
       }
 
@@ -192,6 +196,7 @@ const LocApp: React.FC = () => {
         stableStartTime = 0;
       }
     });
+
 
     locar.startGps();
 
