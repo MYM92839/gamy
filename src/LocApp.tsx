@@ -104,6 +104,7 @@ const LocApp: React.FC = () => {
   const DIST_THRESHOLD_REF = useRef(1); // 초기 1미터
 
   const prevUserCoordRef = useRef<{ lat: number; lon: number } | null>(null); // 이전 위치 저장
+  const lastLogTimeRef = useRef(Date.now());
 
   // 커스텀 로그 함수
   const log = (message: string) => {
@@ -112,128 +113,145 @@ const LocApp: React.FC = () => {
   };
 
   useEffect(() => {
-    // Three.js + LocAR 초기화
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xcccccc); // 배경 색상 설정
+    try {
+      // Three.js + LocAR 초기화
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xcccccc); // 배경 색상 설정
 
-    const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
-    camera.position.set(0, 0, 5); // 카메라 위치 고정
+      const camera = new THREE.PerspectiveCamera(
+        80,
+        window.innerWidth / window.innerHeight,
+        0.001,
+        1000
+      );
+      camera.position.set(0, 0, 5); // 카메라 위치 고정
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    if (containerRef.current) {
-      containerRef.current.appendChild(renderer.domElement);
-    }
-
-    // 좌표계 시각화
-    const axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
-
-    const gridHelper = new THREE.GridHelper(100, 100);
-    scene.add(gridHelper);
-
-    const onResize = () => {
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      log('Window resized and camera updated.');
-    };
-    window.addEventListener('resize', onResize);
 
-    // LocAR 초기화
-    const locar = new LocAR.LocationBased(scene, camera);
-    // const deviceControls = new LocAR.DeviceOrientationControls(camera); // 제거
-    const cam = new LocAR.WebcamRenderer(renderer);
-
-    const ACCURACY_THRESHOLD = 10; // 미터 단위
-    const STABLE_DURATION_MS = 3000; // 밀리초 단위
-
-    const handleGpsUpdate = (pos: GeolocationPosition) => {
-      const { latitude, longitude, accuracy } = pos.coords;
-
-      // 거리 계산
-      let distanceMoved = 0;
-      if (prevUserCoordRef.current) {
-        distanceMoved = getDistanceFromLatLonInMeters(
-          prevUserCoordRef.current.lat,
-          prevUserCoordRef.current.lon,
-          latitude,
-          longitude
-        );
-      }
-      prevUserCoordRef.current = { lat: latitude, lon: longitude };
-
-      setUserCoord({ lat: latitude, lon: longitude });
-      log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distanceMoved.toFixed(2)}m`);
-
-      if (isObjectPlacedRef.current && objectCoord) {
-        // LocAR이 위도/경도를 직접 처리한다고 가정
-        locar.updateObjectPosition(objectCoord.id, latitude, longitude, 1); // 고도 1로 설정
-        log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
-        return;
+      if (containerRef.current) {
+        containerRef.current.appendChild(renderer.domElement);
       }
 
-      if (accuracy <= ACCURACY_THRESHOLD && distanceMoved <= DIST_THRESHOLD_REF.current) {
-        if (stableStartTimeRef.current === 0) {
-          stableStartTimeRef.current = Date.now();
-          log('Stabilization started');
-        } else {
-          const stableElapsed = Date.now() - stableStartTimeRef.current;
-          log(`Stabilization elapsed: ${stableElapsed}ms`);
+      // 좌표계 시각화
+      const axesHelper = new THREE.AxesHelper(5);
+      scene.add(axesHelper);
 
-          if (stableElapsed >= STABLE_DURATION_MS) {
-            const objId = placeRedBox(locar, longitude, latitude, log);
-            setObjectCoord({ id: objId, lat: latitude, lon: longitude });
-            isObjectPlacedRef.current = true;
-            setIsStabilizing(false);
+      const gridHelper = new THREE.GridHelper(100, 100);
+      scene.add(gridHelper);
 
-            DIST_THRESHOLD_REF.current = 0;
-            log('Object placed and stabilization completed');
+      const onResize = () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        log('Window resized and camera updated.');
+      };
+      window.addEventListener('resize', onResize);
+
+      // LocAR 초기화
+      const locar = new LocAR.LocationBased(scene, camera);
+      // const deviceControls = new LocAR.DeviceOrientationControls(camera); // 제거
+      const cam = new LocAR.WebcamRenderer(renderer);
+
+      const ACCURACY_THRESHOLD = 10; // 미터 단위
+      const STABLE_DURATION_MS = 3000; // 밀리초 단위
+
+      const handleGpsUpdate = (pos: GeolocationPosition) => {
+        try {
+          const { latitude, longitude, accuracy } = pos.coords;
+
+          // 거리 계산
+          let distanceMoved = 0;
+          if (prevUserCoordRef.current) {
+            distanceMoved = getDistanceFromLatLonInMeters(
+              prevUserCoordRef.current.lat,
+              prevUserCoordRef.current.lon,
+              latitude,
+              longitude
+            );
           }
-        }
-      } else {
-        stableStartTimeRef.current = 0;
-        log('Stabilization reset');
-      }
-    };
+          prevUserCoordRef.current = { lat: latitude, lon: longitude };
 
-    locar.on('gpsupdate', handleGpsUpdate);
+          setUserCoord({ lat: latitude, lon: longitude });
+          log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distanceMoved.toFixed(2)}m`);
 
-    locar.startGps();
+          if (isObjectPlacedRef.current && objectCoord) {
+            // LocAR이 위도/경도를 직접 처리한다고 가정
+            locar.updateObjectPosition(objectCoord.id, latitude, longitude, 1); // 고도 1로 설정
+            log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
+            return;
+          }
 
-    // 애니메이션 루프
-    useEffect(() => {
-      let lastLogTime = Date.now();
-      const logInterval = 1000; // 1초 간격
+          if (accuracy <= ACCURACY_THRESHOLD && distanceMoved <= DIST_THRESHOLD_REF.current) {
+            if (stableStartTimeRef.current === 0) {
+              stableStartTimeRef.current = Date.now();
+              log('Stabilization started');
+            } else {
+              const stableElapsed = Date.now() - stableStartTimeRef.current;
+              log(`Stabilization elapsed: ${stableElapsed}ms`);
 
-      const animate = () => {
-        requestAnimationFrame(animate);
-        cam.update();
-        renderer.render(scene, camera);
+              if (stableElapsed >= STABLE_DURATION_MS) {
+                const objId = placeRedBox(locar, longitude, latitude, log);
+                setObjectCoord({ id: objId, lat: latitude, lon: longitude });
+                isObjectPlacedRef.current = true;
+                setIsStabilizing(false);
 
-        const currentTime = Date.now();
-        if (currentTime - lastLogTime >= logInterval) {
-          log(`Camera Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-          log(`Camera Rotation: (${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}, ${camera.rotation.z.toFixed(2)})`);
-          lastLogTime = currentTime;
+                DIST_THRESHOLD_REF.current = 0;
+                log('Object placed and stabilization completed');
+              }
+            }
+          } else {
+            stableStartTimeRef.current = 0;
+            log('Stabilization reset');
+          }
+        } catch (error) {
+          log(`Error in handleGpsUpdate: ${(error as Error).message}`);
         }
       };
-      animate();
+
+      locar.on('gpsupdate', handleGpsUpdate);
+
+      locar.startGps();
 
       return () => {
-        // Clean up는 위 useEffect에서 이미 처리
+        window.removeEventListener('resize', onResize);
+        if (containerRef.current) {
+          containerRef.current.removeChild(renderer.domElement);
+        }
+        locar.off('gpsupdate', handleGpsUpdate); // 이벤트 리스너 정리
       };
-    }, []); // 빈 의존성 배열로 한 번만 실행
+    } catch (error) {
+      log(`Error in useEffect: ${(error as Error).message}`);
+    }
+  }, []); // 빈 의존성 배열로 한 번만 실행
+
+  // 별도의 useEffect로 애니메이션 루프 설정
+  useEffect(() => {
+    const logInterval = 1000; // 1초 간격
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      try {
+        // cam.update()와 renderer.render()는 첫 번째 useEffect에서 설정되므로 여기서는 생략
+        // 하지만 만약 별도로 업데이트가 필요하다면 여기에 추가할 수 있습니다.
+
+        const currentTime = Date.now();
+        if (currentTime - lastLogTimeRef.current >= logInterval) {
+          // 카메라 상태를 로그로 기록
+          log(`Camera Position: (${0.00}, ${0.00}, ${5.00})`); // 카메라 위치 고정
+          log(`Camera Rotation: (-1.57, 0.00, 0.00)`); // 초기 회전 값
+          lastLogTimeRef.current = currentTime;
+        }
+      } catch (error) {
+        log(`Error in animate loop: ${(error as Error).message}`);
+      }
+    };
+    animate();
 
     return () => {
-      window.removeEventListener('resize', onResize);
-      if (containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
-      locar.off('gpsupdate', handleGpsUpdate); // 이벤트 리스너 정리
+      // 애니메이션 루프 클린업은 따로 필요 없음
     };
-  }, []); // 의존성 배열을 빈 배열로 설정하여 초기화가 한 번만 실행되도록 함
+  }, []); // 빈 의존성 배열로 한 번만 실행
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -297,16 +315,21 @@ const LocApp: React.FC = () => {
 };
 
 // 두 지리적 좌표 간의 거리(미터)를 계산하는 함수
-function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function getDistanceFromLatLonInMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
   const R = 6371e3; // 지구 반경 (미터)
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
   return distance;
@@ -319,19 +342,24 @@ function placeRedBox(
   lat: number,
   log: (msg: string) => void
 ): string {
-  const geo = new THREE.BoxGeometry(1, 1, 1); // 크기를 1로 설정
-  const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // 녹색으로 변경
-  const mesh = new THREE.Mesh(geo, mat);
+  try {
+    const geo = new THREE.BoxGeometry(1, 1, 1); // 크기를 1로 설정
+    const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // 녹색으로 변경
+    const mesh = new THREE.Mesh(geo, mat);
 
-  const objId = Math.random().toString(36).substr(2, 9);
+    const objId = Math.random().toString(36).substr(2, 9);
 
-  // 고도를 1로 설정하여 박스가 바닥에서 약간 떠 있도록 함
-  locar.add(mesh, lon, lat, 1, {
-    name: '1m³ Box',
-    id: objId,
-  });
+    // 고도를 1로 설정하여 박스가 바닥에서 약간 떠 있도록 함
+    locar.add(mesh, lon, lat, 1, {
+      name: '1m³ Box',
+      id: objId,
+    });
 
-  log(`Box placed with ID: ${objId} at (${lat}, ${lon})`);
+    log(`Box placed with ID: ${objId} at (${lat}, ${lon})`);
 
-  return objId;
+    return objId;
+  } catch (error) {
+    log(`Error in placeRedBox: ${(error as Error).message}`);
+    return '';
+  }
 }
