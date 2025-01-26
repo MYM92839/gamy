@@ -33,7 +33,7 @@ const LocationPrompt: React.FC = () => {
 
   const handleStartAR = () => {
     navigator.geolocation.getCurrentPosition(
-      () => {
+      (pos) => {
         requestCameraPermission()
           .then(() => {
             setPermission('granted');
@@ -66,14 +66,13 @@ export default LocationPrompt;
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setUpdateUI] = useState(false);
-  const [isStabilizing, setIsStabilizing] = useState(true);
   const userCoordRef = useRef<{ lat: number; lon: number; alt: number } | null>(null);
   const objectCoordRef = useRef<{ lat: number; lon: number; alt: number } | null>(null);
   const boxRef = useRef<THREE.Mesh | null>(null);
   let stableStartTime = 0;
   let isObjectPlaced = false;
   const STABLE_DURATION_MS = 3000;
-  const ACCURACY_THRESHOLD = 5;
+  const ACCURACY_THRESHOLD = 10;
   let DIST_THRESHOLD = 1;
 
   useEffect(() => {
@@ -93,12 +92,9 @@ const LocApp: React.FC = () => {
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
-      setUpdateUI(prev => !prev);
+      setUpdateUI((prev) => !prev);
 
       if (!isObjectPlaced) {
-        setIsStabilizing(true);
-        console.log('[Stabilizing] 보정 시작');
-
         if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
           if (stableStartTime === 0) {
             stableStartTime = Date.now();
@@ -107,8 +103,6 @@ const LocApp: React.FC = () => {
             boxRef.current = placeRedBox(locar, longitude, latitude);
             isObjectPlaced = true;
             DIST_THRESHOLD = 0.0001;
-            setIsStabilizing(false);
-            console.log('[Stabilizing] 보정 완료');
           }
         } else {
           stableStartTime = 0;
@@ -142,11 +136,6 @@ const LocApp: React.FC = () => {
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {isStabilizing && (
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '10px 20px', borderRadius: '8px', zIndex: 10 }}>
-          보정 중입니다...
-        </div>
-      )}
       <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.7)', color: '#000', padding: '8px', borderRadius: '4px', zIndex: 20, fontSize: '14px' }}>
         <div><strong>내 위치:</strong> {userCoordRef.current ? `${userCoordRef.current.lat.toFixed(6)}, ${userCoordRef.current.lon.toFixed(6)}, ${userCoordRef.current.alt}` : '---, ---'}</div>
         <div><strong>오브젝트 위치:</strong> {objectCoordRef.current ? `${objectCoordRef.current.lat.toFixed(6)}, ${objectCoordRef.current.lon.toFixed(6)}, ${objectCoordRef.current.alt}` : '---, ---'}</div>
@@ -154,6 +143,7 @@ const LocApp: React.FC = () => {
     </div>
   );
 };
+
 function placeRedBox(locar: any, lon: number, lat: number): THREE.Mesh {
   const geo = new THREE.BoxGeometry(1, 1, 1);
   const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
