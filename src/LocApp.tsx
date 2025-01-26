@@ -164,8 +164,13 @@ const LocApp: React.FC = () => {
     const STABLE_DURATION_MS = 3000;
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      // 위치가 확정되었다면 이후 업데이트 중단
+      // 위치가 확정되었다면 이후 오브젝트 업데이트를 중단
       if (isObjectPlaced) {
+        setUserCoord({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          alt: pos.coords.altitude || 0,
+        });
         return;
       }
 
