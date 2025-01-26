@@ -32,23 +32,17 @@ const LocationPrompt: React.FC = () => {
   }
 
   const handleStartAR = () => {
-    console.log('[AR] Starting permission chain...');
-
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        console.log('[Location] granted!', pos);
         requestCameraPermission()
-          .then((stream) => {
-            console.log('[Camera] granted!', stream);
+          .then(() => {
             setPermission('granted');
           })
-          .catch((err) => {
-            console.error('[Camera] permission error:', err);
+          .catch(() => {
             setPermission('denied');
           });
       },
-      (err) => {
-        console.error('[Location] permission error:', err);
+      () => {
         setPermission('denied');
       },
       { enableHighAccuracy: true }
@@ -72,14 +66,14 @@ export default LocationPrompt;
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setUpdateUI] = useState(false);
-  const userCoordRef = useRef<{ lat: number; lon: number; alt?: number } | null>(null);
-  const objectCoordRef = useRef<{ lat: number; lon: number; alt?: number } | null>(null);
+  const userCoordRef = useRef<{ lat: number; lon: number; alt: number } | null>(null);
+  const objectCoordRef = useRef<{ lat: number; lon: number; alt: number } | null>(null);
   const boxRef = useRef<THREE.Mesh | null>(null);
   let stableStartTime = 0;
   let isObjectPlaced = false;
   const STABLE_DURATION_MS = 3000;
-  const ACCURACY_THRESHOLD = 10;
-  const DIST_THRESHOLD = 1;
+  const ACCURACY_THRESHOLD = 15;
+  let DIST_THRESHOLD = 1;
 
   useEffect(() => {
     const scene = new THREE.Scene();
@@ -98,16 +92,17 @@ const LocApp: React.FC = () => {
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
-      setUpdateUI((prev) => !prev); // Force UI update
+      setUpdateUI((prev) => !prev);
 
       if (!isObjectPlaced) {
         if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
           if (stableStartTime === 0) {
             stableStartTime = Date.now();
           } else if (Date.now() - stableStartTime >= STABLE_DURATION_MS) {
-            objectCoordRef.current = { lat: latitude, lon: longitude };
+            objectCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
             boxRef.current = placeRedBox(locar, longitude, latitude);
             isObjectPlaced = true;
+            DIST_THRESHOLD = 0.0001;
           }
         } else {
           stableStartTime = 0;
@@ -142,8 +137,8 @@ const LocApp: React.FC = () => {
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.7)', color: '#000', padding: '8px', borderRadius: '4px', zIndex: 20, fontSize: '14px' }}>
-        <div><strong>내 위치:</strong> {userCoordRef.current ? `${userCoordRef.current.lat.toFixed(6)}, ${userCoordRef.current.lon.toFixed(6)}` : '---, ---'}</div>
-        <div><strong>오브젝트 위치:</strong> {objectCoordRef.current ? `${objectCoordRef.current.lat.toFixed(6)}, ${objectCoordRef.current.lon.toFixed(6)}` : '---, ---'}</div>
+        <div><strong>내 위치:</strong> {userCoordRef.current ? `${userCoordRef.current.lat.toFixed(6)}, ${userCoordRef.current.lon.toFixed(6)}, ${userCoordRef.current.alt}` : '---, ---'}</div>
+        <div><strong>오브젝트 위치:</strong> {objectCoordRef.current ? `${objectCoordRef.current.lat.toFixed(6)}, ${objectCoordRef.current.lon.toFixed(6)}, ${objectCoordRef.current.alt}` : '---, ---'}</div>
       </div>
     </div>
   );
