@@ -82,7 +82,6 @@ const LocationPrompt: React.FC = () => {
 };
 
 export default LocationPrompt;
-
 interface ObjectCoord {
   id: string;
   lat: number;
@@ -96,9 +95,10 @@ const LocApp: React.FC = () => {
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
   const [objectCoord, setObjectCoord] = useState<ObjectCoord | null>(null);
 
+  // useRef로 상태 관리
   const isObjectPlacedRef = useRef(false);
   const stableStartTimeRef = useRef(0);
-  const DIST_THRESHOLD_REF = useRef(1);
+  const DIST_THRESHOLD_REF = useRef(1); // 초기 1미터
 
   useEffect(() => {
     // Three.js + LocAR 초기화
@@ -125,7 +125,7 @@ const LocApp: React.FC = () => {
     const ACCURACY_THRESHOLD = 10;
     const STABLE_DURATION_MS = 3000;
 
-    locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
+    const handleGpsUpdate = (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy } = pos.coords;
       setUserCoord({ lat: latitude, lon: longitude });
 
@@ -176,7 +176,9 @@ const LocApp: React.FC = () => {
         stableStartTimeRef.current = 0;
         console.log('Stabilization reset');
       }
-    });
+    };
+
+    locar.on('gpsupdate', handleGpsUpdate);
 
     locar.startGps();
 
@@ -193,8 +195,9 @@ const LocApp: React.FC = () => {
       if (containerRef.current) {
         containerRef.current.removeChild(renderer.domElement);
       }
+      locar.off('gpsupdate', handleGpsUpdate); // 이벤트 리스너 정리
     };
-  }, [objectCoord]);
+  }, []); // 의존성 배열에서 objectCoord 제거
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -254,11 +257,13 @@ function placeRedBox(locar: any, lon: number, lat: number): string {
 
   const objId = Math.random().toString(36).substr(2, 9);
 
-  // 고도는 alt-1
-  locar.add(mesh, lon, lat, - 1, {
+  // 고도를 0으로 설정 (필요 시 조정)
+  locar.add(mesh, lon, lat, 0, {
     name: '1m² Box',
     id: objId,
   });
+
+  console.log(`Box placed with ID: ${objId} at (${lat}, ${lon})`);
 
   return objId;
 }
