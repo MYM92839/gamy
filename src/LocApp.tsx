@@ -76,6 +76,16 @@ const LocApp: React.FC = () => {
   const ACCURACY_THRESHOLD = 10;
   let DIST_THRESHOLD = 1;
 
+  const smoothGpsData = (newCoord: { lat: number; lon: number; alt: number }) => {
+    if (!userCoordRef.current) {
+      userCoordRef.current = newCoord;
+    } else {
+      userCoordRef.current.lat = (userCoordRef.current.lat * 9 + newCoord.lat) / 10;
+      userCoordRef.current.lon = (userCoordRef.current.lon * 9 + newCoord.lon) / 10;
+      userCoordRef.current.alt = (userCoordRef.current.alt * 9 + newCoord.alt) / 10;
+    }
+  };
+
   useEffect(() => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
@@ -92,7 +102,7 @@ const LocApp: React.FC = () => {
 
     locar.on('gpsupdate', (pos: GeolocationPosition) => {
       const { latitude, longitude, accuracy } = pos.coords;
-      userCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
+      smoothGpsData({ lat: latitude, lon: longitude, alt: 0 });
       setUpdateUI((prev) => !prev);
 
       if (!isObjectPlaced) {
@@ -103,7 +113,7 @@ const LocApp: React.FC = () => {
             objectCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
             boxRef.current = placeRedBox(locar, longitude, latitude - (5 / 110574));
             isObjectPlaced = true;
-            DIST_THRESHOLD = 0.0001;
+            DIST_THRESHOLD = 0.00001;
             setIsStabilizing(false);
           }
         } else {
@@ -112,11 +122,14 @@ const LocApp: React.FC = () => {
       } else if (objectCoordRef.current) {
         const deltaLon = (longitude - objectCoordRef.current.lon) * 111320;
         const deltaLat = (latitude - objectCoordRef.current.lat) * 110574;
-        if (Math.abs(deltaLon) > DIST_THRESHOLD || Math.abs(deltaLat) > DIST_THRESHOLD) {
+        const distance = Math.sqrt(deltaLon ** 2 + deltaLat ** 2);
+
+        if (distance > DIST_THRESHOLD) {
           boxRef.current?.position.set(deltaLon, deltaLat, 0);
         }
       }
     });
+
 
     locar.startGps();
 
@@ -143,10 +156,6 @@ const LocApp: React.FC = () => {
           보정 중입니다...
         </div>
       )}
-      <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.7)', color: '#000', padding: '8px', borderRadius: '4px', zIndex: 20, fontSize: '14px' }}>
-        <div><strong>내 위치:</strong> {userCoordRef.current ? `${userCoordRef.current.lat.toFixed(6)}, ${userCoordRef.current.lon.toFixed(6)}, ${userCoordRef.current.alt}` : '---, ---'}</div>
-        <div><strong>오브젝트 위치:</strong> {objectCoordRef.current ? `${objectCoordRef.current.lat.toFixed(6)}, ${objectCoordRef.current.lon.toFixed(6)}, ${objectCoordRef.current.alt}` : '---, ---'}</div>
-      </div>
     </div>
   );
 };
