@@ -157,7 +157,7 @@ const LocApp: React.FC = () => {
 
     let isObjectPlaced = false;
     let stableStartTime = 0;
-    let boxMesh: THREE.Mesh | null = null;
+    // let boxMesh: THREE.Mesh | null = null;
 
     const ACCURACY_THRESHOLD = 10;
     const DIST_THRESHOLD = 1;
@@ -184,7 +184,7 @@ const LocApp: React.FC = () => {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
             console.log('[Stable] Placing object...');
-            boxMesh = placeRedBox(locar, longitude, latitude, 0);
+            placeRedBox(locar, longitude, latitude, 0);
             setObjectCoord({ lat: latitude, lon: longitude });
             isObjectPlaced = true;
             setIsStabilizing(false);
