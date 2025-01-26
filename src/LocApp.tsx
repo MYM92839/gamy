@@ -89,13 +89,23 @@ const LocApp: React.FC = () => {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
+    const updateObjectPosition = (lat: number, lon: number) => {
+      if (boxRef.current && objectCoordRef.current) {
+        const deltaLon = (lon - objectCoordRef.current.lon) * 111320;
+        const deltaLat = (lat - objectCoordRef.current.lat) * 110574;
+        boxRef.current.position.set(deltaLon, deltaLat, 0);
+      }
+    };
+
+    locar.on('gpsupdate', (pos: GeolocationPosition) => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
       setUpdateUI((prev) => !prev);
 
+      console.log(`[GPS Update] Lat: ${latitude}, Lon: ${longitude}, Accuracy: ${accuracy}`);
+
       if (!isObjectPlaced) {
-        if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
+        if (accuracy <= ACCURACY_THRESHOLD) {
           if (stableStartTime === 0) {
             stableStartTime = Date.now();
           } else if (Date.now() - stableStartTime >= STABLE_DURATION_MS) {
@@ -108,11 +118,7 @@ const LocApp: React.FC = () => {
           stableStartTime = 0;
         }
       } else {
-        if (boxRef.current && objectCoordRef.current) {
-          const deltaLon = (longitude - objectCoordRef.current.lon) * 111320;
-          const deltaLat = (latitude - objectCoordRef.current.lat) * 110574;
-          boxRef.current.position.set(deltaLon, deltaLat, 0);
-        }
+        updateObjectPosition(latitude, longitude);
       }
     });
 
