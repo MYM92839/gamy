@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as LocAR from 'locar';
 import proj4 from 'proj4';
+import { OrbitControls } from 'three-stdlib';
 
 type PermissionState = 'idle' | 'granted' | 'denied';
 
@@ -118,6 +119,7 @@ const LocationPrompt: React.FC = () => {
 export default LocationPrompt;
 
 
+
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -172,6 +174,10 @@ const LocApp: React.FC = () => {
     const cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
+    // OrbitControls 설정 (디버깅용)
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.update();
+
     // LocAR 설정
     const locar = new LocAR.LocationBased(scene, camera);
     locarRef.current = locar;
@@ -192,8 +198,8 @@ const LocApp: React.FC = () => {
       const Δλ = (lon2 - lon1) * Math.PI / 180;
 
       const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
       const distance = R * c; // 미터 단위 거리
@@ -273,6 +279,20 @@ const LocApp: React.FC = () => {
       }
     };
 
+    // 이벤트 리스너 등록
+    locar.on('gpsupdate', handleGpsUpdate);
+
+    locar.startGps();
+
+    const animate = () => {
+      camRenderer.update();
+      deviceControls.update();
+      controls.update(); // OrbitControls 업데이트 (디버깅용)
+      renderer.render(scene, camera);
+      animationId = requestAnimationFrame(animate);
+    };
+    animate();
+
     // `onResize` 함수 정의
     const onResize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -281,19 +301,7 @@ const LocApp: React.FC = () => {
       console.log('[Resize] Renderer size updated');
     };
 
-    // 이벤트 리스너 등록
     window.addEventListener('resize', onResize);
-    locar.on('gpsupdate', handleGpsUpdate);
-
-    locar.startGps();
-
-    const animate = () => {
-      camRenderer.update();
-      deviceControls.update();
-      renderer.render(scene, camera);
-      animationId = requestAnimationFrame(animate);
-    };
-    animate();
 
     return () => {
       window.removeEventListener('resize', onResize);
@@ -358,6 +366,7 @@ const LocApp: React.FC = () => {
     </div>
   );
 };
+
 /**
  * Places a red box at the specified relative coordinates.
  * @param locar - The LocAR.LocationBased instance.
@@ -379,6 +388,25 @@ function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
   return mesh;
 }
 
+/**
+ * Converts latitude and longitude to UTM coordinates with automatic zone calculation.
+ * @param lat - Latitude in degrees.
+ * @param lon - Longitude in degrees.
+ * @returns An object containing x (easting), y (northing), and zone.
+ */
+export function latLonToUTM(lat: number, lon: number): { x: number; y: number; zone: string } {
+  // 자동으로 UTM Zone 계산
+  const zone = Math.floor((lon + 180) / 6) + 1;
+  const hemisphere = lat >= 0 ? 'north' : 'south';
+
+  // WGS84 좌표계 (EPSG:4326)에서 UTM 좌표계로 변환
+  const projLatLon = 'EPSG:4326'; // WGS84
+  const projUTM = `+proj=utm +zone=${zone} +${hemisphere === 'north' ? 'north' : 'south'} +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
+
+  const [x, y] = proj4(projLatLon, projUTM, [lon, lat]);
+
+  return { x, y, zone: `${zone}${hemisphere === 'north' ? 'N' : 'S'}` };
+}
 /**
  * Calculates the distance between two latitude/longitude points in meters.
  * @param lat1 - Latitude of point 1 in degrees.
@@ -408,16 +436,3 @@ function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
  * @param lon - Longitude in degrees.
  * @returns An object containing x (easting), y (northing), and zone.
  */
-export function latLonToUTM(lat: number, lon: number): { x: number; y: number; zone: string } {
-  // 자동으로 UTM Zone 계산
-  const zone = Math.floor((lon + 180) / 6) + 1;
-  const hemisphere = lat >= 0 ? 'north' : 'south';
-
-  // WGS84 좌표계 (EPSG:4326)에서 UTM 좌표계로 변환
-  const projLatLon = 'EPSG:4326'; // WGS84
-  const projUTM = `+proj=utm +zone=${zone} +${hemisphere === 'north' ? 'north' : 'south'} +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
-
-  const [x, y] = proj4(projLatLon, projUTM, [lon, lat]);
-
-  return { x, y, zone: `${zone}${hemisphere === 'north' ? 'N' : 'S'}` };
-}
