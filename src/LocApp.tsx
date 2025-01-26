@@ -42,9 +42,9 @@ const LocationPrompt: React.FC = () => {
   }
 
   return (
-    <div className="text-center mt-12">
-      <h2 className="text-xl font-bold">AR 권한 요청</h2>
-      <button className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md" onClick={handleStartAR}>
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-800 text-white">
+      <h2 className="text-2xl font-bold">AR 권한 요청</h2>
+      <button className="mt-4 px-6 py-3 bg-blue-500 rounded-lg shadow-lg" onClick={handleStartAR}>
         AR 시작하기
       </button>
     </div>
@@ -57,6 +57,7 @@ type AppState = 'idle' | 'calibrating' | 'stabilized' | 'viewing';
 
 const ARApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<AppState>('idle');
   const userCoordRef = useRef<{ lat: number; lon: number } | null>(null);
   const correctedCoordRef = useRef<{ lat: number; lon: number } | null>(null);
@@ -70,21 +71,18 @@ const ARApp: React.FC = () => {
 
   useEffect(() => {
     const initAR = async () => {
-      await tf.setBackend('webgl');
-      await tf.ready();
-      console.log('TensorFlow.js backend initialized.');
-
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      containerRef.current?.appendChild(renderer.domElement);
+      if (tf.getBackend() !== 'webgl') {
+        await tf.setBackend('webgl');
+        await tf.ready();
+        console.log('TensorFlow.js WebGL backend initialized');
+      }
 
       const mindarThree = new MindARThree({
         container: containerRef.current!,
         imageTargetSrc: '/card.mind',
       });
 
+      const { renderer, scene, camera } = mindarThree;
       const mindarAnchor = mindarThree.addAnchor(0);
 
       mindarAnchor.onTargetFound = () => {
@@ -116,7 +114,6 @@ const ARApp: React.FC = () => {
       };
 
       await mindarThree.start();
-      console.log('MindAR started successfully');
 
       const locar = new LocAR.LocationBased(scene, camera);
       locar.startGps();
@@ -164,10 +161,11 @@ const ARApp: React.FC = () => {
   }, [state]);
 
   return (
-    <div ref={containerRef} className="w-full h-screen relative bg-black">
-      <h2 className="absolute top-5 left-5 text-lg font-bold text-white bg-gray-800 p-2 rounded">
+    <div ref={containerRef} className="relative w-full h-screen bg-black">
+      <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover" autoPlay playsInline></video>
+      <div className="absolute top-5 left-5 text-lg font-bold text-white bg-gray-800 p-2 rounded">
         MindAR + LocAR 연동 테스트
-      </h2>
+      </div>
       <p className="absolute top-14 left-5 text-sm text-gray-300">
         현재 상태: {state}
       </p>
