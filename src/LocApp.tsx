@@ -82,6 +82,9 @@ const LocationPrompt: React.FC = () => {
 };
 
 export default LocationPrompt;
+
+
+
 interface ObjectCoord {
   id: string;
   lat: number;
@@ -142,12 +145,13 @@ const LocApp: React.FC = () => {
         const latDiffM = latDiff * metersPerLatDeg;
         const lonDiffM = lonDiff * metersPerLonDeg;
 
+        console.log(`Lat Diff (deg): ${latDiff}, Lon Diff (deg): ${lonDiff}`);
         console.log(`Lat Diff (m): ${latDiffM}, Lon Diff (m): ${lonDiffM}`);
 
         const relativeX = lonDiffM;
         const relativeZ = -latDiffM;
 
-        console.log(`Updating Object Position to: X=${relativeX}, Z=${relativeZ}`);
+        console.log(`Relative Coordinates: X=${relativeX}, Z=${relativeZ}`);
 
         locar.updateObjectPosition(objectCoord.id, relativeX, relativeZ, 0);
 
@@ -197,7 +201,7 @@ const LocApp: React.FC = () => {
       }
       locar.off('gpsupdate', handleGpsUpdate); // 이벤트 리스너 정리
     };
-  }, []); // 의존성 배열에서 objectCoord 제거
+  }, []); // 의존성 배열을 빈 배열로 설정하여 초기화가 한 번만 실행되도록 함
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
