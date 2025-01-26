@@ -98,16 +98,24 @@ const LocApp: React.FC = () => {
   const [isStabilizing, setIsStabilizing] = useState(true);
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
   const [objectCoord, setObjectCoord] = useState<ObjectCoord | null>(null);
+  const [logs, setLogs] = useState<string[]>([]); // 로그 상태 추가
 
   // useRef로 상태 관리
   const isObjectPlacedRef = useRef(false);
   const stableStartTimeRef = useRef(0);
   const DIST_THRESHOLD_REF = useRef(1); // 초기 1미터
 
+  // 커스텀 로그 함수
+  const log = (message: string) => {
+    setLogs((prevLogs) => [...prevLogs, message]);
+    console.log(message);
+  };
+
   useEffect(() => {
     // Three.js + LocAR 초기화
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
+    camera.position.set(0, 0, 5); // 카메라를 z축 방향으로 이동
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -115,10 +123,18 @@ const LocApp: React.FC = () => {
       containerRef.current.appendChild(renderer.domElement);
     }
 
+    // 좌표계 시각화
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+
+    const gridHelper = new THREE.GridHelper(100, 100);
+    scene.add(gridHelper);
+
     const onResize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      log('Window resized and camera updated.');
     };
     window.addEventListener('resize', onResize);
 
@@ -133,39 +149,38 @@ const LocApp: React.FC = () => {
       const { latitude, longitude, accuracy } = pos.coords;
       setUserCoord({ lat: latitude, lon: longitude });
 
-      console.log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distMoved}`);
+      log(`User Position: (${latitude}, ${longitude}), Distance Moved: ${distMoved}m`);
 
       if (isObjectPlacedRef.current && objectCoord) {
         // LocAR이 좌표 변환을 처리한다고 가정
-        // 상대 좌표 계산 없이 직접 업데이트
+        // 위도와 경도를 직접 전달
         locar.updateObjectPosition(objectCoord.id, latitude, longitude, 0); // altitude는 필요 시 조정
 
-        console.log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
-
+        log(`Updated Object Position to: Latitude=${latitude}, Longitude=${longitude}`);
         return;
       }
 
       if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD_REF.current) {
         if (stableStartTimeRef.current === 0) {
           stableStartTimeRef.current = Date.now();
-          console.log('Stabilization started');
+          log('Stabilization started');
         } else {
           const stableElapsed = Date.now() - stableStartTimeRef.current;
-          console.log(`Stabilization elapsed: ${stableElapsed}ms`);
+          log(`Stabilization elapsed: ${stableElapsed}ms`);
 
           if (stableElapsed >= STABLE_DURATION_MS) {
-            const objId = placeRedBox(locar, longitude, latitude);
+            const objId = placeRedBox(locar, longitude, latitude, log);
             setObjectCoord({ id: objId, lat: latitude, lon: longitude });
             isObjectPlacedRef.current = true;
             setIsStabilizing(false);
 
             DIST_THRESHOLD_REF.current = 0;
-            console.log('Object placed and stabilization completed');
+            log('Object placed and stabilization completed');
           }
         }
       } else {
         stableStartTimeRef.current = 0;
-        console.log('Stabilization reset');
+        log('Stabilization reset');
       }
     };
 
@@ -174,10 +189,15 @@ const LocApp: React.FC = () => {
     locar.startGps();
 
     const animate = () => {
+      requestAnimationFrame(animate);
       cam.update();
       deviceControls.update();
       renderer.render(scene, camera);
-      requestAnimationFrame(animate);
+
+      // 카메라의 현재 위치와 회전 값 로그 출력 (매 프레임마다 로그가 너무 많아질 수 있음)
+      // 필요 시 주석 처리하거나 로그 빈도 조절
+      log(`Camera Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
+      log(`Camera Rotation: (${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}, ${camera.rotation.z.toFixed(2)})`);
     };
     animate();
 
@@ -216,23 +236,39 @@ const LocApp: React.FC = () => {
           position: 'absolute',
           top: 10,
           left: 10,
-          background: 'rgba(255,255,255,0.7)',
+          maxHeight: '40%',
+          width: '80%',
+          overflowY: 'auto',
+          background: 'rgba(255,255,255,0.8)',
           padding: '8px',
           borderRadius: '4px',
           zIndex: 20,
+          fontSize: '12px',
+          lineHeight: '1.4',
         }}
       >
         <div>
-          유저 위치:{' '}
+          <strong>유저 위치:</strong>{' '}
           {userCoord
             ? `(${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)})`
             : '---'}
         </div>
         <div>
-          오브젝트 위치:{' '}
+          <strong>오브젝트 위치:</strong>{' '}
           {objectCoord
             ? `(${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)})`
             : '---'}
+        </div>
+        <hr />
+        <div>
+          <strong>로그:</strong>
+          <ul style={{ listStyleType: 'none', paddingLeft: '0' }}>
+            {logs.map((logMsg, index) => (
+              <li key={index} style={{ whiteSpace: 'pre-wrap' }}>
+                {logMsg}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
@@ -241,8 +277,8 @@ const LocApp: React.FC = () => {
 
 // -------------------------------
 // 오브젝트 배치 함수
-function placeRedBox(locar: any, lon: number, lat: number): string {
-  const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+function placeRedBox(locar: any, lon: number, lat: number, log: (msg: string) => void): string {
+  const geo = new THREE.BoxGeometry(1, 1, 1); // 크기를 1로 설정
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
@@ -254,7 +290,7 @@ function placeRedBox(locar: any, lon: number, lat: number): string {
     id: objId,
   });
 
-  console.log(`Box placed with ID: ${objId} at (${lat}, ${lon})`);
+  log(`Box placed with ID: ${objId} at (${lat}, ${lon})`);
 
   return objId;
 }
