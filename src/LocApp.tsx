@@ -64,54 +64,34 @@ const ARApp: React.FC = () => {
 
   useEffect(() => {
     const scene = new THREE.Scene();
-    const camera = new THREE.Camera();
-    scene.add(camera);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current?.appendChild(renderer.domElement);
 
-    const arToolkitSource = new ArToolkitSource({
-      sourceType: 'webcam',
-    });
+    const arToolkitSource = new ArToolkitSource({ sourceType: 'webcam' });
+    const arToolkitContext = new ArToolkitContext({ detectionMode: 'mono_and_matrix', canvasWidth: 640, canvasHeight: 480 });
 
     arToolkitSource.init(() => {
-      setTimeout(() => {
-        arToolkitSource.onResize();
-        arToolkitSource.copySizeTo(renderer.domElement);
-      }, 2000);
+      setTimeout(() => arToolkitContext.init(() => {
+        camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+      }), 1000);
     });
 
-    const arToolkitContext = new ArToolkitContext({
-      cameraParametersUrl: 'https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat',
-      detectionMode: 'mono',
-    });
-
-    arToolkitContext.init(() => {
-      camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-    });
-
-    const markerControls = new ArMarkerControls(arToolkitContext, camera, {
+    new ArMarkerControls(arToolkitContext, camera, {
       type: 'barcode',
       barcodeValue: 5,
+      size: 1,
     });
 
-    const cube = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    );
-    cube.position.set(0, 0, -5);
-    scene.add(cube);
-    boxRef.current = cube;
-
-    const onGPSUpdate = (pos: GeolocationPosition) => {
+    navigator.geolocation.watchPosition((pos) => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude };
 
       if (accuracy <= ACCURACY_THRESHOLD) {
         if (state === 'calibrating' && Date.now() - stableStartTime >= STABLE_DURATION_MS) {
           setState('stabilized');
-          correctedCoordRef.current = { lat: markerCoord.lat, lon: markerCoord.lon };
+          correctedCoordRef.current = markerCoord;
         }
       } else {
         stableStartTime = Date.now();
@@ -128,17 +108,9 @@ const ARApp: React.FC = () => {
           setState('viewing');
         }
       }
-    };
-
-    navigator.geolocation.watchPosition(onGPSUpdate, console.error, {
-      enableHighAccuracy: true,
-      maximumAge: 0,
     });
 
     const animate = () => {
-      if (arToolkitSource.ready) {
-        arToolkitContext.update(arToolkitSource.domElement);
-      }
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
@@ -152,7 +124,7 @@ const ARApp: React.FC = () => {
   return (
     <div ref={containerRef} className="relative w-full h-screen bg-black">
       <div className="absolute top-5 left-5 text-lg font-bold text-white bg-gray-800 p-2 rounded">
-        QR 기반 AR.js 연동 테스트
+        AR.js 위치 기반 AR 테스트
       </div>
       <p className="absolute top-14 left-5 text-sm text-gray-300">현재 상태: {state}</p>
     </div>
