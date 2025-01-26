@@ -183,7 +183,7 @@ const LocApp: React.FC = () => {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const camRenderer = new LocAR.WebcamRenderer(renderer);
 
-    const ACCURACY_THRESHOLD = 10; // GPS 정확도 (미터)
+    const ACCURACY_THRESHOLD = 20; // GPS 정확도 (미터)
     const STABLE_DURATION_MS = 3000; // 안정화 기간 (밀리초)
 
     let previousPosition: GeolocationPosition | null = null;
