@@ -119,7 +119,6 @@ const LocationPrompt: React.FC = () => {
 export default LocationPrompt;
 
 
-
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -170,7 +169,7 @@ const LocApp: React.FC = () => {
 
     // 간단한 큐브 추가 (디버깅용)
     const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // 디버깅용 재질
     const cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
@@ -377,7 +376,7 @@ const LocApp: React.FC = () => {
 function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
   console.log(`placeRedBox at x=${x}, y=${y}`);
   const geo = new THREE.BoxGeometry(1, 1, 1); // 크기 조정 가능
-  const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // 표면 조명 적용
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // 재질 변경 (디버깅용)
   const mesh = new THREE.Mesh(geo, mat);
 
   // Three.js에서의 위치는 x, y, z로 설정 (z는 높이)
