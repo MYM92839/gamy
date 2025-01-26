@@ -33,8 +33,8 @@ const LocationPrompt: React.FC = () => {
 
   const handleStartAR = () => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        requestCameraPermission().then((stream) => {
+      () => {
+        requestCameraPermission().then(() => {
           setPermission('granted');
         }).catch(() => {
           setPermission('denied');
