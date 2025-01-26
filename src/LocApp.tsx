@@ -123,9 +123,8 @@ const LocApp: React.FC = () => {
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
     null
   );
-  const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
-    null
-  );
+  const [objectCoord, setObjectCoord] = useState<{ id: string; lat: number; lon: number; alt?: number } | null>(null);
+
 
   useEffect(() => {
     let animationId = 0;
@@ -163,44 +162,36 @@ const LocApp: React.FC = () => {
     const DIST_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
 
+    // 'gpsupdate' 핸들러에서 수정
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      // 위치가 확정되었다면 이후 오브젝트 업데이트를 중단
+      const { latitude, longitude, accuracy } = pos.coords;
+
+      // 사용자 위치는 계속 업데이트
+      setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
+
       if (isObjectPlaced) {
-        setUserCoord({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          alt: pos.coords.altitude || 0,
-        });
+        // 오브젝트와 유저 간의 상대 위치 계산
+        const relativeLat = latitude - (objectCoord?.lat || latitude);
+        const relativeLon = longitude - (objectCoord?.lon || longitude);
+
+        locar.updateObjectPosition(objectCoord?.id, relativeLat, relativeLon, 0);
         return;
       }
 
-      const { latitude, longitude, accuracy } = pos.coords;
-
-      // 초기 오브젝트 배치
-      setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
-
-      const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
-      const isMovedSmall = distMoved <= DIST_THRESHOLD;
-
-      if (isAccurateEnough && isMovedSmall) {
+      // 오브젝트 배치 로직
+      if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
         if (stableStartTime === 0) {
           stableStartTime = Date.now();
-        } else {
-          const stableElapsed = Date.now() - stableStartTime;
-          if (stableElapsed >= STABLE_DURATION_MS) {
-            console.log('[Stable] Placing object...');
-            placeRedBox(locar, longitude, latitude, 0);
-            setObjectCoord({ lat: latitude, lon: longitude });
-            isObjectPlaced = true;
-            setIsStabilizing(false);
-          }
+        } else if (Date.now() - stableStartTime >= STABLE_DURATION_MS) {
+          const newObjectId = placeRedBox(locar, longitude, latitude, 0);
+          setObjectCoord({ id: newObjectId, lat: latitude, lon: longitude, alt: 0 });
+          isObjectPlaced = true;
+          setIsStabilizing(false);
         }
       } else {
         stableStartTime = 0;
       }
     });
-
-
 
     locar.startGps();
 
@@ -274,13 +265,14 @@ const LocApp: React.FC = () => {
   );
 };
 
-function placeRedBox(locar: any, lon: number, lat: number, alt: number): THREE.Mesh {
+function placeRedBox(locar: any, lon: number, lat: number, alt: number): string {
   console.log(`placeRedBox at lon=${lon}, lat=${lat}, alt=${alt}`);
   const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  locar.add(mesh, lon, lat, alt - 1, { name: '1m² Box' });
+  const objectId = Math.random().toString(36).substr(2, 9); // 고유 ID 생성
+  locar.add(mesh, lon, lat, alt - 1, { name: '1m² Box', id: objectId });
 
-  return mesh;
+  return objectId;
 }
