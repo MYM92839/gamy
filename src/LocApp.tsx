@@ -82,7 +82,7 @@ const ARApp: React.FC = () => {
 
       const mindarThree = new MindARThree({
         container: containerRef.current!,
-        imageTargetSrc: 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind',
+        imageTargetSrc: '/card.mind',
       });
 
       const mindarAnchor = mindarThree.addAnchor(0);
