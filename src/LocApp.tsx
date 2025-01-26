@@ -159,7 +159,7 @@ const LocApp: React.FC = () => {
     // let boxMesh: THREE.Mesh | null = null;
 
     const ACCURACY_THRESHOLD = 10;
-    const DIST_THRESHOLD = 1;
+    const DIST_THRESHOLD = 0.001;
     const STABLE_DURATION_MS = 3000;
 
     // 'gpsupdate' 핸들러에서 수정
