@@ -128,7 +128,7 @@ const LocApp: React.FC = () => {
   // Refs to manage persistent state across renders
   const isObjectPlacedRef = useRef(false);
   const stableStartTimeRef = useRef(0);
-  const locarRef = useRef<any | null>(null);
+  const locarRef = useRef<LocAR.LocationBased | null>(null);
 
   // Ref for DIST_THRESHOLD to allow dynamic updates
   const DIST_THRESHOLDRef = useRef(0.00001); // 0.00001 degrees (~1.11 meters)
@@ -140,16 +140,16 @@ const LocApp: React.FC = () => {
     let animationId = 0;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff); // 흰색 배경으로 설정
+    scene.background = new THREE.Color(0x87ceeb); // 하늘색 배경
 
     const camera = new THREE.PerspectiveCamera(
       80,
       window.innerWidth / window.innerHeight,
-      0.001,
+      0.1,
       1000
     );
-    camera.position.set(0, 0, 5); // 카메라를 원점에서 약간 뒤로 이동
-    camera.lookAt(0, 0, 0); // 카메라가 원점을 바라보도록 설정
+    camera.position.set(0, 0, 5);
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -158,13 +158,21 @@ const LocApp: React.FC = () => {
       containerRef.current.appendChild(renderer.domElement);
     }
 
-    const onResize = () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-    };
-    window.addEventListener('resize', onResize);
+    // 조명 추가
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
 
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(0, 1, 1).normalize();
+    scene.add(directionalLight);
+
+    // 간단한 큐브 추가 (디버깅용)
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    // LocAR 설정
     const locar = new LocAR.LocationBased(scene, camera);
     locarRef.current = locar;
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
@@ -175,6 +183,24 @@ const LocApp: React.FC = () => {
 
     let previousPosition: GeolocationPosition | null = null;
 
+    // 거리 계산 함수
+    function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+      const R = 6371e3; // 지구 반경 (미터)
+      const φ1 = lat1 * Math.PI / 180; // 라디안으로 변환
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      const distance = R * c; // 미터 단위 거리
+      return distance;
+    }
+
+    // GPS 업데이트 핸들러
     const handleGpsUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude, accuracy } = pos.coords;
 
@@ -247,6 +273,16 @@ const LocApp: React.FC = () => {
       }
     };
 
+    // `onResize` 함수 정의
+    const onResize = () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      console.log('[Resize] Renderer size updated');
+    };
+
+    // 이벤트 리스너 등록
+    window.addEventListener('resize', onResize);
     locar.on('gpsupdate', handleGpsUpdate);
 
     locar.startGps();
@@ -322,7 +358,6 @@ const LocApp: React.FC = () => {
     </div>
   );
 };
-
 /**
  * Places a red box at the specified relative coordinates.
  * @param locar - The LocAR.LocationBased instance.
@@ -333,7 +368,7 @@ const LocApp: React.FC = () => {
 function placeRedBox(locar: any, x: number, y: number): THREE.Mesh {
   console.log(`placeRedBox at x=${x}, y=${y}`);
   const geo = new THREE.BoxGeometry(1, 1, 1); // 크기 조정 가능
-  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // 빨간색
+  const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // 표면 조명 적용
   const mesh = new THREE.Mesh(geo, mat);
 
   // Three.js에서의 위치는 x, y, z로 설정 (z는 높이)
@@ -360,8 +395,8 @@ function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number,
   const Δλ = (lon2 - lon1) * Math.PI / 180;
 
   const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   const distance = R * c; // 미터 단위 거리
