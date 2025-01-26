@@ -83,12 +83,10 @@ const LocationPrompt: React.FC = () => {
 
 export default LocationPrompt;
 
-
 interface ObjectCoord {
   id: string;
   lat: number;
   lon: number;
-  alt?: number;
 }
 
 const LocApp: React.FC = () => {
@@ -96,8 +94,9 @@ const LocApp: React.FC = () => {
 
   const [isStabilizing, setIsStabilizing] = useState(true);
 
-  // 사용자 현재 좌표
+  // 사용자 좌표
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number } | null>(null);
+
   // 오브젝트(고정) 좌표
   const [objectCoord, setObjectCoord] = useState<ObjectCoord | null>(null);
 
@@ -123,65 +122,58 @@ const LocApp: React.FC = () => {
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
     const cam = new LocAR.WebcamRenderer(renderer);
 
-    // 안정화 & 배치 제어
     let isObjectPlaced = false;
     let stableStartTime = 0;
 
-    // 초기값: 1m 기준
+    // 초기엔 1m 기준
     let DIST_THRESHOLD = 1;
     const ACCURACY_THRESHOLD = 10;
     const STABLE_DURATION_MS = 3000;
 
-    // GPS 콜백
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
       const { latitude, longitude, accuracy } = pos.coords;
-
-      // 유저 위치 업데이트
       setUserCoord({ lat: latitude, lon: longitude });
 
-      // 이미 오브젝트 배치된 뒤 => 상대적 위치 업데이트
+      // 1) 이미 오브젝트 배치된 상태 => 작은 이동이라도 반영
       if (isObjectPlaced && objectCoord) {
-        // -------------------------
-        // (1) 경위도 차이
-        // -------------------------
+        // distMoved는 고려 안함 => 작은 이동도 반영
+        // lat/lon 차이 -> 미터 변환
         const latDiff = latitude - objectCoord.lat;
         const lonDiff = longitude - objectCoord.lon;
 
-        // -------------------------
-        // (2) 경위도 -> 미터 변환
-        // -------------------------
-        const metersPerLatDeg = 111320; // 대략
+        const metersPerLatDeg = 111320;
         const cosLat = Math.cos((latitude * Math.PI) / 180);
         const metersPerLonDeg = 111320 * cosLat;
 
-        const latDiffMeters = latDiff * metersPerLatDeg;
-        const lonDiffMeters = lonDiff * metersPerLonDeg;
+        const latDiffM = latDiff * metersPerLatDeg;
+        const lonDiffM = lonDiff * metersPerLonDeg;
 
-        // 예: x=경도, z=위도
-        const relativeX = lonDiffMeters;
-        const relativeZ = -latDiffMeters; // 북쪽 증가는 z-
-        // 고도는 필요시 계산: altitudeDiff
+        // x=lon, z=-lat
+        const relativeX = lonDiffM;
+        const relativeZ = -latDiffM;
 
-        // 오브젝트 위치 갱신
         locar.updateObjectPosition(objectCoord.id, relativeX, relativeZ, 0);
 
-        // distThreshold => 0.1
-        DIST_THRESHOLD = 0.1;
+        // threshold 바꿔도 이미 안정화 끝났으므로 상관 X
         return;
       }
 
-      // 오브젝트 배치 전
+      // 2) 오브젝트 배치 전 (안정화 로직)
       if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
         if (stableStartTime === 0) {
           stableStartTime = Date.now();
         } else {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
-            // 배치
-            const objId = placeRedBox(locar, longitude, latitude, 0);
+            // 오브젝트 한 번 배치
+            const objId = placeRedBox(locar, longitude, latitude);
             setObjectCoord({ id: objId, lat: latitude, lon: longitude });
             isObjectPlaced = true;
             setIsStabilizing(false);
+
+            // 안정화 끝 => distMoved 무시
+            // -> distThreshold = 0.1 (원한다면 이 시점에 바꾸기 가능)
+            DIST_THRESHOLD = 0;
           }
         }
       } else {
@@ -209,7 +201,6 @@ const LocApp: React.FC = () => {
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {/* 중앙에 "보정 중" 메시지 */}
       {isStabilizing && (
         <div
           style={{
@@ -217,7 +208,7 @@ const LocApp: React.FC = () => {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            background: 'rgba(0, 0, 0, 0.6)',
+            background: 'rgba(0,0,0,0.6)',
             color: '#fff',
             padding: '10px 20px',
             borderRadius: '8px',
@@ -259,16 +250,15 @@ const LocApp: React.FC = () => {
 
 // -------------------------------
 // 오브젝트 배치 함수
-function placeRedBox(locar: any, lon: number, lat: number, alt: number): string {
+function placeRedBox(locar: any, lon: number, lat: number): string {
   const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   const mesh = new THREE.Mesh(geo, mat);
 
-  // 임의로 ID 생성
   const objId = Math.random().toString(36).substr(2, 9);
 
   // 고도는 alt-1
-  locar.add(mesh, lon, lat, alt - 1, {
+  locar.add(mesh, lon, lat, - 1, {
     name: '1m² Box',
     id: objId,
   });
