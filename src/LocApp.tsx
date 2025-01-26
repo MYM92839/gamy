@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ArToolkitSource, ArToolkitContext, ArMarkerControls } from 'threex';
+import * as THREEx from './libs/threex.js';
 
 const LocationPrompt: React.FC = () => {
   const [permission, setPermission] = useState<'idle' | 'granted' | 'denied'>('idle');
@@ -69,8 +69,8 @@ const ARApp: React.FC = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current?.appendChild(renderer.domElement);
 
-    const arToolkitSource = new ArToolkitSource({ sourceType: 'webcam' });
-    const arToolkitContext = new ArToolkitContext({ detectionMode: 'mono_and_matrix', canvasWidth: 640, canvasHeight: 480 });
+    const arToolkitSource = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+    const arToolkitContext = new THREEx.ArToolkitContext({ detectionMode: 'mono_and_matrix', canvasWidth: 640, canvasHeight: 480 });
 
     arToolkitSource.init(() => {
       setTimeout(() => arToolkitContext.init(() => {
@@ -78,7 +78,7 @@ const ARApp: React.FC = () => {
       }), 1000);
     });
 
-    new ArMarkerControls(arToolkitContext, camera, {
+    new THREEx.ArMarkerControls(arToolkitContext, camera, {
       type: 'barcode',
       barcodeValue: 5,
       size: 1,
