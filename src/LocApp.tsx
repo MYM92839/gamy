@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as LocAR from 'locar';
+import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js';
+
+
 
 type PermissionState = 'idle' | 'granted' | 'denied';
 
@@ -50,7 +53,7 @@ const LocationPrompt: React.FC = () => {
   };
 
   if (permission === 'granted') {
-    return <LocApp />;
+    return <ARApp />;
   }
 
   return (
@@ -63,107 +66,135 @@ const LocationPrompt: React.FC = () => {
 
 export default LocationPrompt;
 
-const LocApp: React.FC = () => {
+type AppState = 'idle' | 'calibrating' | 'stabilized' | 'viewing';
+
+const ARApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [, setUpdateUI] = useState(false);
-  const [isStabilizing, setIsStabilizing] = useState(true);
-  const userCoordRef = useRef<{ lat: number; lon: number; alt: number } | null>(null);
-  const objectCoordRef = useRef<{ lat: number; lon: number; alt: number } | null>(null);
+  const [state, setState] = useState<AppState>('idle');
+  const userCoordRef = useRef<{ lat: number; lon: number } | null>(null);
+  const correctedCoordRef = useRef<{ lat: number; lon: number } | null>(null);
   const boxRef = useRef<THREE.Mesh | null>(null);
-  let stableStartTime = 0;
-  let isObjectPlaced = false;
+  const DIST_THRESHOLD = useRef(0.0001);
   const STABLE_DURATION_MS = 3000;
   const ACCURACY_THRESHOLD = 10;
-  let DIST_THRESHOLD = 1;
+  let stableStartTime = 0;
 
-  const smoothGpsData = (newCoord: { lat: number; lon: number; alt: number }) => {
-    if (!userCoordRef.current) {
-      userCoordRef.current = newCoord;
-    } else {
-      userCoordRef.current.lat = (userCoordRef.current.lat * 9 + newCoord.lat) / 10;
-      userCoordRef.current.lon = (userCoordRef.current.lon * 9 + newCoord.lon) / 10;
-      userCoordRef.current.alt = (userCoordRef.current.alt * 9 + newCoord.alt) / 10;
-    }
-  };
-
+  const markerCoord = { lat: 37.3411707, lon: 127.0649522 };
   useEffect(() => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    containerRef.current?.appendChild(renderer.domElement);
 
-    if (containerRef.current) {
-      containerRef.current.appendChild(renderer.domElement);
-    }
+    const mindarThree = new MindARThree({
+      container: containerRef.current,
+      imageTargetSrc: "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind"
+    });
+    const mindarAnchor = mindarThree.addAnchor(0);
+
+    mindarAnchor.onTargetFound = () => {
+      console.log('Marker found! Calibrating GPS...');
+      setState('calibrating');
+      stableStartTime = Date.now();
+
+      if (userCoordRef.current) {
+        const latOffset = markerCoord.lat - userCoordRef.current.lat;
+        const lonOffset = markerCoord.lon - userCoordRef.current.lon;
+
+        correctedCoordRef.current = {
+          lat: userCoordRef.current.lat + latOffset,
+          lon: userCoordRef.current.lon + lonOffset,
+        };
+
+        console.log(`GPS corrected to: ${correctedCoordRef.current.lat}, ${correctedCoordRef.current.lon}`);
+        setState('stabilized');
+
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xff0000 })
+        );
+        cube.position.set(0, 0, -2);
+        mindarAnchor.group.add(cube);
+        boxRef.current = cube;
+        console.log('Cube added to scene');
+      }
+    };
+
+    mindarThree.start();
 
     const locar = new LocAR.LocationBased(scene, camera);
-    const deviceControls = new LocAR.DeviceOrientationControls(camera);
-    const cam = new LocAR.WebcamRenderer(renderer);
+    locar.startGps();
 
     locar.on('gpsupdate', (pos: GeolocationPosition) => {
       const { latitude, longitude, accuracy } = pos.coords;
-      smoothGpsData({ lat: latitude, lon: longitude, alt: 0 });
-      setUpdateUI((prev) => !prev);
+      userCoordRef.current = { lat: latitude, lon: longitude };
 
-      if (!isObjectPlaced) {
-        if (accuracy <= ACCURACY_THRESHOLD) {
-          if (stableStartTime === 0) {
-            stableStartTime = Date.now();
-          } else if (Date.now() - stableStartTime >= STABLE_DURATION_MS) {
-            objectCoordRef.current = { lat: latitude, lon: longitude, alt: 0 };
-            boxRef.current = placeRedBox(locar, longitude, latitude - (5 / 110574));
-            isObjectPlaced = true;
-            DIST_THRESHOLD = 0.00001;
-            setIsStabilizing(false);
-          }
-        } else {
-          stableStartTime = 0;
+      if (accuracy <= ACCURACY_THRESHOLD) {
+        if (state === 'calibrating' && Date.now() - stableStartTime >= STABLE_DURATION_MS) {
+          setState('stabilized');
         }
-      } else if (objectCoordRef.current) {
-        const deltaLon = (longitude - objectCoordRef.current.lon) * 111320;
-        const deltaLat = (latitude - objectCoordRef.current.lat) * 110574;
+      } else {
+        stableStartTime = Date.now();
+      }
+
+      if (state === 'stabilized') {
+        const deltaLon = (longitude - correctedCoordRef.current!.lon) * 111320;
+        const deltaLat = (latitude - correctedCoordRef.current!.lat) * 110574;
         const distance = Math.sqrt(deltaLon ** 2 + deltaLat ** 2);
 
-        if (distance > DIST_THRESHOLD) {
+        if (distance > DIST_THRESHOLD.current) {
           boxRef.current?.position.set(deltaLon, deltaLat, 0);
+          DIST_THRESHOLD.current = 0.00001;
+          setState('viewing');
         }
+      }
+
+      if (state === 'viewing' && correctedCoordRef.current) {
+        const distanceToUser = getDistanceFromLatLonInMeters(
+          latitude,
+          longitude,
+          correctedCoordRef.current.lat,
+          correctedCoordRef.current.lon
+        );
+        const scaleFactor = Math.max(0.1, 5 / distanceToUser);
+        boxRef.current?.scale.set(scaleFactor, scaleFactor, scaleFactor);
       }
     });
 
-
-    locar.startGps();
-
     const animate = () => {
-      cam.update();
-      deviceControls.update();
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
     animate();
 
     return () => {
+      mindarThree.stop();
       locar.stopGps();
-      if (containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
+      containerRef.current?.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [state]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {isStabilizing && (
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '10px 20px', borderRadius: '8px', zIndex: 10 }}>
-          보정 중입니다...
-        </div>
-      )}
+    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+      <h2>MindAR + LocAR 연동 테스트</h2>
+      <p>현재 상태: {state}</p>
     </div>
   );
 };
 
-function placeRedBox(locar: any, lon: number, lat: number): THREE.Mesh {
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-  const mesh = new THREE.Mesh(geo, mat);
-  locar.add(mesh, lon, lat, 0);
-  return mesh;
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
 }

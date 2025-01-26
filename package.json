@@ -26,6 +26,7 @@
     "js-cookie": "^3.0.5",
     "locar": "^0.0.4",
     "lodash": "^4.17.21",
+    "mind-ar": "^1.2.5",
     "postprocessing": "^6.35.5",
     "proj4": "^2.15.0",
     "qr-scanner": "^1.4.2",
