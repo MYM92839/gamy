@@ -3,8 +3,6 @@ import * as THREE from 'three';
 import * as LocAR from 'locar';
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js';
 
-
-
 type PermissionState = 'idle' | 'granted' | 'denied';
 
 const LocationPrompt: React.FC = () => {
@@ -16,20 +14,12 @@ const LocationPrompt: React.FC = () => {
     }
     return navigator.mediaDevices
       .getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
       })
       .catch((envErr) => {
         console.warn('[Camera] environment error:', envErr);
         return navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'user' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
+          video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } },
         });
       });
   }
@@ -77,9 +67,11 @@ const ARApp: React.FC = () => {
   const DIST_THRESHOLD = useRef(0.0001);
   const STABLE_DURATION_MS = 3000;
   const ACCURACY_THRESHOLD = 10;
-  let stableStartTime = 0;
+  const stableStartTimeRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
 
   const markerCoord = { lat: 37.3411707, lon: 127.0649522 };
+
   useEffect(() => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.001, 1000);
@@ -89,14 +81,15 @@ const ARApp: React.FC = () => {
 
     const mindarThree = new MindARThree({
       container: containerRef.current,
-      imageTargetSrc: "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind"
+      imageTargetSrc: "/card.mind"
     });
+
     const mindarAnchor = mindarThree.addAnchor(0);
 
     mindarAnchor.onTargetFound = () => {
       console.log('Marker found! Calibrating GPS...');
       setState('calibrating');
-      stableStartTime = Date.now();
+      stableStartTimeRef.current = Date.now();
 
       if (userCoordRef.current) {
         const latOffset = markerCoord.lat - userCoordRef.current.lat;
@@ -114,7 +107,7 @@ const ARApp: React.FC = () => {
           new THREE.BoxGeometry(1, 1, 1),
           new THREE.MeshBasicMaterial({ color: 0xff0000 })
         );
-        cube.position.set(0, 0, -2);
+        cube.position.set(0, 0, -5);
         mindarAnchor.group.add(cube);
         boxRef.current = cube;
         console.log('Cube added to scene');
@@ -130,12 +123,14 @@ const ARApp: React.FC = () => {
       const { latitude, longitude, accuracy } = pos.coords;
       userCoordRef.current = { lat: latitude, lon: longitude };
 
+      console.log(`[GPS] Lat: ${latitude}, Lon: ${longitude}, Accuracy: ${accuracy}`);
+
       if (accuracy <= ACCURACY_THRESHOLD) {
-        if (state === 'calibrating' && Date.now() - stableStartTime >= STABLE_DURATION_MS) {
+        if (state === 'calibrating' && Date.now() - stableStartTimeRef.current >= STABLE_DURATION_MS) {
           setState('stabilized');
         }
       } else {
-        stableStartTime = Date.now();
+        stableStartTimeRef.current = Date.now();
       }
 
       if (state === 'stabilized') {
@@ -164,13 +159,14 @@ const ARApp: React.FC = () => {
 
     const animate = () => {
       renderer.render(scene, camera);
-      requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
     };
     animate();
 
     return () => {
       mindarThree.stop();
       locar.stopGps();
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       containerRef.current?.removeChild(renderer.domElement);
     };
   }, [state]);
@@ -179,6 +175,9 @@ const ARApp: React.FC = () => {
     <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
       <h2>MindAR + LocAR 연동 테스트</h2>
       <p>현재 상태: {state}</p>
+      {state === 'calibrating' && <p>보정 중입니다...</p>}
+      {state === 'stabilized' && <p>위치가 보정되었습니다.</p>}
+      {state === 'viewing' && <p>오브젝트를 관찰 중입니다.</p>}
     </div>
   );
 };
@@ -190,10 +189,7 @@ function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number,
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
   const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) *
-    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
