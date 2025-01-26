@@ -32,15 +32,23 @@ const LocationPrompt: React.FC = () => {
   }
 
   const handleStartAR = () => {
+    console.log('[AR] Starting permission chain...');
+
     navigator.geolocation.getCurrentPosition(
-      () => {
-        requestCameraPermission().then(() => {
-          setPermission('granted');
-        }).catch(() => {
-          setPermission('denied');
-        });
+      (pos) => {
+        console.log('[Location] granted!', pos);
+        requestCameraPermission()
+          .then((stream) => {
+            console.log('[Camera] granted!', stream);
+            setPermission('granted');
+          })
+          .catch((err) => {
+            console.error('[Camera] permission error:', err);
+            setPermission('denied');
+          });
       },
-      () => {
+      (err) => {
+        console.error('[Location] permission error:', err);
         setPermission('denied');
       },
       { enableHighAccuracy: true }
@@ -54,7 +62,6 @@ const LocationPrompt: React.FC = () => {
   return (
     <div style={{ textAlign: 'center', marginTop: 50 }}>
       <h2>AR 권한 요청</h2>
-      <p>방향 센서 / 위치 / 카메라 권한을 얻어야 AR을 시작할 수 있습니다.</p>
       <button onClick={handleStartAR}>AR 시작하기</button>
     </div>
   );
@@ -64,9 +71,16 @@ export default LocationPrompt;
 
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [isStabilizing, setIsStabilizing] = useState(true);
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(null);
   const [objectCoord, setObjectCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(null);
   const boxRef = useRef<THREE.Mesh | null>(null);
+  let stableStartTime = 0;
+  let isObjectPlaced = false;
+  const STABLE_DURATION_MS = 3000;
+  const ACCURACY_THRESHOLD = 10;
+  const DIST_THRESHOLD = 1;
 
   useEffect(() => {
     const scene = new THREE.Scene();
@@ -79,27 +93,39 @@ const LocApp: React.FC = () => {
     }
 
     const locar = new LocAR.LocationBased(scene, camera);
-    const camRenderer = new LocAR.WebcamRenderer(renderer);
     const deviceControls = new LocAR.DeviceOrientationControls(camera);
+    const cam = new LocAR.WebcamRenderer(renderer);
 
-    locar.on('gpsupdate', (pos: any) => {
-      const { latitude, longitude } = pos.coords;
-      setUserCoord({ lat: latitude, lon: longitude });
+    locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      setUserCoord({ lat: latitude, lon: longitude, alt: 0 });
 
-      if (!objectCoord) {
-        setObjectCoord({ lat: latitude, lon: longitude });
-        boxRef.current = placeRedBox(locar, longitude, latitude);
-      } else if (boxRef.current) {
-        const deltaLon = (longitude - objectCoord.lon) * 111320;
-        const deltaLat = (latitude - objectCoord.lat) * 110574;
-        boxRef.current.position.set(deltaLon, deltaLat, 0);
+      if (!isObjectPlaced) {
+        if (accuracy <= ACCURACY_THRESHOLD && distMoved <= DIST_THRESHOLD) {
+          if (stableStartTime === 0) {
+            stableStartTime = Date.now();
+          } else if (Date.now() - stableStartTime >= STABLE_DURATION_MS) {
+            setObjectCoord({ lat: latitude, lon: longitude });
+            boxRef.current = placeRedBox(locar, longitude, latitude);
+            isObjectPlaced = true;
+            setIsStabilizing(false);
+          }
+        } else {
+          stableStartTime = 0;
+        }
+      } else {
+        if (boxRef.current && objectCoord) {
+          const deltaLon = (longitude - objectCoord.lon) * 111320;
+          const deltaLat = (latitude - objectCoord.lat) * 110574;
+          boxRef.current.position.set(deltaLon, deltaLat, 0);
+        }
       }
     });
 
     locar.startGps();
 
     const animate = () => {
-      camRenderer.update();
+      cam.update();
       deviceControls.update();
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
@@ -116,14 +142,7 @@ const LocApp: React.FC = () => {
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.7)', padding: '8px', borderRadius: '4px', zIndex: 20, fontSize: '14px' }}>
-        <div>
-          <strong>내 위치:</strong> {userCoord ? `${userCoord.lat.toFixed(6)}, ${userCoord.lon.toFixed(6)}` : '---, ---'}
-        </div>
-        <div>
-          <strong>오브젝트 위치:</strong> {objectCoord ? `${objectCoord.lat.toFixed(6)}, ${objectCoord.lon.toFixed(6)}` : '---, ---'}
-        </div>
-      </div>
+      {isStabilizing && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '10px 20px', borderRadius: '8px', zIndex: 10 }}>보정 중입니다...</div>}
     </div>
   );
 };
@@ -132,6 +151,7 @@ function placeRedBox(locar: any, lon: number, lat: number): THREE.Mesh {
   const geo = new THREE.BoxGeometry(1, 1, 1);
   const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(0, -1, 0);
   locar.add(mesh, lon, lat, 0);
   return mesh;
 }
