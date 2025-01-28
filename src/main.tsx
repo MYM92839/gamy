@@ -15,6 +15,7 @@ import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
 import MindApp from './MindApp.tsx';
 import LocationPrompt from './LocApp.tsx';
+import LocationPrompt2 from './LocApp2.tsx';
 
 const router = createBrowserRouter([
   {
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
       {
         path: 'test',
         element: <LocationPrompt />
+      },
+      {
+        path: 'test2',
+        element: <LocationPrompt2 />
       },
       {
         path: 'ar/:char',
