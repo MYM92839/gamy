@@ -113,9 +113,9 @@ const LocApp: React.FC = () => {
     let stableStartTime = 0;
     const ACCURACY_THRESHOLD = 10;
     const DIST_THRESHOLD = 1;
-    const STABLE_DURATION_MS = 3000;
+    const STABLE_DURATION_MS = 1500;
     // const MAX_SPEED = 1.2;
-    const REBORECTION_THRESHOLD = 5; // 유저가 일정 거리 이상 벗어나면 재보정
+    const REBORECTION_THRESHOLD = 10; // 유저가 일정 거리 이상 벗어나면 재보정
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -175,12 +175,12 @@ const LocApp: React.FC = () => {
       }
 
       if (!isObjectPlaced) {
-        if (isAccurateEnough && isMovedSmall) {
+        if (isAccurateEnough && isMovedSmall && distanceFromInitial <= 2) {
           if (stableStartTime === 0) {
             stableStartTime = Date.now();
           } else {
             const stableElapsed = Date.now() - stableStartTime;
-            if (stableElapsed >= STABLE_DURATION_MS && gpsSamples.length > 1) {
+            if (stableElapsed >= STABLE_DURATION_MS && gpsSamples.length > 1 && distanceFromInitial <= 2) {
               const sortedLat = gpsSamples.map(s => s.lat).sort((a, b) => a - b);
               const sortedLon = gpsSamples.map(s => s.lon).sort((a, b) => a - b);
               const medianLat = sortedLat[Math.floor(sortedLat.length / 2)];
