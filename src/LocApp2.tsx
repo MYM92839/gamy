@@ -184,12 +184,12 @@ const LocApp: React.FC = () => {
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
 
       if (isObjectPlaced) {
-        // 유저 이동 시 오프셋을 기준으로 오브젝트 위치 갱신
+        // 유저 이동 시 오프셋 값을 활용해 오브젝트 위치를 고정
         if (offset) {
           const correctedCoords = locar.latLonToWorld(
-            fixedObjectCoord.lat + offset.lat,
-            fixedObjectCoord.lon + offset.lon,
-            fixedObjectCoord.alt + offset.alt
+            fixedObjectCoord.lat,
+            fixedObjectCoord.lon,
+            fixedObjectCoord.alt
           );
           locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z);
         }
@@ -208,9 +208,9 @@ const LocApp: React.FC = () => {
 
             // 오프셋 계산 및 저장
             offset = {
-              lat: averageLat - fixedObjectCoord.lat,
-              lon: averageLon - fixedObjectCoord.lon,
-              alt: 0, // 고도가 다를 경우 처리 가능
+              lat: fixedObjectCoord.lat - averageLat,
+              lon: fixedObjectCoord.lon - averageLon,
+              alt: 0,
             };
 
             gpsSamples = []; // 샘플 초기화
