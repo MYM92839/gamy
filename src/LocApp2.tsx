@@ -103,9 +103,7 @@ export default LocationPrompt;
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isStabilizing, setIsStabilizing] = useState(true);
-  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(
-    null
-  );
+  const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(null);
 
   const fixedObjectCoord = { lat: 37.341186, lon: 127.064875, alt: 0 }; // 정해진 오브젝트 위치
 
@@ -203,7 +201,7 @@ const LocApp: React.FC = () => {
           const correctedCoords = locar.latLonToWorld(
             fixedObjectCoord.lat + offset.lat,
             fixedObjectCoord.lon + offset.lon,
-            fixedObjectCoord.alt + offset.alt
+            0
           );
           locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z);
         }
@@ -225,39 +223,8 @@ const LocApp: React.FC = () => {
               return latDiff <= ACCURACY_THRESHOLD / 1e5 && lonDiff <= ACCURACY_THRESHOLD / 1e5;
             });
 
-            // 중간값(Median) 계산
-            const sortedLat = gpsSamples.map(s => s.lat).sort((a, b) => a - b);
-            const sortedLon = gpsSamples.map(s => s.lon).sort((a, b) => a - b);
-            const medianLat = sortedLat[Math.floor(sortedLat.length / 2)];
-            const medianLon = sortedLon[Math.floor(sortedLon.length / 2)];
-
-            // 정확도가 가장 높은 데이터 선택
-            const bestSample = gpsSamples.reduce((best, current) => {
-              return current.accuracy < best.accuracy ? current : best;
-            });
-
-            // 가중 평균 계산 (최근 데이터에 가중치 부여)
-            const weightedLat = gpsSamples.reduce((sum, sample, index) => {
-              const weight = index + 1; // 최신 데이터일수록 더 높은 가중치
-              return sum + sample.lat * weight;
-            }, 0) / gpsSamples.reduce((sum, _, index) => sum + (index + 1), 0);
-
-            const weightedLon = gpsSamples.reduce((sum, sample, index) => {
-              const weight = index + 1; // 최신 데이터일수록 더 높은 가중치
-              return sum + sample.lon * weight;
-            }, 0) / gpsSamples.reduce((sum, _, index) => sum + (index + 1), 0);
-
-            // 최종 오프셋 계산 (가중 평균, 중간값, 최적 데이터 사용)
-            offset = {
-              lat: fixedObjectCoord.lat - weightedLat,
-              lon: fixedObjectCoord.lon - weightedLon,
-              alt: 0, // 고도는 기본값 유지
-            };
-
-            gpsSamples = []; // 샘플 초기화
-
             // 오브젝트를 고정된 위치에 배치
-            placeRedBox(locar, fixedObjectCoord.lon, fixedObjectCoord.lat, fixedObjectCoord.alt);
+            placeRedBox(locar, fixedObjectCoord.lon, fixedObjectCoord.lat, 0);
             isObjectPlaced = true;
             setIsStabilizing(false);
           }
@@ -283,6 +250,7 @@ const LocApp: React.FC = () => {
       cancelAnimationFrame(animationId);
     };
   }, []);
+
 
   return (
     <div
