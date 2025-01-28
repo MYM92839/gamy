@@ -148,10 +148,6 @@ const LocApp: React.FC = () => {
     const DIST_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
 
-    // 유저 초기 위치를 오브젝트 위치와 동일하다고 가정
-    const initialUserCoord = { ...fixedObjectCoord };
-    setUserCoord(initialUserCoord);
-
     // 오프셋 저장용 변수
     let offset = { lat: 0, lon: 0, alt: 0 };
 
@@ -162,6 +158,9 @@ const LocApp: React.FC = () => {
       const smoothedLat = kalmanLat.filter(latitude);
       const smoothedLon = kalmanLon.filter(longitude);
       setUserCoord({ lat: smoothedLat, lon: smoothedLon });
+
+      const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
+      const isMovedSmall = distMoved <= DIST_THRESHOLD;
 
       if (isObjectPlaced) {
         // 유저 이동 시 오프셋을 기준으로 오브젝트 위치 갱신
@@ -174,20 +173,17 @@ const LocApp: React.FC = () => {
         return;
       }
 
-      const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
-      const isMovedSmall = distMoved <= DIST_THRESHOLD;
-
       if (isAccurateEnough && isMovedSmall) {
         if (stableStartTime === 0) {
           stableStartTime = Date.now();
         } else {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
-            // 오프셋 계산 및 저장
+            // 오프셋 계산 및 저장 (보정 끝난 시점의 유저 위치 사용)
             offset = {
               lat: smoothedLat - fixedObjectCoord.lat,
               lon: smoothedLon - fixedObjectCoord.lon,
-              alt: 0, // 고도가 다를 경우 추가 처리 가능
+              alt: 0,
             };
 
             // 오브젝트를 고정된 위치에 배치
