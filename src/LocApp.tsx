@@ -148,6 +148,9 @@ const LocApp: React.FC = () => {
     const DIST_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
 
+    // GPS 샘플 저장용 배열
+    let gpsSamples: { lat: number; lon: number }[] = [];
+
     // 오프셋 저장용 변수
     let offset = { lat: 0, lon: 0, alt: 0 };
 
@@ -158,6 +161,16 @@ const LocApp: React.FC = () => {
       const smoothedLat = kalmanLat.filter(latitude);
       const smoothedLon = kalmanLon.filter(longitude);
       setUserCoord({ lat: smoothedLat, lon: smoothedLon });
+
+      // 신뢰할 수 있는 위치 데이터만 샘플에 추가
+      if (accuracy <= ACCURACY_THRESHOLD) {
+        gpsSamples.push({ lat: smoothedLat, lon: smoothedLon });
+      }
+
+      // 샘플 크기 제한 (10개로 제한)
+      if (gpsSamples.length > 10) {
+        gpsSamples.shift();
+      }
 
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
@@ -179,12 +192,18 @@ const LocApp: React.FC = () => {
         } else {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
-            // 오프셋 계산 및 저장 (보정 끝난 시점의 유저 위치 사용)
+            // 보정 종료 시점에서 GPS 샘플의 평균값 계산
+            const averageLat = gpsSamples.reduce((sum, sample) => sum + sample.lat, 0) / gpsSamples.length;
+            const averageLon = gpsSamples.reduce((sum, sample) => sum + sample.lon, 0) / gpsSamples.length;
+
+            // 오프셋 계산 및 저장
             offset = {
-              lat: smoothedLat - fixedObjectCoord.lat,
-              lon: smoothedLon - fixedObjectCoord.lon,
-              alt: 0,
+              lat: averageLat - fixedObjectCoord.lat,
+              lon: averageLon - fixedObjectCoord.lon,
+              alt: 0, // 고도가 다를 경우 처리 가능
             };
+
+            gpsSamples = []; // 샘플 초기화
 
             // 오브젝트를 고정된 위치에 배치
             placeRedBox(locar, fixedObjectCoord.lon, fixedObjectCoord.lat, fixedObjectCoord.alt);
