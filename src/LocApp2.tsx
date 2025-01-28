@@ -101,8 +101,6 @@ const LocationPrompt: React.FC = () => {
 export default LocationPrompt;
 
 
-
-
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isStabilizing, setIsStabilizing] = useState(true);
@@ -205,10 +203,10 @@ const LocApp: React.FC = () => {
       }
 
       if (offset) {
-        const distance = userCoord ? Math.sqrt(
-          Math.pow(userCoord?.lat - fixedObjectCoord.lat, 2) +
-          Math.pow(userCoord?.lon - fixedObjectCoord.lon, 2)
-        ) : 0;
+        const distance = Math.sqrt(
+          Math.pow((userCoord?.lat ?? fixedObjectCoord.lat) - fixedObjectCoord.lat, 2) +
+          Math.pow((userCoord?.lon ?? fixedObjectCoord.lon) - fixedObjectCoord.lon, 2)
+        );
 
         const scaleFactor = Math.max(0.5, 5 / (distance + 0.1)); // 거리에 따라 크기 조정
 
