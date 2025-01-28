@@ -151,7 +151,7 @@ const LocApp: React.FC = () => {
     const MAX_SPEED = 1.2; // 성인 여성 평균 보폭 기준 (1.2m/s)
 
     // GPS 샘플 저장용 배열
-    let gpsSamples: { lat: number; lon: number }[] = [];
+    let gpsSamples: { lat: number; lon: number; accuracy: number }[] = [];
 
     // 오프셋 저장용 변수
     let offset: { lat: number; lon: number; alt: number } | null = null;
@@ -172,7 +172,7 @@ const LocApp: React.FC = () => {
 
       // 신뢰할 수 있는 위치 데이터만 샘플에 추가
       if (accuracy <= ACCURACY_THRESHOLD) {
-        gpsSamples.push({ lat: smoothedLat, lon: smoothedLon });
+        gpsSamples.push({ lat: smoothedLat, lon: smoothedLon, accuracy });
       }
 
       // 샘플 크기 제한 (10개로 제한)
@@ -184,12 +184,26 @@ const LocApp: React.FC = () => {
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
 
       if (isObjectPlaced) {
-        // 유저 이동 시 오프셋 값을 활용해 오브젝트 위치를 고정
-        if (offset) {
+        // 실시간 보정: GPS 샘플의 변화량 확인
+        const latDiff = Math.max(...gpsSamples.map(s => s.lat)) - Math.min(...gpsSamples.map(s => s.lat));
+        const lonDiff = Math.max(...gpsSamples.map(s => s.lon)) - Math.min(...gpsSamples.map(s => s.lon));
+
+        if (latDiff <= ACCURACY_THRESHOLD / 1e5 && lonDiff <= ACCURACY_THRESHOLD / 1e5) {
+          // GPS 변화가 안정적일 때 새로운 오프셋 계산
+          const averageLat = gpsSamples.reduce((sum, sample) => sum + sample.lat, 0) / gpsSamples.length;
+          const averageLon = gpsSamples.reduce((sum, sample) => sum + sample.lon, 0) / gpsSamples.length;
+
+          offset = {
+            lat: fixedObjectCoord.lat - averageLat,
+            lon: fixedObjectCoord.lon - averageLon,
+            alt: 0,
+          };
+
+          // 오브젝트 위치 업데이트
           const correctedCoords = locar.latLonToWorld(
-            fixedObjectCoord.lat,
-            fixedObjectCoord.lon,
-            fixedObjectCoord.alt
+            fixedObjectCoord.lat + offset.lat,
+            fixedObjectCoord.lon + offset.lon,
+            fixedObjectCoord.alt + offset.alt
           );
           locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z);
         }
@@ -202,15 +216,42 @@ const LocApp: React.FC = () => {
         } else {
           const stableElapsed = Date.now() - stableStartTime;
           if (stableElapsed >= STABLE_DURATION_MS) {
-            // 보정 종료 시점에서 GPS 샘플의 평균값 계산
-            const averageLat = gpsSamples.reduce((sum, sample) => sum + sample.lat, 0) / gpsSamples.length;
-            const averageLon = gpsSamples.reduce((sum, sample) => sum + sample.lon, 0) / gpsSamples.length;
+            // GPS 변화율 필터링: 샘플 간 변화가 너무 큰 경우 제거
+            gpsSamples = gpsSamples.filter((sample, index, array) => {
+              if (index === 0) return true; // 첫 샘플은 비교 대상 없음
+              const prevSample = array[index - 1];
+              const latDiff = Math.abs(sample.lat - prevSample.lat);
+              const lonDiff = Math.abs(sample.lon - prevSample.lon);
+              return latDiff <= ACCURACY_THRESHOLD / 1e5 && lonDiff <= ACCURACY_THRESHOLD / 1e5;
+            });
 
-            // 오프셋 계산 및 저장
+            // 중간값(Median) 계산
+            const sortedLat = gpsSamples.map(s => s.lat).sort((a, b) => a - b);
+            const sortedLon = gpsSamples.map(s => s.lon).sort((a, b) => a - b);
+            const medianLat = sortedLat[Math.floor(sortedLat.length / 2)];
+            const medianLon = sortedLon[Math.floor(sortedLon.length / 2)];
+
+            // 정확도가 가장 높은 데이터 선택
+            const bestSample = gpsSamples.reduce((best, current) => {
+              return current.accuracy < best.accuracy ? current : best;
+            });
+
+            // 가중 평균 계산 (최근 데이터에 가중치 부여)
+            const weightedLat = gpsSamples.reduce((sum, sample, index) => {
+              const weight = index + 1; // 최신 데이터일수록 더 높은 가중치
+              return sum + sample.lat * weight;
+            }, 0) / gpsSamples.reduce((sum, _, index) => sum + (index + 1), 0);
+
+            const weightedLon = gpsSamples.reduce((sum, sample, index) => {
+              const weight = index + 1; // 최신 데이터일수록 더 높은 가중치
+              return sum + sample.lon * weight;
+            }, 0) / gpsSamples.reduce((sum, _, index) => sum + (index + 1), 0);
+
+            // 최종 오프셋 계산 (가중 평균, 중간값, 최적 데이터 사용)
             offset = {
-              lat: fixedObjectCoord.lat - averageLat,
-              lon: fixedObjectCoord.lon - averageLon,
-              alt: 0,
+              lat: fixedObjectCoord.lat - weightedLat,
+              lon: fixedObjectCoord.lon - weightedLon,
+              alt: 0, // 고도는 기본값 유지
             };
 
             gpsSamples = []; // 샘플 초기화
