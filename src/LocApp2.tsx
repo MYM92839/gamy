@@ -102,11 +102,11 @@ export default LocationPrompt;
 
 
 
+
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isStabilizing, setIsStabilizing] = useState(true);
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(null);
-
   const fixedObjectCoord = { lat: 37.341186, lon: 127.064875, alt: 0 };
 
   useEffect(() => {
@@ -117,6 +117,7 @@ const LocApp: React.FC = () => {
     const DIST_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
     // const MAX_SPEED = 1.2;
+    const REBORECTION_THRESHOLD = 5; // 유저가 일정 거리 이상 벗어나면 재보정
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -163,6 +164,18 @@ const LocApp: React.FC = () => {
       const isAccurateEnough = accuracy <= ACCURACY_THRESHOLD;
       const isMovedSmall = distMoved <= DIST_THRESHOLD;
 
+      const distanceFromInitial = Math.sqrt(
+        Math.pow(fixedObjectCoord.lat - smoothedLat, 2) +
+        Math.pow(fixedObjectCoord.lon - smoothedLon, 2)
+      ) * 111000; // 위경도를 미터 단위로 변환
+
+      if (isObjectPlaced && distanceFromInitial > REBORECTION_THRESHOLD) {
+        console.log('[REBORECTION] 사용자 위치가 변경됨, 재보정 수행');
+        isObjectPlaced = false;
+        stableStartTime = 0;
+        gpsSamples = [];
+      }
+
       if (!isObjectPlaced) {
         if (isAccurateEnough && isMovedSmall) {
           if (stableStartTime === 0) {
@@ -192,12 +205,20 @@ const LocApp: React.FC = () => {
       }
 
       if (offset) {
+        const distance = userCoord ? Math.sqrt(
+          Math.pow(userCoord?.lat - fixedObjectCoord.lat, 2) +
+          Math.pow(userCoord?.lon - fixedObjectCoord.lon, 2)
+        ) : 0;
+
+        const scaleFactor = Math.max(0.5, 5 / (distance + 0.1)); // 거리에 따라 크기 조정
+
         const correctedCoords = locar.latLonToWorld(
           fixedObjectCoord.lat - offset.lat,
           fixedObjectCoord.lon - offset.lon,
           fixedObjectCoord.alt + offset.alt
         );
-        locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z);
+
+        locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z, { scale: scaleFactor });
       }
     });
 
