@@ -103,13 +103,13 @@ export default LocationPrompt;
 
 const LocApp: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isObjectPlacedRef = useRef(false); // useRef로 변경하여 렌더링과 분리
   const [isStabilizing, setIsStabilizing] = useState(true);
   const [userCoord, setUserCoord] = useState<{ lat: number; lon: number; alt?: number } | null>(null);
   const fixedObjectCoord = { lat: 37.341186, lon: 127.064875, alt: 0 };
 
   useEffect(() => {
     let animationId = 0;
-    let isObjectPlaced = false;
     let stableStartTime = 0;
     const ACCURACY_THRESHOLD = 10;
     const DIST_THRESHOLD = 1;
@@ -167,14 +167,14 @@ const LocApp: React.FC = () => {
         Math.pow(fixedObjectCoord.lon - smoothedLon, 2)
       ) * 111000; // 위경도를 미터 단위로 변환
 
-      if (isObjectPlaced && distanceFromInitial > REBORECTION_THRESHOLD) {
+      if (isObjectPlacedRef.current && distanceFromInitial > REBORECTION_THRESHOLD) {
         console.log('[REBORECTION] 사용자 위치가 변경됨, 재보정 수행');
-        isObjectPlaced = false;
+        isObjectPlacedRef.current = false;
         stableStartTime = 0;
         gpsSamples = [];
       }
 
-      if (!isObjectPlaced) {
+      if (!isObjectPlacedRef.current) {
         if (isAccurateEnough && isMovedSmall && distanceFromInitial <= 2) {
           if (stableStartTime === 0) {
             stableStartTime = Date.now();
@@ -193,7 +193,7 @@ const LocApp: React.FC = () => {
               };
 
               placeRedBox(locar, fixedObjectCoord.lon, fixedObjectCoord.lat, 0);
-              isObjectPlaced = true;
+              isObjectPlacedRef.current = true;
               setIsStabilizing(false);
             }
           }
@@ -236,6 +236,7 @@ const LocApp: React.FC = () => {
       cancelAnimationFrame(animationId);
     };
   }, []);
+
 
   return (
     <div
