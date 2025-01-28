@@ -148,19 +148,27 @@ const LocApp: React.FC = () => {
     const DIST_THRESHOLD = 1;
     const STABLE_DURATION_MS = 3000;
 
+    const MAX_SPEED = 1.2; // 성인 여성 평균 보폭 기준 (1.2m/s)
+
     // GPS 샘플 저장용 배열
     let gpsSamples: { lat: number; lon: number }[] = [];
 
     // 오프셋 저장용 변수
-    let offset = { lat: 0, lon: 0, alt: 0 };
+    let offset: { lat: number; lon: number; alt: number } | null = null;
 
     locar.on('gpsupdate', (pos: GeolocationPosition, distMoved: number) => {
-      const { latitude, longitude, accuracy } = pos.coords;
+      const { latitude, longitude, accuracy, speed } = pos.coords;
 
       // 칼만 필터를 적용하여 위치 데이터를 부드럽게 처리
       const smoothedLat = kalmanLat.filter(latitude);
       const smoothedLon = kalmanLon.filter(longitude);
       setUserCoord({ lat: smoothedLat, lon: smoothedLon });
+
+      // 이동 속도가 null이거나 과도하면 업데이트 무시
+      if (speed !== null && speed > MAX_SPEED) {
+        console.warn('[GPS] 속도가 과도하여 업데이트 무시됨');
+        return;
+      }
 
       // 신뢰할 수 있는 위치 데이터만 샘플에 추가
       if (accuracy <= ACCURACY_THRESHOLD) {
@@ -177,12 +185,14 @@ const LocApp: React.FC = () => {
 
       if (isObjectPlaced) {
         // 유저 이동 시 오프셋을 기준으로 오브젝트 위치 갱신
-        const correctedCoords = locar.latLonToWorld(
-          fixedObjectCoord.lat + offset.lat,
-          fixedObjectCoord.lon + offset.lon,
-          fixedObjectCoord.alt + offset.alt
-        );
-        locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z);
+        if (offset) {
+          const correctedCoords = locar.latLonToWorld(
+            fixedObjectCoord.lat + offset.lat,
+            fixedObjectCoord.lon + offset.lon,
+            fixedObjectCoord.alt + offset.alt
+          );
+          locar.updateObjectLocation('1m² Box', correctedCoords.x, correctedCoords.y, correctedCoords.z);
+        }
         return;
       }
 
