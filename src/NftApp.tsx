@@ -12,7 +12,7 @@ import { requestCameraPermission } from './libs/util';
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
   const { arEnabled } = useARNft();
-  const markerTracked = useRef(false); // ✅ NFT 마커가 한 번만 감지되도록 관리
+  const markerTracked = useRef(false);
 
   useEffect(() => {
     if (!markerTracked.current && arEnabled && ref.current) {
@@ -25,9 +25,9 @@ export function Instances({ url, setOrigin }: any) {
           const markerPosition = new THREE.Vector3();
           markerPosition.setFromMatrixPosition(markerMatrix);
 
-          // ✅ 초기 카메라 위치 가져오기
+          // ✅ 초기 카메라 위치 가져오기 (useFrame에서 강제 업데이트 후 가져옴)
           const initialCameraPosition = new THREE.Vector3();
-          ref.current.parent?.getObjectByName("camera")?.getWorldPosition(initialCameraPosition);
+          ref.current.getWorldPosition(initialCameraPosition);
 
           console.log("NFT 마커 감지됨, 마커 위치:", markerPosition);
           console.log("NFT 마커 감지 시 카메라 위치:", initialCameraPosition);
@@ -44,9 +44,9 @@ export function Instances({ url, setOrigin }: any) {
 
       checkMarker();
     }
-  }, [arEnabled, ref, setOrigin]); // ✅ `arEnabled`가 변경될 때만 실행
+  }, [arEnabled, ref, setOrigin]);
 
-  return <group ref={ref} visible={!markerTracked.current} />;
+  return <group ref={ref} />;
 }
 
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
@@ -58,11 +58,12 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   useFrame(({ camera }) => {
     if (!origin) return; // ✅ `origin`이 설정되었는지 확인
 
+    camera.updateMatrixWorld(true); // ✅ 카메라 위치 강제 업데이트
     const cameraPosition = new THREE.Vector3();
     camera.getWorldPosition(cameraPosition);
 
     const distance = cameraPosition.distanceTo(origin);
-    console.log("현재 거리:", distance);
+    console.log("현재 거리:", distance, "카메라 위치:", cameraPosition, "원점 위치:", origin);
 
     // ✅ 카메라의 시야 영역(Frustum) 업데이트
     const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
