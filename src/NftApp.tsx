@@ -10,6 +10,7 @@ import { useARNft, useNftMarker } from './libs/XRProvider';
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
+const matrix = new THREE.Matrix4()
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
   const { arEnabled, arnft } = useARNft();
@@ -155,15 +156,12 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
-    <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
+    <mesh ref={objectRef} position={[origin.x, origin.y, 0]} visible={true}>
       <boxGeometry args={[1, 1, 1]} />
       <meshBasicMaterial color={objectColor} />
     </mesh>
   );
 };
-
-
-
 
 // function Box() {
 //   const modelRef = useRef<THREE.Group>(null);
