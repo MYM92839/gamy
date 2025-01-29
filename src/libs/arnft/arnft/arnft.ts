@@ -177,9 +177,17 @@ export class ARNft {
 
   onFound(msg: { matrixGL_RH: string; index: string }) {
     const matrix = new THREE.Matrix4();
-    matrix.fromArray(JSON.parse(msg.matrixGL_RH)); // ✅ JSON을 올바른 Three.js 행렬로 변환
+    matrix.fromArray(JSON.parse(msg.matrixGL_RH));
 
     const index = JSON.parse(msg.index);
+
+    // ✅ 마커의 행렬 설정
+    setMatrix(this.markers[index].root.matrix, matrix);
+
+    // ✅ 마커의 `visible` 상태 업데이트
+    this.markers.forEach((marker: { root: { visible: boolean } }, i: number) => {
+      marker.root.visible = i === index;
+    });
 
     // ✅ 마커의 월드 위치 가져오기
     const markerPosition = new THREE.Vector3();
@@ -197,14 +205,12 @@ export class ARNft {
     const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, cameraPosition);
     console.log("✅ 보정된 원점 설정:", adjustedOrigin);
 
-    // ✅ `setMatrix()` 제거 → 마커의 원래 매트릭스를 덮어쓰지 않음
-
-    // ✅ 외부에서 `setOrigin()`을 사용할 수 있도록 `onOriginDetected` 호출
+    // ✅ `onOriginDetected()` 호출하여 외부에서 원점 설정 가능하도록 함
     if (typeof this.onOriginDetected === "function") {
       this.onOriginDetected(adjustedOrigin);
     }
+}
 
-  }
 
   onLost() {
     this.markers.forEach((marker: { root: { visible: boolean } }) => {
