@@ -52,11 +52,11 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
   useEffect(() => {
     if (origin && !objectPlaced) {
       console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", origin);
-      objectPosition.current.copy(origin);
-      setObjectPosition(origin.clone());
-      setObjectPlaced(true);
+      objectPosition.current.copy(origin); // ✅ 원점 한 번만 설정
+      setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
     }
   }, [origin]);
+
 
   /** ✅ AlvaAR SLAM 활성화 */
   useEffect(() => {
@@ -147,7 +147,7 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
         adjustedPosition.z
       );
 
-      setObjectPosition(objectRef.current.position.clone());
+      if (!objectPlaced) setObjectPosition(objectRef.current.position.clone());
 
       console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
     }
