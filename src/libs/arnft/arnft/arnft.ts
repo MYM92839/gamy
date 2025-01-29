@@ -186,28 +186,27 @@ export class ARNft {
 
     // ✅ 마커의 행렬 설정
     setMatrix(this.markers[index].root.matrix, matrix);
-    this.markers[index].root.matrixAutoUpdate = false; // ✅ 자동 행렬 업데이트 비활성화 (중요)
 
     // ✅ 마커의 월드 위치를 `matrixGL_RH`에서 직접 가져오기 (원점으로 설정)
     const markerPosition = new THREE.Vector3(matrix[12], matrix[13], matrix[14]);
     console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
-    // ✅ 최초 감지 시 카메라 위치 저장 (이후 `useFrame`에서 별도 관리 불필요)
+    // ✅ 최초 감지 시 카메라 위치 저장
     if (!this.initialCameraPosition) {
       this.initialCameraPosition = new THREE.Vector3();
 
-      if (this.renderer.xr.isPresenting) {
-        // WebXR 모드에서는 camera.matrixWorld에서 가져오기
-        this.initialCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
-      } else {
-        // 일반 모드에서는 getWorldPosition() 사용
-        this.camera.getWorldPosition(this.initialCameraPosition);
-      }
+      // ✅ 카메라 행렬 업데이트 (중요!)
+      this.camera.updateMatrixWorld(true);
+
+      // WebXR 모드에서는 camera.matrixWorld에서 가져오기
+      this.initialCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
+
       console.log('✅ 최초 감지된 카메라 위치 저장:', this.initialCameraPosition);
     }
 
     // ✅ 현재 카메라 위치 가져오기
     const currentCameraPosition = new THREE.Vector3();
+    this.camera.updateMatrixWorld(true); // 📌 추가: 카메라 행렬을 최신 상태로 유지
     if (this.renderer.xr.isPresenting) {
       currentCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
     } else {
@@ -221,13 +220,13 @@ export class ARNft {
 
     // ✅ `onOriginDetected()` 호출하여 원점 설정 (최초 한 번만)
     if (!this.markerTracked && typeof this.onOriginDetected === 'function') {
-      this.onOriginDetected(markerPosition); // ✅ 마커 좌표를 원점으로 유지
+      this.onOriginDetected(markerPosition); // 마커 좌표를 원점으로 유지
       this.markerTracked = true;
     }
   }
 
-onLost() {
-    console.log("❌ 마커 손실됨!");
+  onLost() {
+    console.log('❌ 마커 손실됨!');
 
     // ✅ 마커 가시성 제거
     this.markers.forEach((marker) => (marker.root.visible = false));
@@ -237,7 +236,5 @@ onLost() {
 
     // ✅ 카메라 위치 다시 초기화하여 보정값 유지
     this.initialCameraPosition = null;
-}
-
-
+  }
 }
