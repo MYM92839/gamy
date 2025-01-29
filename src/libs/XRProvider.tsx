@@ -43,7 +43,6 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
           gl.domElement.width = video.current.videoWidth;
           gl.domElement.height = video.current.videoHeight;
           gl.domElement.style.objectFit = "cover";
-          camera.rotation.reorder( 'YXZ' );
           camera.updateProjectionMatrix();
 
           try {

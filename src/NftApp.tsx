@@ -47,7 +47,6 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
   const initialCameraPosition = useRef(new THREE.Vector3());
   const poseSet = useRef(false)
 
-  const { camera } = useThree();
 
   /** ✅ 원점 감지 시 오브젝트 위치 설정 */
   useEffect(() => {
@@ -68,7 +67,7 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
   }, [alvaAR]);
 
   /** ✅ useFrame 루프 */
-  useFrame(() => {
+  useFrame(({ camera }) => {
     if (!origin || !alvaAR || !applyPose.current) {
       console.warn("🚨 useFrame 실행 중 조건 불만족!", { origin, alvaAR, applyPose: applyPose.current });
       return;
@@ -99,9 +98,11 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
     /** ✅ AlvaAR로 SLAM pose 추출 */
     const pose = alvaAR.findCameraPose(imageData);
     if (pose) {
+     // camera.rotation.reorder('YXZ');
+
       // 오브젝트
       /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
-      if (objectRef.current) {
+      if (objectRef.current ) {
         objectRef.current.position.z = objectRef.current.scale.z * 0.5;
 
         applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
