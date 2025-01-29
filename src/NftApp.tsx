@@ -9,6 +9,7 @@ import { useARNft, useNftMarker } from './libs/XRProvider';
 
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
+const objectPosition = new THREE.Vector3()
 
 
 export function Instances({ url, setOrigin }: any) {
@@ -41,12 +42,13 @@ export function Instances({ url, setOrigin }: any) {
 
 const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
-  const [objectColor, setObjectColor] = useState("0x0fffff");
+  const [objectColor, setObjectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.1;
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
+  const objectPosition = useRef(new THREE.Vector3());
 
   const { camera } = useThree();
 
@@ -62,7 +64,8 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
   useEffect(() => {
     if (origin) {
       console.log("🔄 원점 변경 감지! 오브젝트 위치 갱신:", origin);
-      setObjectPosition(origin.clone()); // ✅ 원점 기준으로 오브젝트 위치 갱신
+      objectPosition.current.copy(origin);
+      setObjectPosition(origin.clone());
     }
   }, [origin]);
 
@@ -127,7 +130,7 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
     }
 
     /** ✅ 오브젝트 색상 변경 (거리 기반) */
-    const distance = camera.position.distanceTo(origin);
+    const distance = camera.position.distanceTo(objectPosition.current);
     console.log("📏 현재 거리:", distance);
 
     if (isOriginVisible) {
@@ -135,26 +138,35 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
       setObjectColor((prevColor) => (prevColor !== newColor ? newColor : prevColor));
     }
 
-    /** ✅ 오브젝트 위치 업데이트 (objectPlaced === true인 경우) */
+    /** 📌 오브젝트의 위치를 SLAM 포즈 기반으로 조정 */
     if (objectPlaced && objectRef.current) {
-      objectRef.current.position.set(origin.x, origin.y + 1, origin.z);
+      // 📌 AlvaAR에서 보정된 카메라 위치를 기준으로 오브젝트 위치 업데이트
+      const adjustedPosition = new THREE.Vector3()
+        .copy(objectPosition.current)
+        .sub(camera.position); // 📌 카메라 기준 상대 좌표로 변환
+
+      objectRef.current.position.set(
+        adjustedPosition.x,
+        adjustedPosition.y,
+        adjustedPosition.z
+      );
+
       setObjectPosition(objectRef.current.position.clone());
+
       console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
     }
   });
 
   // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
   return (
-    <>
-      {objectPlaced && (
-        <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
-          <boxGeometry args={[20, 20, 20]} />
-          <meshBasicMaterial color={objectColor} />
-        </mesh>
-      )}
-    </>
+    <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshBasicMaterial color={objectColor} />
+    </mesh>
   );
 };
+
+
 // function Box() {
 //   const modelRef = useRef<THREE.Group>(null);
 //   const instances: any = useContext(context);
