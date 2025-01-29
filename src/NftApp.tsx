@@ -156,7 +156,7 @@ export default function NftApp() {
       <ARCanvas interpolationFactor={30} setOrigin={setOrigin}>
         <Suspense fallback={null}>
           {/* NFT 마커 감지 */}
-          <Instances url={"../data/marker/marker"} />
+          <Instances url={"/data/marker/marker"} />
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
           {origin && <CameraTracker origin={origin} />}
