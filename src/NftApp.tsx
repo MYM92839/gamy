@@ -38,7 +38,7 @@ export function Instances({ url, setOrigin }: any) {
 
 const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
-  const [objectColor, setObjectColor] = useState("red");
+  const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Mesh>(null);
