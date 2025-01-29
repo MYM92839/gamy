@@ -15,7 +15,7 @@ export function Instances({ url, setOrigin }: any) {
   const markerTracked = useRef(false);
 
   useEffect(() => {
-    console.log("ENAMED", arEnabled, arnft)
+    console.log("ENAMED", arEnabled, arnft, ref.current)
     if (!markerTracked.current && arEnabled && ref.current && arnft) {
       // ✅ `onOriginDetected`가 정의되어 있으면 연결
       arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
