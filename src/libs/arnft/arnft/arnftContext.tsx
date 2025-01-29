@@ -26,41 +26,49 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
   }, []);
 
   useEffect(() => {
-    // AR 모드 초기화
     async function init() {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      video.current.srcObject = stream;
-      video.current.onloadedmetadata = async (event: any) => {
-        console.log("🎥 카메라 메타데이터 로드 완료");
-        console.log("📏 비디오 크기:", event.srcElement.videoWidth, "x", event.srcElement.videoHeight);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.current.srcObject = stream;
+        video.current.onloadedmetadata = async (event: any) => {
+          console.log("🎥 카메라 메타데이터 로드 완료");
 
-        video.current.play();
+          video.current.play();
+          gl.domElement.width = event.srcElement.videoWidth;
+          gl.domElement.height = event.srcElement.videoHeight;
+          gl.domElement.style.objectFit = "cover";
+          camera.updateProjectionMatrix();
 
-        gl.domElement.width = event.srcElement.videoWidth;
-        gl.domElement.height = event.srcElement.videoHeight;
+          try {
+            console.log("🎯 ARNft 객체 생성 중...");
+            const arnft: any = new ARNft(
+              "../data/camera_para.dat",
+              video.current,
+              gl,
+              camera,
+              onLoaded,
+              interpolationFactor
+            );
 
-        gl.domElement.style.objectFit = "cover";
-        camera.updateProjectionMatrix();
+            arnftRef.current = arnft;
+            setARNft({ ...arnft });
 
-        console.log("🎯 ARNft 객체 생성 중...");
-        const arnft: any = new ARNft(
-          "../data/camera_para.dat",
-          video.current,
-          gl,
-          camera,
-          onLoaded,
-          interpolationFactor
-        );
+            console.log("✅ ARNft 객체 생성 완료");
 
-        arnftRef.current = arnft;
-        console.log("🎯 ARNft 객체 생성 끝..");
+            // ✅ `onOriginDetected` 실행 여부 확인
+            arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
+              console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+              setOrigin(adjustedOrigin);
+            };
+            console.log("✅ `onOriginDetected()` 이벤트 핸들러 설정 완료");
 
-        // ✅ `onOriginDetected`를 여기서 처리
-        arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
-          console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
-          setOrigin(adjustedOrigin);
+          } catch (error) {
+            console.error("🚨 ARNft 객체 생성 중 오류 발생:", error);
+          }
         };
-      };
+      } catch (error) {
+        console.error("🚨 비디오 스트림 초기화 실패:", error);
+      }
     }
 
     if (arEnabled) {
