@@ -10,8 +10,6 @@ import { useARNft, useNftMarker } from './libs/XRProvider';
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
-
-const ma = new THREE.Matrix4()
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
   const { arEnabled, arnft } = useARNft();
