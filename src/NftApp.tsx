@@ -11,23 +11,40 @@ import { requestCameraPermission } from './libs/util';
 
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
-  const { arEnabled } = useARNft(); // AR 활성화 여부 확인
-  const markerTracked = useRef(false); // NFT 마커 감지 여부
+  const { arEnabled } = useARNft();
+  const markerTracked = useRef(false); // ✅ NFT 마커가 한 번만 감지되도록 관리
 
   useEffect(() => {
     if (!markerTracked.current && arEnabled && ref.current) {
-      // ✅ arEnabled가 true로 전환되었을 때 한 번만 실행
-      if (ref.current.visible) {
-        // NFT 마커가 감지되었을 때 위치 가져오기
-        const markerPosition = new THREE.Vector3();
-        ref.current.getWorldPosition(markerPosition);
+      const checkMarker = () => {
+        if (ref.current.visible) {
+          // ✅ NFT 마커의 월드 좌표 가져오기
+          const markerMatrix = new THREE.Matrix4();
+          markerMatrix.copy(ref.current.matrixWorld);
 
-        console.log("NFT 마커 감지됨, 원점 설정:", markerPosition);
-        setOrigin(markerPosition); // 원점 저장
-        markerTracked.current = true; // 이후 다시 설정하지 않음
-      }
+          const markerPosition = new THREE.Vector3();
+          markerPosition.setFromMatrixPosition(markerMatrix);
+
+          // ✅ 초기 카메라 위치 가져오기
+          const initialCameraPosition = new THREE.Vector3();
+          ref.current.parent?.getObjectByName("camera")?.getWorldPosition(initialCameraPosition);
+
+          console.log("NFT 마커 감지됨, 마커 위치:", markerPosition);
+          console.log("NFT 마커 감지 시 카메라 위치:", initialCameraPosition);
+
+          // ✅ 유저 초기 위치를 기준으로 `origin` 보정
+          const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, initialCameraPosition);
+
+          console.log("조정된 원점 설정:", adjustedOrigin);
+          setOrigin(adjustedOrigin);
+
+          markerTracked.current = true; // ✅ 이후 추가 감지 방지
+        }
+      };
+
+      checkMarker();
     }
-  }, [arEnabled, ref, setOrigin]); // ✅ arEnabled가 변경될 때만 실행
+  }, [arEnabled, ref, setOrigin]); // ✅ `arEnabled`가 변경될 때만 실행
 
   return <group ref={ref} visible={!markerTracked.current} />;
 }
@@ -35,11 +52,11 @@ export function Instances({ url, setOrigin }: any) {
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const [objectVisible, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 0.5; // 거리 임계값
-  const frustum = useRef(new THREE.Frustum()); // 시야(뷰포트) 계산을 위한 Frustum 객체
+  const threshold = 0.5; // ✅ 거리 임계값
+  const frustum = useRef(new THREE.Frustum()); // ✅ 시야(뷰포트) 계산을 위한 Frustum 객체
 
   useFrame(({ camera }) => {
-    if (!origin) return;
+    if (!origin) return; // ✅ `origin`이 설정되었는지 확인
 
     const cameraPosition = new THREE.Vector3();
     camera.getWorldPosition(cameraPosition);
