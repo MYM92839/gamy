@@ -40,18 +40,19 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
   const { alvaAR } = useARNft();
   const [objectColor, setObjectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 0.1;
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
+  const initialCameraPosition = useRef(new THREE.Vector3());
 
   const { camera } = useThree();
 
+  /** ✅ 원점 감지 시 오브젝트 위치 설정 */
   useEffect(() => {
     if (origin && !objectPlaced) {
       console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", origin);
-      objectPosition.current.copy(origin); // ✅ 원점 한 번만 설정
+      objectPosition.current.copy(origin);
       setObjectPosition(origin.clone());
       setObjectPlaced(true);
     }
@@ -99,6 +100,13 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
     if (pose) {
       applyPose.current(pose, camera.quaternion, camera.position);
       console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
+
+      // ✅ SLAM이 처음 감지한 카메라 위치를 저장 (최초 1회)
+      if (initialCameraPosition.current.length() === 0) {
+        initialCameraPosition.current.copy(camera.position);
+        console.log("📌 최초 카메라 위치 저장:", initialCameraPosition.current);
+      }
+
       setCameraPosition(camera.position.clone());
     } else {
       console.warn("⚠️ AlvaAR에서 pose를 찾을 수 없음!");
@@ -125,21 +133,13 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
       setObjectPlaced(true);
     }
 
-    /** ✅ 오브젝트 색상 변경 (거리 기반) */
-    const distance = camera.position.distanceTo(objectPosition.current);
-    console.log("📏 현재 거리:", distance);
-
-    if (isOriginVisible) {
-      const newColor = distance > threshold ? "red" : "blue";
-      setObjectColor((prevColor) => (prevColor !== newColor ? newColor : prevColor));
-    }
-
-    /** 📌 오브젝트의 위치를 SLAM 포즈 기반으로 조정 */
+    /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
     if (objectPlaced && objectRef.current) {
-      // 📌 AlvaAR에서 보정된 카메라 위치를 기준으로 오브젝트 위치 업데이트
+      // 📌 초기 카메라 위치 기준으로 보정 (오브젝트는 고정)
       const adjustedPosition = new THREE.Vector3()
         .copy(objectPosition.current)
-        .sub(camera.position); // 📌 카메라 기준 상대 좌표로 변환
+        .sub(initialCameraPosition.current) // 최초 감지된 카메라 위치 기준으로 조정
+        .add(camera.position); // 현재 카메라 이동 반영
 
       objectRef.current.position.set(
         adjustedPosition.x,
@@ -155,10 +155,12 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
-    <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial color={objectColor} />
-    </mesh>
+    objectPlaced && (
+      <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial color={objectColor} />
+      </mesh>
+    )
   );
 };
 
