@@ -40,16 +40,22 @@ export function Instances({ url, setOrigin }: any) {
 
 
 
-const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
+const CameraTracker = ({
+  origin,
+  setObjectPosition,
+  setCameraPosition,
+}: {
+  origin: THREE.Vector3;
+  setCameraPosition: any;
+  setObjectPosition: any;
+}) => {
   const { alvaAR } = useARNft();
-  const [objectColor, setObjectColor] = useState("red");
+  const [objectColor, setObjectColor] = useState("0x0fffff");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.1;
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
-  const objectPosition = useRef(new THREE.Vector3());
-
   const { camera } = useThree();
 
   /** ✅ AlvaAR SLAM 활성화 */
@@ -64,10 +70,9 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
   useEffect(() => {
     if (origin) {
       console.log("🔄 원점 변경 감지! 오브젝트 위치 갱신:", origin);
-      objectPosition.current.copy(origin);
-      setObjectPosition(origin.clone());
+      setObjectPosition(origin.clone()); // ✅ 원점 기준으로 오브젝트 위치 갱신
     }
-  }, [origin]);
+  }, [origin, camera.position]); // ✅ 카메라 위치 변경 감지하도록 수정!
 
   /** ✅ useFrame 루프 */
   useFrame(() => {
@@ -101,9 +106,13 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
     /** ✅ AlvaAR로 SLAM pose 추출 */
     const pose = alvaAR.findCameraPose(imageData);
     if (pose) {
+      // ✅ SLAM 카메라 위치를 Three.js 좌표계로 변환
+      const camPos = new THREE.Vector3(pose[12], pose[13], pose[14]); // SLAM 좌표에서 가져오기
+      camPos.applyMatrix4(camera.matrixWorld); // Three.js 좌표계 변환 적용
+
       applyPose.current(pose, camera.quaternion, camera.position);
-      console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
-      setCameraPosition(camera.position.clone());
+      console.log("📍 AlvaAR 카메라 위치 업데이트:", camPos);
+      setCameraPosition(camPos);
     } else {
       console.warn("⚠️ AlvaAR에서 pose를 찾을 수 없음!");
     }
@@ -130,7 +139,7 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
     }
 
     /** ✅ 오브젝트 색상 변경 (거리 기반) */
-    const distance = camera.position.distanceTo(objectPosition.current);
+    const distance = camera.position.distanceTo(origin);
     console.log("📏 현재 거리:", distance);
 
     if (isOriginVisible) {
@@ -138,19 +147,12 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
       setObjectColor((prevColor) => (prevColor !== newColor ? newColor : prevColor));
     }
 
-    /** 📌 오브젝트의 위치를 SLAM 포즈 기반으로 조정 */
+    // 📌 오브젝트 위치가 최신 카메라 좌표에 맞게 조정되지 않음 → 업데이트 추가!
     if (objectPlaced && objectRef.current) {
-      // 📌 AlvaAR에서 보정된 카메라 위치를 기준으로 오브젝트 위치 업데이트
-      const adjustedPosition = new THREE.Vector3()
-        .copy(objectPosition.current)
-        .sub(camera.position); // 📌 카메라 기준 상대 좌표로 변환
+      const adjustedOrigin = new THREE.Vector3(origin.x, origin.y, origin.z);
+      adjustedOrigin.applyMatrix4(camera.matrixWorld); // ✅ Three.js 좌표 변환
 
-      objectRef.current.position.set(
-        adjustedPosition.x,
-        adjustedPosition.y,
-        adjustedPosition.z
-      );
-
+      objectRef.current.position.copy(adjustedOrigin);
       setObjectPosition(objectRef.current.position.clone());
 
       console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
@@ -165,6 +167,7 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
     </mesh>
   );
 };
+
 
 
 // function Box() {
