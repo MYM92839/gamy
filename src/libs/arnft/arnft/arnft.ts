@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import { Camera } from '@react-three/fiber';
-import { WebGLRenderer } from 'three';
+import * as THREE from 'three';
 import { isMobile, setMatrix } from './utils';
 
 const workerScript = './js/arnft.worker.js';
@@ -10,7 +10,7 @@ export class ARNft {
   inputHeight: any;
   cameraParamUrl: string;
   video: { videoWidth: any; videoHeight: any };
-  renderer: WebGLRenderer;
+  renderer: THREE.WebGLRenderer;
   camera: Camera & { manual?: boolean | undefined };
   onLoaded: (msg: any) => void;
   markers: any[];
@@ -23,10 +23,11 @@ export class ARNft {
   h!: number;
   ox!: number;
   oy!: number;
+  onOriginDetected: any;
   constructor(
     cameraParamUrl: string,
     video: { videoWidth: any; videoHeight: any },
-    renderer: WebGLRenderer,
+    renderer: THREE.WebGLRenderer,
     camera: Camera & { manual?: boolean | undefined },
     onLoaded: (msg: any) => void,
     interpolationFactor: any
@@ -58,6 +59,7 @@ export class ARNft {
       cameraParamUrl: this.cameraParamUrl,
       interpolationFactor,
     });
+    this.onOriginDetected = null; // ✅ onOriginDetected를 기본적으로 null로 설정
   }
 
   initRenderer() {
@@ -174,14 +176,34 @@ export class ARNft {
   }
 
   onFound(msg: { matrixGL_RH: string; index: string }) {
-    const matrix = JSON.parse(msg.matrixGL_RH);
+    const matrix = new THREE.Matrix4();
+    matrix.fromArray(JSON.parse(msg.matrixGL_RH)); // ✅ JSON을 올바른 Three.js 행렬로 변환
+
     const index = JSON.parse(msg.index);
 
-    setMatrix(this.markers[index].root.matrix, matrix);
+    // ✅ 마커의 월드 위치 가져오기
+    const markerPosition = new THREE.Vector3();
+    this.markers[index].root.getWorldPosition(markerPosition);
 
-    this.markers.forEach((marker: { root: { visible: boolean } }, i: any) => {
-      marker.root.visible = i === index;
-    });
+    console.log("✅ 마커 감지됨, 원점 위치 설정:", markerPosition);
+
+    // ✅ 초기 카메라 위치 가져오기
+    const cameraPosition = new THREE.Vector3();
+    this.camera.getWorldPosition(cameraPosition);
+
+    console.log("✅ 감지 시점의 카메라 위치:", cameraPosition);
+
+    // ✅ 카메라 기준으로 원점 보정
+    const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, cameraPosition);
+    console.log("✅ 보정된 원점 설정:", adjustedOrigin);
+
+    // ✅ `setMatrix()` 제거 → 마커의 원래 매트릭스를 덮어쓰지 않음
+
+    // ✅ 외부에서 `setOrigin()`을 사용할 수 있도록 `onOriginDetected` 호출
+    if (typeof this.onOriginDetected === "function") {
+      this.onOriginDetected(adjustedOrigin);
+    }
+
   }
 
   onLost() {

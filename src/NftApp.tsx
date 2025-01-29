@@ -11,40 +11,19 @@ import { requestCameraPermission } from './libs/util';
 
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
-  const { arEnabled } = useARNft();
+  const { arEnabled, arnft } = useARNft(); // ✅ ARNft 인스턴스 가져오기
   const markerTracked = useRef(false);
 
   useEffect(() => {
-    if (!markerTracked.current && arEnabled && ref.current) {
-      const checkMarker = () => {
-        if (ref.current.visible) {
-          // ✅ NFT 마커의 월드 좌표 가져오기
-          const markerMatrix = new THREE.Matrix4();
-          markerMatrix.copy(ref.current.matrixWorld);
-
-          const markerPosition = new THREE.Vector3();
-          markerPosition.setFromMatrixPosition(markerMatrix);
-
-          // ✅ 초기 카메라 위치 가져오기 (useFrame에서 강제 업데이트 후 가져옴)
-          const initialCameraPosition = new THREE.Vector3();
-          ref.current.getWorldPosition(initialCameraPosition);
-
-          console.log("NFT 마커 감지됨, 마커 위치:", markerPosition);
-          console.log("NFT 마커 감지 시 카메라 위치:", initialCameraPosition);
-
-          // ✅ 유저 초기 위치를 기준으로 `origin` 보정
-          const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, initialCameraPosition);
-
-          console.log("조정된 원점 설정:", adjustedOrigin);
-          setOrigin(adjustedOrigin);
-
-          markerTracked.current = true; // ✅ 이후 추가 감지 방지
-        }
+    if (!markerTracked.current && arEnabled && ref.current && arnft) {
+      // ✅ `onOriginDetected`가 정의되어 있으면 연결
+      arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
+        console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+        setOrigin(adjustedOrigin);
+        markerTracked.current = true; // ✅ 이후 다시 감지하지 않도록 설정
       };
-
-      checkMarker();
     }
-  }, [arEnabled, ref, setOrigin]);
+  }, [arEnabled, ref, arnft, setOrigin]);
 
   return <group ref={ref} />;
 }
