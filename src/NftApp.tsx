@@ -36,7 +36,7 @@ export function Instances({ url, setOrigin }: any) {
   return <group ref={ref} />;
 }
 
-const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
+const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
   const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
@@ -44,19 +44,10 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
-  const initialCameraPosition = useRef(new THREE.Vector3());
   const poseSet = useRef(false)
 
 
   /** ✅ 원점 감지 시 오브젝트 위치 설정 */
-  useEffect(() => {
-    if (origin && !objectPlaced) {
-      console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", origin);
-      objectPosition.current.copy(origin); // ✅ 원점 한 번만 설정
-      setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
-    }
-  }, [origin]);
-
 
   /** ✅ AlvaAR SLAM 활성화 */
   useEffect(() => {
@@ -68,6 +59,12 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
 
   /** ✅ useFrame 루프 */
   useFrame(({ camera, gl, scene }) => {
+    if (originRef.current && !objectPlaced) {
+      console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", originRef.current);
+      objectPosition.current.copy(originRef.current); // ✅ 원점 한 번만 설정
+      setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
+    }
+
     if (!origin || !alvaAR || !applyPose.current) {
       console.warn("🚨 useFrame 실행 중 조건 불만족!", { origin, alvaAR, applyPose: applyPose.current });
       return;
@@ -105,21 +102,21 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
       applyPose.current(pose, camera.quaternion, camera.position);
       console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
 
-            // 오브젝트
-      /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
-      if (objectRef.current && !poseSet.current) {
-        objectRef.current.position.z = objectRef.current.scale.z * 0.5;
+      // 오브젝트
+      if (objectRef.current) {
 
+        // applyPose로 오브젝트 위치 업데이트
         applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
-        console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
-        poseSet.current = true
+        // 오브젝트 위치 반전 (좌우, 앞뒤)
+        objectRef.current.position.x = -objectRef.current.position.x;  // 좌우 반전
+        objectRef.current.position.z = -objectRef.current.position.z;  // 앞뒤 반전
+        const inverseQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));  // 180도 회전 (좌우 반전)
+        objectRef.current.quaternion.multiply(inverseQuaternion);  // 기존 회전에 반전된 회전값을 곱해줌
+
+
+        console.log("🟦 오브젝트 위치 업데이트 (반전됨):", objectRef.current.position);
       }
 
-      // ✅ SLAM이 처음 감지한 카메라 위치를 저장 (최초 1회)
-      if (initialCameraPosition.current.length() === 0) {
-        initialCameraPosition.current.copy(camera.position);
-        console.log("📌 최초 카메라 위치 저장:", initialCameraPosition.current);
-      }
 
       setCameraPosition(camera.position.clone());
     } else {
@@ -127,28 +124,29 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
     }
 
     /** ✅ 카메라 시야 영역(Frustum) 업데이트 */
-    camera.updateMatrixWorld();
-    camera.near = 0.1;
-    camera.far = 100;
-    camera.updateProjectionMatrix();
+    // camera.updateMatrixWorld();
+    // camera.near = 0.1;
+    // camera.far = 100;
+    // camera.updateProjectionMatrix();
 
-    const matrix = new THREE.Matrix4().multiplyMatrices(
-      camera.projectionMatrix,
-      camera.matrixWorldInverse
-    );
-    frustum.current.setFromProjectionMatrix(matrix);
+    // const matrix = new THREE.Matrix4().multiplyMatrices(
+    //   camera.projectionMatrix,
+    //   camera.matrixWorldInverse
+    // );
+    // frustum.current.setFromProjectionMatrix(matrix);
 
-    const isOriginVisible = frustum.current.containsPoint(origin);
-    console.log("👀 isOriginVisible:", isOriginVisible);
+    // const isOriginVisible = frustum.current.containsPoint(origin);
+    // console.log("👀 isOriginVisible:", isOriginVisible);
 
     /** ✅ 원점이 카메라의 뷰포트 안에 있으면 오브젝트 배치 */
-    if (!objectPlaced && isOriginVisible) {
-      console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
-      setObjectPlaced(true);
-    }
-
+    // if (!objectPlaced) {
+    //   console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
+    //   setObjectPlaced(true);
+    // }
+    gl.autoClear = true
     gl.render(scene, camera)
-  }, 1);
+
+  });
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
@@ -234,9 +232,15 @@ export default function NftApp() {
   const [origin, setOrigin] = useState(null); // NFT 마커의 위치(원점)
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
+  const originRef = useRef(null)
   useEffect(() => {
     requestCameraPermission();
   }, []);
+  useEffect(() => {
+    if (origin) {
+      originRef.current = origin
+    }
+  }, [origin])
   return (
     <>
       <button
@@ -275,7 +279,7 @@ export default function NftApp() {
           <Instances url={"../data/marker/marker"} setOrigin={setOrigin} />
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          {origin && <CameraTracker origin={origin} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />}
+          {origin && <CameraTracker originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />}
         </Suspense>
       </ARCanvas>
     </>
