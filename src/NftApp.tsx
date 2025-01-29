@@ -41,7 +41,10 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   useFrame(({ camera }) => {
     if (!origin || !arnft.initialCameraPosition) return;
 
-    // ✅ 현재 카메라 위치 가져오기 (WebXR 모드 대응)
+    // ✅ WebXR 모드에서는 `camera.matrixWorld` 강제 업데이트 필요!
+    camera.updateMatrixWorld(true);
+
+    // ✅ 현재 카메라 위치 가져오기 (WebXR 대응)
     currentCameraPosition.setFromMatrixPosition(camera.matrixWorld);
 
     console.log("📍 보정된 카메라 위치:", currentCameraPosition);
@@ -69,7 +72,6 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
       console.log("✅ 거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
       setObjectPlaced(true);
     }
-
   });
 
   useEffect(() => {
