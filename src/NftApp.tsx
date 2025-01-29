@@ -35,16 +35,17 @@ export function Instances({ url, setOrigin }: any) {
 
 
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
-  const { alvaAR, arnft } = useARNft();
-  const [objectColor, setObjectColor] = useState("red"); // 초기 색상: 빨간색
-  const [, setObjectVisible] = useState(false);
+  const { alvaAR } = useARNft();
+  const [objectColor, setObjectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 2.0; // ✅ 2미터 거리 기준
+  const threshold = 2.0;
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
 
   const { camera } = useThree();
+  const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
+  const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
 
   useEffect(() => {
     if (alvaAR) {
@@ -65,6 +66,7 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
 
     if (pose) {
       applyPose.current(pose, camera.quaternion, camera.position);
+      setCameraPosition(camera.position.clone());
       console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
     }
 
@@ -78,8 +80,6 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
     // ✅ 원점이 카메라의 뷰포트 안에 있는지 확인
     const isOriginVisible = frustum.current.containsPoint(origin);
     console.log("👀 isOriginVisible:", isOriginVisible);
-
-    setObjectVisible(isOriginVisible);
 
     // ✅ 오브젝트가 처음 배치되지 않았다면 시야 내에서 배치
     if (!objectPlaced && isOriginVisible) {
@@ -95,22 +95,39 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
       const newColor = distance > threshold ? "red" : "blue";
       setObjectColor((prevColor) => (prevColor !== newColor ? newColor : prevColor));
     }
+
+    // ✅ 오브젝트의 위치 업데이트
+    if (objectRef.current) {
+      setObjectPosition(objectRef.current.position.clone());
+    }
   });
 
-  useEffect(() => {
-    arnft.onTrackingLost = () => {
-      console.log("❌ 마커 손실 감지됨! 하지만 원점은 유지됨.");
-      setObjectPlaced((prev) => prev || true);
-    };
-  }, [arnft]);
-
   // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
-  return objectPlaced ? (
-    <mesh ref={objectRef} position={[origin.x, origin.y + 1, origin.z]} visible={true}>
-      <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshStandardMaterial color={objectColor} />
-    </mesh>
-  ) : null;
+  return (
+    <>
+      {objectPlaced && (
+        <mesh ref={objectRef} position={[origin.x, origin.y + 1, origin.z]} visible={true}>
+          <boxGeometry args={[0.5, 0.5, 0.5]} />
+          <meshStandardMaterial color={objectColor} />
+        </mesh>
+      )}
+
+      {/* ✅ UI에 카메라 위치와 오브젝트 위치 표시 */}
+      <div style={{
+        position: "absolute",
+        top: "10px",
+        left: "10px",
+        background: "rgba(0,0,0,0.6)",
+        padding: "10px",
+        borderRadius: "8px",
+        color: "white",
+        fontSize: "14px",
+      }}>
+        <p>📍 <b>카메라 위치:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
+        <p>🟦 <b>오브젝트 위치:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
+      </div>
+    </>
+  );
 };
 // function Box() {
 //   const modelRef = useRef<THREE.Group>(null);
