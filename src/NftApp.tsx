@@ -67,7 +67,7 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
   }, [alvaAR]);
 
   /** ✅ useFrame 루프 */
-  useFrame(({ camera }) => {
+  useFrame(({ camera, gl, scene }) => {
     if (!origin || !alvaAR || !applyPose.current) {
       console.warn("🚨 useFrame 실행 중 조건 불만족!", { origin, alvaAR, applyPose: applyPose.current });
       return;
@@ -98,22 +98,22 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
     /** ✅ AlvaAR로 SLAM pose 추출 */
     const pose = alvaAR.findCameraPose(imageData);
     if (pose) {
-      camera.rotation.reorder('YXZ');
-      camera.updateProjectionMatrix();
 
-      // 오브젝트
+
+      //////
+
+      applyPose.current(pose, camera.quaternion, camera.position);
+      console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
+
+            // 오브젝트
       /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
-      if (objectRef.current) {
+      if (objectRef.current && !poseSet.current) {
         objectRef.current.position.z = objectRef.current.scale.z * 0.5;
 
         applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
         console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
         poseSet.current = true
       }
-      //////
-
-      applyPose.current(pose, camera.quaternion, camera.position);
-      console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
 
       // ✅ SLAM이 처음 감지한 카메라 위치를 저장 (최초 1회)
       if (initialCameraPosition.current.length() === 0) {
@@ -127,7 +127,7 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
     }
 
     /** ✅ 카메라 시야 영역(Frustum) 업데이트 */
-    camera.updateMatrixWorld(true);
+    camera.updateMatrixWorld();
     camera.near = 0.1;
     camera.far = 100;
     camera.updateProjectionMatrix();
@@ -147,8 +147,8 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
       setObjectPlaced(true);
     }
 
-
-  });
+    gl.render(scene, camera)
+  }, 1);
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (

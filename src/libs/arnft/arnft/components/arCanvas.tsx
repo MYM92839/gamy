@@ -50,6 +50,7 @@ function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, ...prop
           logarithmicDepthBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
         }}
+
       >
         <ARNftProvider video={ref} interpolationFactor={interpolationFactor} arEnabled={arEnabled}>
           {children}
