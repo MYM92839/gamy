@@ -4,7 +4,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { PropsWithChildren, memo, useRef } from 'react';
-import { ARNftProvider } from '../arnftContext';
+import { ARNftProvider } from '../../../XRProvider';
 import * as THREE from 'three';
 
 function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, ...props }: PropsWithChildren<any>) {
@@ -37,6 +37,10 @@ function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, ...prop
         </>
       )}
       <Canvas
+        style={{
+          zIndex: 9999,
+        }}
+        id={'three-canvas'}
         camera={arEnabled ? { position: [0, 0, 0], near: 100, far: 100000 } : props.camera}
         {...props}
         gl={{
