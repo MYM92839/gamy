@@ -16,6 +16,7 @@ export class ARNft {
   markers: any[];
   canvasProcess: HTMLCanvasElement;
   contextProcess: any;
+  markerTracked: boolean = false;
   worker: Worker;
   pw: any;
   ph: any;
@@ -176,6 +177,8 @@ export class ARNft {
   }
 
   onFound(msg: { matrixGL_RH: string; index: string }) {
+    if (this.markerTracked) return; // ✅ 마커가 이미 감지되었다면 실행 안 함
+
     console.log('FOUND');
     const matrix = JSON.parse(msg.matrixGL_RH);
     const index = JSON.parse(msg.index);
@@ -191,7 +194,6 @@ export class ARNft {
     // ✅ 마커의 월드 위치 가져오기
     const markerPosition = new THREE.Vector3();
     this.markers[index].root.getWorldPosition(markerPosition);
-
     console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
     // ✅ 초기 카메라 위치 가져오기 (WebXR 대응)
@@ -207,6 +209,9 @@ export class ARNft {
     // ✅ 카메라 기준으로 원점 보정
     const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, cameraPosition);
     console.log('✅ 보정된 원점 설정:', adjustedOrigin);
+
+    // ✅ 마커가 감지되었음을 표시하여 중복 실행 방지
+    this.markerTracked = true;
 
     // ✅ `onOriginDetected()` 호출하여 외부에서 원점 설정 가능하도록 함
     if (typeof this.onOriginDetected === 'function') {

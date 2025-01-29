@@ -12,13 +12,15 @@ import { requestCameraPermission } from './libs/util';
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
   const { arEnabled, arnft } = useARNft();
-  const markerTracked = useRef(false); // ✅ 마커가 감지되었는지 체크하는 변수
+  const markerTracked = useRef(false);
 
   useEffect(() => {
     if (!arnft || !arEnabled || !ref.current) return;
 
     if (!markerTracked.current) {
-      // ✅ 마커 감지 시 실행되는 콜백 설정
+      console.log("✅ `onOriginDetected()` 할당됨!");
+
+      // ✅ `onOriginDetected`가 실행되도록 설정
       arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
         console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
 
@@ -26,8 +28,7 @@ export function Instances({ url, setOrigin }: any) {
         markerTracked.current = true; // ✅ 이후 다시 실행되지 않도록 설정
       };
     }
-  }, [arEnabled, ref, arnft, setOrigin]); // `arEnabled`가 변경될 때만 실행
-
+  }, [arEnabled, ref, arnft, setOrigin]);
   return <group ref={ref} />;
 }
 
