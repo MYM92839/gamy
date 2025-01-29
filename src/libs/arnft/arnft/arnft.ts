@@ -166,7 +166,7 @@ export class ARNft {
   }
 
   onMarkerInfos(markerInfos: any[]) {
-    console.log('markerInfos', markerInfos);
+    console.log('markerInfos', markerInfos, this.markers);
     markerInfos.forEach((markerInfo: { id: string | number; width: number; dpi: number; height: number }) => {
       this.markers[markerInfo.id as any].root.children[0].position.x =
         ((markerInfo.width / markerInfo.dpi) * 2.54 * 10) / 2.0;

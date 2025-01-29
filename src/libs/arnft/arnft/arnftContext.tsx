@@ -42,7 +42,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
           try {
             console.log("🎯 ARNft 객체 생성 중...");
             const arnft: any = new ARNft(
-              "/data/camera_para.dat",
+              "../data/camera_para.dat",
               video.current,
               gl,
               camera,
