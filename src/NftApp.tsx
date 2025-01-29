@@ -3,10 +3,9 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Back from './assets/icons/Back';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
-import { useARNft, useNftMarker } from './libs/XRProvider';
 import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
-import { Html } from '@react-three/drei';
+import { useARNft, useNftMarker } from './libs/XRProvider';
 
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
