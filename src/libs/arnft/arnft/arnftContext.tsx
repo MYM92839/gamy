@@ -14,7 +14,7 @@ const constraints = {
 
 const ARNftContext = createContext({});
 
-const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOrigin }: any) => {
+const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any) => {
   const { gl, camera } = useThree();
   const [arnft, setARNft] = useState(null);
   const markersRef = useRef([]);
@@ -54,11 +54,11 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
 
             console.log("✅ ARNft 객체 생성 완료");
 
-            // ✅ `onOriginDetected` 실행 여부 확인
-            arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
-              console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
-              setOrigin(adjustedOrigin);
-            };
+            // // ✅ `onOriginDetected` 실행 여부 확인
+            // arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
+            //   console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+            //   setOrigin(adjustedOrigin);
+            // };
             console.log("✅ `onOriginDetected()` 이벤트 핸들러 설정 완료");
 
           } catch (error) {

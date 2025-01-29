@@ -2,15 +2,32 @@ import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Back from './assets/icons/Back';
-import { useNftMarker } from './libs/arnft/arnft/arnftContext';
+import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 
 // const context = createContext(undefined);
 
 
-export function Instances({ url }: any) {
+export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
+  const { arEnabled, arnft } = useARNft();
+  const markerTracked = useRef(false); // ✅ 마커가 감지되었는지 체크하는 변수
+
+  useEffect(() => {
+    if (!arnft || !arEnabled || !ref.current) return;
+
+    if (!markerTracked.current) {
+      // ✅ 마커 감지 시 실행되는 콜백 설정
+      arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
+        console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+
+        setOrigin(adjustedOrigin); // 원점 저장
+        markerTracked.current = true; // ✅ 이후 다시 실행되지 않도록 설정
+      };
+    }
+  }, [arEnabled, ref, arnft, setOrigin]); // `arEnabled`가 변경될 때만 실행
+
   return <group ref={ref} />;
 }
 
@@ -153,10 +170,10 @@ export default function NftApp() {
         <Back style={{}} />
       </button>
 
-      <ARCanvas interpolationFactor={30} setOrigin={setOrigin}>
+      <ARCanvas interpolationFactor={30}>
         <Suspense fallback={null}>
           {/* NFT 마커 감지 */}
-          <Instances url={"../data/marker/marker"} />
+          <Instances url={"../data/marker/marker"} setOrigin={setOrigin} />
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
           {origin && <CameraTracker origin={origin} />}
