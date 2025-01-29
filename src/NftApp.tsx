@@ -7,7 +7,7 @@ import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 
 // const context = createContext(undefined);
-const currentCameraPosition = new THREE.Vector3();
+// const currentCameraPosition = new THREE.Vector3();
 
 
 export function Instances({ url, setOrigin }: any) {
@@ -32,6 +32,7 @@ export function Instances({ url, setOrigin }: any) {
 }
 
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
+  const [objectColor, setObjectColor] = useState('red')
   const [, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.1;
@@ -39,23 +40,14 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const { arnft } = useARNft();
 
   useFrame(({ camera }) => {
-    if (!origin || !arnft.initialCameraPosition) return;
+    if (!origin) return; // ✅ 원점(origin) 없으면 실행 X
 
-    // ✅ WebXR 모드에서는 `camera.matrixWorld` 강제 업데이트 필요!
-    camera.updateMatrixWorld(true);
+    // ✅ 현재 카메라 위치는 항상 (0,0,0) → AR.js 기본 동작 방식 반영
+    const cameraPosition = new THREE.Vector3(0, 0, 0);
 
-    // ✅ 현재 카메라 위치 가져오기 (WebXR 대응)
-    currentCameraPosition.setFromMatrixPosition(camera.matrixWorld);
-
-    console.log("📍 보정된 카메라 위치:", currentCameraPosition);
-
-    // 📏 보정된 카메라 위치 계산 (현재 위치 - 최초 위치)
-    const adjustedCameraPosition = new THREE.Vector3().subVectors(
-      currentCameraPosition,
-      arnft.initialCameraPosition
-    );
-
-    console.log("📏 현재 거리:", adjustedCameraPosition.distanceTo(origin), "카메라 위치:", adjustedCameraPosition, "원점 위치:", origin);
+    // ✅ 마커와 카메라의 거리 계산
+    const distance = cameraPosition.distanceTo(origin);
+    console.log("📏 현재 거리:", distance, "원점 위치:", origin);
 
     // ✅ 카메라의 시야 영역(Frustum) 업데이트
     const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -67,11 +59,16 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
 
     setObjectVisible(isOriginVisible);
 
-    // ✅ 원점이 시야 내에 있고, 거리가 기준값 이상이면 오브젝트 배치
-    if (!objectPlaced && adjustedCameraPosition.distanceTo(origin) > threshold && isOriginVisible) {
-      console.log("✅ 거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
+    // ✅ 오브젝트가 처음 배치되지 않았다면 시야 내에서 배치
+    if (!objectPlaced && isOriginVisible) {
+      console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
       setObjectPlaced(true);
     }
+
+    // ✅ 거리 기반으로 오브젝트 색상 변경
+    const newColor = distance > threshold ? "red" : "blue";
+
+    setObjectColor(newColor);
   });
 
   useEffect(() => {
@@ -84,9 +81,9 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
 
   // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
   return objectPlaced ? (
-    <mesh position={[origin.x, origin.y, origin.z]} visible={true}>
+    <mesh position={[origin.x, origin.y + 1, origin.z]} visible={true}>
       <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshBasicMaterial color="blue" />
+      <meshStandardMaterial color={objectColor} />
     </mesh>
   ) : null;
 

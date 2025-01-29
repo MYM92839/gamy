@@ -192,24 +192,17 @@ export class ARNft {
     const markerPosition = new THREE.Vector3(matrix[12], matrix[13], matrix[14]);
     console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
-    // ✅ 최초 감지 시 카메라 위치 저장
+    // ✅ 카메라 행렬 업데이트 (WebXR 모드 대응)
+    this.camera.updateMatrixWorld(true);
+
+    // ✅ 최초 감지 시 카메라 위치 저장 (WebXR 대응)
     if (!this.initialCameraPosition) {
-      this.initialCameraPosition = new THREE.Vector3();
-
-      // ✅ 카메라 행렬 업데이트 (중요!)
-      this.camera.updateMatrixWorld(true);
-
-      // WebXR 모드에서는 camera.matrixWorld에서 가져오기
-      this.initialCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
-
+      this.initialCameraPosition = new THREE.Vector3().setFromMatrixPosition(this.camera.matrixWorld);
       console.log('✅ 최초 감지된 카메라 위치 저장:', this.initialCameraPosition);
     }
 
     // ✅ 현재 카메라 위치 가져오기
-    const currentCameraPosition = new THREE.Vector3();
-    this.camera.updateMatrixWorld(true); // 📌 추가: 카메라 행렬을 최신 상태로 유지
-      currentCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
-
+    const currentCameraPosition = new THREE.Vector3().setFromMatrixPosition(this.camera.matrixWorld);
     console.log('✅ 현재 카메라 위치:', currentCameraPosition);
 
     // ✅ 마커(원점) 기준으로 카메라 위치 보정
@@ -218,7 +211,7 @@ export class ARNft {
 
     // ✅ `onOriginDetected()` 호출하여 원점 설정 (최초 한 번만)
     if (!this.markerTracked && typeof this.onOriginDetected === 'function') {
-      this.onOriginDetected(markerPosition); // 마커 좌표를 원점으로 유지
+      this.onOriginDetected(markerPosition);
       this.markerTracked = true;
     }
   }
