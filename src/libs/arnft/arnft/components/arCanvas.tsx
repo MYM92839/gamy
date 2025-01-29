@@ -41,7 +41,7 @@ function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, ...prop
           zIndex: 9999,
         }}
         id={'three-canvas'}
-        camera={arEnabled ? { position: [0, 0, 0], near: 100, far: 100000 } : props.camera}
+        camera={props.camera}
         {...props}
         gl={{
           alpha: true,

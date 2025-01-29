@@ -45,6 +45,7 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
   const initialCameraPosition = useRef(new THREE.Vector3());
+  const poseSet = useRef(false)
 
   const { camera } = useThree();
 
@@ -98,6 +99,17 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
     /** ✅ AlvaAR로 SLAM pose 추출 */
     const pose = alvaAR.findCameraPose(imageData);
     if (pose) {
+      // 오브젝트
+      /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
+      if (objectRef.current) {
+        objectRef.current.position.z = objectRef.current.scale.z * 0.5;
+
+        applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
+        console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
+        poseSet.current = true
+      }
+      //////
+
       applyPose.current(pose, camera.quaternion, camera.position);
       console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
 
@@ -133,30 +145,13 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
       setObjectPlaced(true);
     }
 
-    /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
-    if (objectPlaced && objectRef.current) {
-      // 📌 초기 카메라 위치 기준으로 보정 (오브젝트는 고정)
-      const adjustedPosition = new THREE.Vector3()
-        .copy(objectPosition.current)
-        .sub(initialCameraPosition.current) // 최초 감지된 카메라 위치 기준으로 조정
-        .add(camera.position); // 현재 카메라 이동 반영
 
-      objectRef.current.position.set(
-        adjustedPosition.x,
-        adjustedPosition.y,
-        adjustedPosition.z
-      );
-
-      if (!objectPlaced) setObjectPosition(objectRef.current.position.clone());
-
-      console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
-    }
   });
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
     objectPlaced && (
-      <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
+      <mesh ref={objectRef} position={[0, 0, 0]} visible={true}>
         <boxGeometry args={[1, 1, 1]} />
         <meshBasicMaterial color={objectColor} />
       </mesh>
