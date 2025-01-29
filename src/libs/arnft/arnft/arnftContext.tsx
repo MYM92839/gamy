@@ -51,7 +51,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
             );
 
             arnftRef.current = arnft;
-            setARNft({ ...arnft });
+            setARNft(arnft);
 
             console.log("✅ ARNft 객체 생성 완료");
 
