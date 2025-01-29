@@ -36,7 +36,7 @@ export function Instances({ url, setOrigin }: any) {
   return <group ref={ref} />;
 }
 
-const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
+const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
   const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
