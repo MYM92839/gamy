@@ -37,13 +37,13 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   useFrame(({ camera, gl }) => {
     if (!origin) return;
 
-    // ✅ WebXR 모드에서 카메라 위치를 올바르게 가져오기
     const cameraPosition = new THREE.Vector3();
+
     if (gl.xr.isPresenting) {
-      // WebXR 활성화된 경우, `matrixWorld`에서 직접 추출
+      // ✅ WebXR 모드일 때, `matrixWorld`에서 위치를 직접 추출
       cameraPosition.setFromMatrixPosition(camera.matrixWorld);
     } else {
-      // 일반 모드에서는 기존 `getWorldPosition()` 사용
+      // ✅ 일반 모드에서는 기존 `getWorldPosition()` 사용
       camera.getWorldPosition(cameraPosition);
     }
 
