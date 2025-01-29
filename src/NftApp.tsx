@@ -133,25 +133,25 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
     }
 
     /** ✅ 카메라 시야 영역(Frustum) 업데이트 */
-    // camera.updateMatrixWorld();
-    // camera.near = 0.1;
-    // camera.far = 100;
-    // camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
+    camera.near = 0.1;
+    camera.far = 100;
+    camera.updateProjectionMatrix();
 
-    // const matrix = new THREE.Matrix4().multiplyMatrices(
-    //   camera.projectionMatrix,
-    //   camera.matrixWorldInverse
-    // );
-    // frustum.current.setFromProjectionMatrix(matrix);
+    const matrix = new THREE.Matrix4().multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse
+    );
+    frustum.current.setFromProjectionMatrix(matrix);
 
-    // const isOriginVisible = frustum.current.containsPoint(origin);
-    // console.log("👀 isOriginVisible:", isOriginVisible);
+    const isOriginVisible = frustum.current.containsPoint(originRef.current);
+    console.log("👀 isOriginVisible:", isOriginVisible);
 
     /** ✅ 원점이 카메라의 뷰포트 안에 있으면 오브젝트 배치 */
-    // if (!objectPlaced) {
-    //   console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
-    //   setObjectPlaced(true);
-    // }
+    if (!objectPlaced) {
+      console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
+      setObjectPlaced(true);
+    }
     gl.autoClear = true
     gl.render(scene, camera)
 
