@@ -49,7 +49,6 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
-  const poseSet = useRef(false)
 
 
   /** ✅ 원점 감지 시 오브젝트 위치 설정 */
