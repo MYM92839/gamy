@@ -98,11 +98,12 @@ const CameraTracker = ({ origin, setCameraPosition }: { origin: THREE.Vector3; s
     /** ✅ AlvaAR로 SLAM pose 추출 */
     const pose = alvaAR.findCameraPose(imageData);
     if (pose) {
-     // camera.rotation.reorder('YXZ');
+      camera.rotation.reorder('YXZ');
+      camera.updateProjectionMatrix();
 
       // 오브젝트
       /** 📌 오브젝트의 위치를 SLAM 초기 위치 기준으로 변환 */
-      if (objectRef.current ) {
+      if (objectRef.current && !poseSet.current) {
         objectRef.current.position.z = objectRef.current.scale.z * 0.5;
 
         applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
