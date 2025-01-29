@@ -23,8 +23,8 @@ export function Instances({ url, setOrigin }: any) {
       const pre = arnft.onOriginDetected
 
       arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
-        pre()
         if (!markerTracked.current) {
+          pre()
           console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
           setOrigin(adjustedOrigin);
           markerTracked.current = true;
