@@ -34,12 +34,13 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const [, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.1;
-  const frustum = useRef(new THREE.Frustum());
+  // const frustum = useRef(new THREE.Frustum());
   const { arnft } = useARNft();
 
   useFrame(({ camera, gl }) => {
     if (!origin || !arnft.initialCameraPosition) return;
 
+    // ✅ 현재 카메라 위치 가져오기
     const currentCameraPosition = new THREE.Vector3();
     if (gl.xr.isPresenting) {
       currentCameraPosition.setFromMatrixPosition(camera.matrixWorld);
@@ -47,37 +48,37 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
       camera.getWorldPosition(currentCameraPosition);
     }
 
-    const adjustedCameraPosition = new THREE.Vector3().subVectors(
-      currentCameraPosition,
-      arnft.initialCameraPosition
-    );
+    // ✅ 📏 보정된 카메라 위치 계산 (현재 위치 - 최초 위치)
+    const adjustedCameraPosition = new THREE.Vector3().subVectors(currentCameraPosition, arnft.initialCameraPosition);
     console.log("📍 보정된 카메라 위치:", adjustedCameraPosition);
 
+    // ✅ 거리 계산
     const distance = adjustedCameraPosition.distanceTo(origin);
     console.log("📏 현재 거리:", distance, "카메라 위치:", adjustedCameraPosition, "원점 위치:", origin);
 
-    const matrix = new THREE.Matrix4().multiplyMatrices(
-      camera.projectionMatrix,
-      camera.matrixWorldInverse
-    );
-    frustum.current.setFromProjectionMatrix(matrix);
-
+    // ✅ Frustum 체크 제거 (강제로 보이게 하기 위해)
     const isOriginVisible = frustum.current.containsPoint(origin);
     console.log("👀 isOriginVisible:", isOriginVisible);
-    setObjectVisible(isOriginVisible);
-
-    // ✅ 마커가 손실되었어도 `objectPlaced`는 그대로 유지해야 함!
-    if (!objectPlaced && distance > threshold && isOriginVisible) {
-      console.log("✅ 거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
+    setObjectVisible(true); // 무조건 표시
+    console.log("PLAECED!!!", !objectPlaced, distance, isOriginVisible)
+    // ✅ 원점이 시야 내에 있거나, 마커가 손실되었어도 오브젝트 유지
+    if (!objectPlaced && distance > threshold) {
+      console.log("✅ 오브젝트 생성!");
       setObjectPlaced(true);
     }
+
+    arnft.onTrackingLost = () => {
+      console.log("❌ 마커 손실 감지됨! 하지만 원점은 유지됨.");
+      // 마커가 손실되었어도 objectPlaced 상태를 유지
+      setObjectPlaced((prev) => prev || true);
+    };
   });
 
   // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
   return objectPlaced ? (
     <mesh position={[origin.x, origin.y + 1, origin.z]} visible={true}>
       <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshStandardMaterial color="blue" />
+      <meshBasicMaterial color="blue" />
     </mesh>
   ) : null;
 
