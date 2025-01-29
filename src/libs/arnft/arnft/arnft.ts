@@ -176,8 +176,7 @@ export class ARNft {
   }
 
   onFound(msg: { matrixGL_RH: string; index: string }) {
-    const matrix = new THREE.Matrix4();
-    matrix.fromArray(JSON.parse(msg.matrixGL_RH));
+    const matrix = JSON.parse(msg.matrixGL_RH);
 
     const index = JSON.parse(msg.index);
 
