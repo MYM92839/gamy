@@ -53,6 +53,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
         );
 
         arnftRef.current = arnft;
+        console.log("🎯 ARNft 객체 생성 끝..");
 
         // ✅ `onOriginDetected`를 여기서 처리
         arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
