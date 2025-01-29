@@ -84,15 +84,12 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
       console.warn("⚠️ ARNft가 아직 로드되지 않음!");
       return;
     }
-
+    console.log("ARNFT", arnft)
     console.log("📌 마커 로드 시작...");
     (arnft as any).loadMarkers(markersRef.current);
   }, [arnft]);
 
-  const value = useMemo(() => {
-    console.log("📌 ARNftContext에 저장되는 값:", { arnft, markersRef, arEnabled });
-    return { arnft, markersRef, arEnabled };
-  }, [arnft, markersRef, arEnabled]);
+  const value = { arnft, markersRef, arEnabled };
 
   return <ARNftContext.Provider value={value}>{children}</ARNftContext.Provider>;
 };
