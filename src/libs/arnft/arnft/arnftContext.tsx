@@ -21,8 +21,8 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
   const arnftRef = useRef<any>();
 
   const onLoaded = () => {
-    console.log("✅ ARNft가 로드됨!", arnft);
-    setARNft(arnftRef.current as any);
+    console.log("✅ ARNft가 로드됨!", arnftRef.current);
+    // setARNft(arnftRef.current as any);
   }
 
   useEffect(() => {
