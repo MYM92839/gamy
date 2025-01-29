@@ -208,11 +208,8 @@ export class ARNft {
     // ✅ 현재 카메라 위치 가져오기
     const currentCameraPosition = new THREE.Vector3();
     this.camera.updateMatrixWorld(true); // 📌 추가: 카메라 행렬을 최신 상태로 유지
-    if (this.renderer.xr.isPresenting) {
       currentCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
-    } else {
-      this.camera.getWorldPosition(currentCameraPosition);
-    }
+
     console.log('✅ 현재 카메라 위치:', currentCameraPosition);
 
     // ✅ 마커(원점) 기준으로 카메라 위치 보정
