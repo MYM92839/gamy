@@ -1,9 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
-import { ARNft } from "./arnft/arnft/arnft";
-import { AlvaARConnectorTHREE } from "./alvaConnector";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { AlvaAR } from './alva/alva';
+import { ARNft } from "./arnft/arnft/arnft";
 
 const ARNftContext = createContext({});
 

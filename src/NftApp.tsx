@@ -1,4 +1,4 @@
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Back from './assets/icons/Back';
@@ -33,36 +33,85 @@ export function Instances({ url, setOrigin }: any) {
 }
 
 
-const CameraTracker = () => {
-  const { alvaAR } = useARNft();
-  const rotationQuaternion = new THREE.Quaternion();
-  const translationVector = new THREE.Vector3();
-  const applyPose = AlvaARConnectorTHREE.Initialize(THREE);
+
+const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
+  const { alvaAR, arnft } = useARNft();
+  const [objectColor, setObjectColor] = useState("red"); // 초기 색상: 빨간색
+  const [, setObjectVisible] = useState(false);
+  const [objectPlaced, setObjectPlaced] = useState(false);
+  const threshold = 2.0; // ✅ 2미터 거리 기준
+  const frustum = useRef(new THREE.Frustum());
+  const objectRef = useRef<THREE.Mesh>(null);
+  const applyPose = useRef<any>(null);
+
+  const { camera } = useThree();
+
+  useEffect(() => {
+    if (alvaAR) {
+      applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
+      console.log("✅ AlvaAR SLAM 활성화됨!");
+    }
+  }, [alvaAR]);
 
   useFrame(() => {
-    if (!alvaAR) return;
+    if (!origin || !alvaAR || !applyPose.current || !objectRef.current) return;
 
-    const videoCanvas = document.createElement("canvas");
-    const ctx = videoCanvas.getContext("2d");
-    const video = document.querySelector("video") as HTMLVideoElement;
+    // ✅ AlvaAR을 사용하여 카메라 위치 업데이트
+    const ctx = (document.getElementById("myCanvas") as HTMLCanvasElement)?.getContext("2d");
+    if (!ctx) return;
 
-    if (!ctx || !video) return;
-    videoCanvas.width = video.videoWidth;
-    videoCanvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-    const imageData = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
+    const imageData = ctx.getImageData(0, 0, 640, 480);
     const pose = alvaAR.findCameraPose(imageData);
 
     if (pose) {
-      applyPose(pose, rotationQuaternion, translationVector);
-      console.log("📍 SLAM 위치 업데이트:", translationVector);
+      applyPose.current(pose, camera.quaternion, camera.position);
+      console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
+    }
+
+    // ✅ 카메라의 시야 영역(Frustum) 업데이트
+    const matrix = new THREE.Matrix4().multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse
+    );
+    frustum.current.setFromProjectionMatrix(matrix);
+
+    // ✅ 원점이 카메라의 뷰포트 안에 있는지 확인
+    const isOriginVisible = frustum.current.containsPoint(origin);
+    console.log("👀 isOriginVisible:", isOriginVisible);
+
+    setObjectVisible(isOriginVisible);
+
+    // ✅ 오브젝트가 처음 배치되지 않았다면 시야 내에서 배치
+    if (!objectPlaced && isOriginVisible) {
+      console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
+      setObjectPlaced(true);
+    }
+
+    // ✅ 거리 기반으로 오브젝트 색상 변경 (카메라 이동 기반)
+    const distance = camera.position.distanceTo(origin);
+    console.log("📏 현재 거리:", distance);
+
+    if (isOriginVisible) {
+      const newColor = distance > threshold ? "red" : "blue";
+      setObjectColor((prevColor) => (prevColor !== newColor ? newColor : prevColor));
     }
   });
 
-  return null;
-};
+  useEffect(() => {
+    arnft.onTrackingLost = () => {
+      console.log("❌ 마커 손실 감지됨! 하지만 원점은 유지됨.");
+      setObjectPlaced((prev) => prev || true);
+    };
+  }, [arnft]);
 
+  // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
+  return objectPlaced ? (
+    <mesh ref={objectRef} position={[origin.x, origin.y + 1, origin.z]} visible={true}>
+      <boxGeometry args={[0.5, 0.5, 0.5]} />
+      <meshStandardMaterial color={objectColor} />
+    </mesh>
+  ) : null;
+};
 // function Box() {
 //   const modelRef = useRef<THREE.Group>(null);
 //   const instances: any = useContext(context);
@@ -161,7 +210,7 @@ export default function NftApp() {
           <Instances url={"../data/marker/marker"} setOrigin={setOrigin} />
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          {origin && <CameraTracker />}
+          {origin && <CameraTracker origin={origin} />}
         </Suspense>
       </ARCanvas>
     </>
