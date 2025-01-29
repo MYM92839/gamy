@@ -5,6 +5,7 @@ import Back from './assets/icons/Back';
 import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
+import { AlvaARConnectorTHREE } from './libs/alvaConnector';
 
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
@@ -31,64 +32,36 @@ export function Instances({ url, setOrigin }: any) {
   return <group ref={ref} />;
 }
 
-const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
-  const [objectColor, setObjectColor] = useState('red')
-  const [, setObjectVisible] = useState(false);
-  const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 0.1;
-  const frustum = useRef(new THREE.Frustum());
-  const { arnft } = useARNft();
 
-  useFrame(({ camera }) => {
-    if (!origin) return; // ✅ 원점(origin) 없으면 실행 X
+const CameraTracker = () => {
+  const { alvaAR } = useARNft();
+  const rotationQuaternion = new THREE.Quaternion();
+  const translationVector = new THREE.Vector3();
+  const applyPose = AlvaARConnectorTHREE.Initialize(THREE);
 
-    // ✅ 현재 카메라 위치는 항상 (0,0,0) → AR.js 기본 동작 방식 반영
-    const cameraPosition = new THREE.Vector3(0, 0, 0);
+  useFrame(() => {
+    if (!alvaAR) return;
 
-    // ✅ 마커와 카메라의 거리 계산
-    const distance = cameraPosition.distanceTo(origin);
-    console.log("📏 현재 거리:", distance, "원점 위치:", origin);
+    const videoCanvas = document.createElement("canvas");
+    const ctx = videoCanvas.getContext("2d");
+    const video = document.querySelector("video") as HTMLVideoElement;
 
-    // ✅ 카메라의 시야 영역(Frustum) 업데이트
-    const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    frustum.current.setFromProjectionMatrix(matrix);
+    if (!ctx || !video) return;
+    videoCanvas.width = video.videoWidth;
+    videoCanvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
-    // ✅ 원점이 카메라의 뷰포트 안에 있는지 확인
-    const isOriginVisible = frustum.current.containsPoint(origin);
-    console.log("👀 isOriginVisible:", isOriginVisible);
+    const imageData = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
+    const pose = alvaAR.findCameraPose(imageData);
 
-    setObjectVisible(isOriginVisible);
-
-    // ✅ 오브젝트가 처음 배치되지 않았다면 시야 내에서 배치
-    if (!objectPlaced && isOriginVisible) {
-      console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
-      setObjectPlaced(true);
+    if (pose) {
+      applyPose(pose, rotationQuaternion, translationVector);
+      console.log("📍 SLAM 위치 업데이트:", translationVector);
     }
-
-    // ✅ 거리 기반으로 오브젝트 색상 변경
-    const newColor = distance > threshold ? "red" : "blue";
-
-    setObjectColor(newColor);
   });
 
-  useEffect(() => {
-    arnft.onTrackingLost = () => {
-      console.log("❌ 마커 손실 감지됨! 하지만 원점은 유지됨.");
-      // 마커가 손실되었어도 objectPlaced 상태를 유지
-      setObjectPlaced((prev) => prev || true);
-    };
-  }, [arnft])
-
-  // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
-  return objectPlaced ? (
-    <mesh position={[origin.x, origin.y + 1, origin.z]} visible={true}>
-      <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshStandardMaterial color={objectColor} />
-    </mesh>
-  ) : null;
-
+  return null;
 };
-
 
 // function Box() {
 //   const modelRef = useRef<THREE.Group>(null);
@@ -188,7 +161,7 @@ export default function NftApp() {
           <Instances url={"../data/marker/marker"} setOrigin={setOrigin} />
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          {origin && <CameraTracker origin={origin} />}
+          {origin && <CameraTracker />}
         </Suspense>
       </ARCanvas>
     </>
