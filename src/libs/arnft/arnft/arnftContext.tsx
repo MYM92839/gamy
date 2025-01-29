@@ -22,7 +22,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
   const onLoaded = useCallback(() =>
   //msg: string
   {
-    setARNft(arnftRef.current as any);
+    setARNft({ ...arnftRef.current as any });
   }, []);
 
   useEffect(() => {
@@ -78,7 +78,6 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
 
 const useARNft = () => {
   const arValue = useContext(ARNftContext);
-  console.log("NFT", arValue)
   return useMemo(() => ({ ...arValue } as any), [arValue]);
 };
 
