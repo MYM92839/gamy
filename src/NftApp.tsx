@@ -32,17 +32,24 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const [objectVisible, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.5; // ✅ 거리 임계값
-  const frustum = useRef(new THREE.Frustum()); // ✅ 시야(뷰포트) 계산을 위한 Frustum 객체
+  const frustum = useRef(new THREE.Frustum());
 
-  useFrame(({ camera }) => {
-    if (!origin) return; // ✅ `origin`이 설정되었는지 확인
+  useFrame(({ camera, gl }) => {
+    if (!origin) return;
 
-    camera.updateMatrixWorld(true); // ✅ 카메라 위치 강제 업데이트
+    // ✅ WebXR 모드에서 카메라 위치를 올바르게 가져오기
     const cameraPosition = new THREE.Vector3();
-    camera.getWorldPosition(cameraPosition);
+    if (gl.xr.isPresenting) {
+      // WebXR 활성화된 경우, `matrixWorld`에서 직접 추출
+      cameraPosition.setFromMatrixPosition(camera.matrixWorld);
+    } else {
+      // 일반 모드에서는 기존 `getWorldPosition()` 사용
+      camera.getWorldPosition(cameraPosition);
+    }
 
+    // ✅ 거리 계산
     const distance = cameraPosition.distanceTo(origin);
-    console.log("현재 거리:", distance, "카메라 위치:", cameraPosition, "원점 위치:", origin);
+    console.log("📏 현재 거리:", distance, "카메라 위치:", cameraPosition, "원점 위치:", origin);
 
     // ✅ 카메라의 시야 영역(Frustum) 업데이트
     const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -54,7 +61,7 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
 
     // ✅ 원점이 시야에 있고, 거리가 기준값 이상이면 오브젝트 배치
     if (!objectPlaced && distance > threshold && isOriginVisible) {
-      console.log("거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
+      console.log("✅ 거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
       setObjectPlaced(true);
     }
   });
