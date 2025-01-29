@@ -26,6 +26,7 @@ export class ARNft {
   ox!: number;
   oy!: number;
   onOriginDetected: any;
+  onTrackingLost?: () => void; // ✅ 마커 손실 시 호출될 함수 추가
   constructor(
     cameraParamUrl: string,
     video: { videoWidth: any; videoHeight: any },
@@ -228,13 +229,12 @@ export class ARNft {
   onLost() {
     console.log('❌ 마커 손실됨!');
 
-    // ✅ 마커 가시성 제거
-    this.markers.forEach((marker) => (marker.root.visible = false));
-
-    // ✅ 마커 재감지를 위해 `markerTracked` 초기화
+    // ✅ 마커는 손실되었지만, 원점(origin)은 그대로 유지
     this.markerTracked = false;
 
-    // ✅ 카메라 위치 다시 초기화하여 보정값 유지
-    this.initialCameraPosition = null;
+    // ✅ 마커가 사라졌다고 해서 오브젝트를 숨기지 않음 (단, CameraTracker에서 계속 추적됨)
+    if (typeof this.onTrackingLost === 'function') {
+      this.onTrackingLost();
+    }
   }
 }

@@ -31,16 +31,15 @@ export function Instances({ url, setOrigin }: any) {
 }
 
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
-  const objectVisible = useRef(false); // ✅ `useState` 대신 `useRef` 사용하여 리렌더링 방지
+  const [, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 0.1; // ✅ 거리 임계값
+  const threshold = 0.1;
   const frustum = useRef(new THREE.Frustum());
   const { arnft } = useARNft();
 
   useFrame(({ camera, gl }) => {
     if (!origin || !arnft.initialCameraPosition) return;
 
-    // ✅ 현재 카메라 위치 가져오기
     const currentCameraPosition = new THREE.Vector3();
     if (gl.xr.isPresenting) {
       currentCameraPosition.setFromMatrixPosition(camera.matrixWorld);
@@ -48,34 +47,33 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
       camera.getWorldPosition(currentCameraPosition);
     }
 
-    // ✅ 📏 보정된 카메라 위치 계산 (현재 위치 - 최초 위치)
-    const adjustedCameraPosition = new THREE.Vector3().subVectors(currentCameraPosition, arnft.initialCameraPosition);
+    const adjustedCameraPosition = new THREE.Vector3().subVectors(
+      currentCameraPosition,
+      arnft.initialCameraPosition
+    );
     console.log("📍 보정된 카메라 위치:", adjustedCameraPosition);
 
-    // ✅ 거리 계산 (보정된 카메라 위치 기준)
     const distance = adjustedCameraPosition.distanceTo(origin);
     console.log("📏 현재 거리:", distance, "카메라 위치:", adjustedCameraPosition, "원점 위치:", origin);
 
-    // ✅ 카메라의 시야 영역(Frustum) 업데이트
-    camera.updateMatrixWorld(true); // ✅ 최신 상태 유지
-    const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    const matrix = new THREE.Matrix4().multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse
+    );
     frustum.current.setFromProjectionMatrix(matrix);
 
-    // ✅ 원점이 카메라의 뷰포트 안에 있는지 확인
     const isOriginVisible = frustum.current.containsPoint(origin);
+    console.log("👀 isOriginVisible:", isOriginVisible);
+    setObjectVisible(isOriginVisible);
 
-    if (objectVisible.current !== isOriginVisible) {
-      objectVisible.current = isOriginVisible;
-      console.log("👀 isOriginVisible:", isOriginVisible);
-    }
-
-    // ✅ 원점이 시야 내에 있고, 거리가 기준값 이상이면 오브젝트 배치
+    // ✅ 마커가 손실되었어도 `objectPlaced`는 그대로 유지해야 함!
     if (!objectPlaced && distance > threshold && isOriginVisible) {
       console.log("✅ 거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
       setObjectPlaced(true);
     }
   });
 
+  // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
   return objectPlaced ? (
     <mesh position={[origin.x, origin.y + 1, origin.z]} visible={true}>
       <boxGeometry args={[0.5, 0.5, 0.5]} />
