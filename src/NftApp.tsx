@@ -11,7 +11,7 @@ import { useARNft, useNftMarker } from './libs/XRProvider';
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
 
-
+const ma = new THREE.Matrix4()
 export function Instances({ url, setOrigin }: any) {
   const ref = useNftMarker(url);
   const { arEnabled, arnft } = useARNft();
@@ -38,24 +38,16 @@ export function Instances({ url, setOrigin }: any) {
   return <group ref={ref} />;
 }
 
-
-
-const CameraTracker = ({
-  origin,
-  setObjectPosition,
-  setCameraPosition,
-}: {
-  origin: THREE.Vector3;
-  setCameraPosition: any;
-  setObjectPosition: any;
-}) => {
+const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origin: THREE.Vector3; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
-  const [objectColor, setObjectColor] = useState("0x0fffff");
+  const [objectColor, setObjectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.1;
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Mesh>(null);
   const applyPose = useRef<any>(null);
+  const objectPosition = useRef(new THREE.Vector3());
+
   const { camera } = useThree();
 
   /** ✅ AlvaAR SLAM 활성화 */
@@ -70,9 +62,10 @@ const CameraTracker = ({
   useEffect(() => {
     if (origin) {
       console.log("🔄 원점 변경 감지! 오브젝트 위치 갱신:", origin);
-      setObjectPosition(origin.clone()); // ✅ 원점 기준으로 오브젝트 위치 갱신
+      objectPosition.current.copy(origin);
+      setObjectPosition(origin.clone());
     }
-  }, [origin, camera.position]); // ✅ 카메라 위치 변경 감지하도록 수정!
+  }, [origin]);
 
   /** ✅ useFrame 루프 */
   useFrame(() => {
@@ -90,7 +83,7 @@ const CameraTracker = ({
       return;
     }
 
-    /** ✅ Canvas 생성하여 `ar-video` 영상 캡처 */
+    /** ✅ Canvas 생성하여 ar-video 영상 캡처 */
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -106,13 +99,9 @@ const CameraTracker = ({
     /** ✅ AlvaAR로 SLAM pose 추출 */
     const pose = alvaAR.findCameraPose(imageData);
     if (pose) {
-      // ✅ SLAM 카메라 위치를 Three.js 좌표계로 변환
-      const camPos = new THREE.Vector3(pose[12], pose[13], pose[14]); // SLAM 좌표에서 가져오기
-      camPos.applyMatrix4(camera.matrixWorld); // Three.js 좌표계 변환 적용
-
       applyPose.current(pose, camera.quaternion, camera.position);
-      console.log("📍 AlvaAR 카메라 위치 업데이트:", camPos);
-      setCameraPosition(camPos);
+      console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
+      setCameraPosition(camera.position.clone());
     } else {
       console.warn("⚠️ AlvaAR에서 pose를 찾을 수 없음!");
     }
@@ -139,7 +128,7 @@ const CameraTracker = ({
     }
 
     /** ✅ 오브젝트 색상 변경 (거리 기반) */
-    const distance = camera.position.distanceTo(origin);
+    const distance = camera.position.distanceTo(objectPosition.current);
     console.log("📏 현재 거리:", distance);
 
     if (isOriginVisible) {
@@ -147,19 +136,26 @@ const CameraTracker = ({
       setObjectColor((prevColor) => (prevColor !== newColor ? newColor : prevColor));
     }
 
-    // 📌 오브젝트 위치가 최신 카메라 좌표에 맞게 조정되지 않음 → 업데이트 추가!
+    /** 📌 오브젝트의 위치를 SLAM 포즈 기반으로 조정 */
     if (objectPlaced && objectRef.current) {
-      const adjustedOrigin = new THREE.Vector3(origin.x, origin.y, origin.z);
-      adjustedOrigin.applyMatrix4(camera.matrixWorld); // ✅ Three.js 좌표 변환
+      // 📌 AlvaAR에서 보정된 카메라 위치를 기준으로 오브젝트 위치 업데이트
+      const adjustedPosition = new THREE.Vector3()
+        .copy(objectPosition.current)
+        .sub(camera.position); // 📌 카메라 기준 상대 좌표로 변환
 
-      objectRef.current.position.copy(adjustedOrigin);
+      objectRef.current.position.set(
+        adjustedPosition.x,
+        adjustedPosition.y,
+        adjustedPosition.z
+      );
+
       setObjectPosition(objectRef.current.position.clone());
 
       console.log("🟦 오브젝트 위치 업데이트:", objectRef.current.position);
     }
   });
 
-  // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
+  // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
     <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
       <boxGeometry args={[1, 1, 1]} />
@@ -167,6 +163,7 @@ const CameraTracker = ({
     </mesh>
   );
 };
+
 
 
 
