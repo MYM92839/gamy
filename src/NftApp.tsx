@@ -15,9 +15,9 @@ export function Instances({ url }: any) {
 }
 
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
-  const [objectVisible, setObjectVisible] = useState(false);
+  const [setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 0.5; // ✅ 거리 임계값
+  const threshold = 0.1; // ✅ 거리 임계값
   const frustum = useRef(new THREE.Frustum());
 
   useFrame(({ camera, gl }) => {
