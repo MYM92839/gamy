@@ -33,7 +33,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
     async function init() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: 640, height: 480 },
+          video: { facingMode: "environment", width: 1280, height: 720 },
         });
         video.current.srcObject = stream;
         video.current.onloadedmetadata = async () => {
