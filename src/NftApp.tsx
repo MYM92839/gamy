@@ -7,6 +7,11 @@ import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 import { useARNft, useNftMarker } from './libs/XRProvider';
 
+const m = new THREE.Matrix4()
+const r = new THREE.Quaternion()
+const t = new THREE.Vector3();
+
+
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
@@ -105,13 +110,17 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
       // 오브젝트
       if (objectRef.current) {
 
+
+        m.fromArray(pose);
+        r.setFromRotationMatrix(m);
+        t.set(pose[12], pose[13], pose[14]);
+
+        (objectRef.current.quaternion !== null) && objectRef.current.quaternion.set(r.x, -r.y, -r.z, r.w);
+        (objectRef.current.position !== null) && objectRef.current.position.set(-t.x, t.y, t.z);
+
         // applyPose로 오브젝트 위치 업데이트
-        applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
+        // applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
         // 오브젝트 위치 반전 (좌우, 앞뒤)
-        objectRef.current.position.x = -objectRef.current.position.x;  // 좌우 반전
-        objectRef.current.position.z = -objectRef.current.position.z;  // 앞뒤 반전
-        const inverseQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));  // 180도 회전 (좌우 반전)
-        objectRef.current.quaternion.multiply(inverseQuaternion);  // 기존 회전에 반전된 회전값을 곱해줌
 
 
         console.log("🟦 오브젝트 위치 업데이트 (반전됨):", objectRef.current.position);
@@ -153,7 +162,7 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
     objectPlaced && (
       <mesh ref={objectRef} position={[0, 0, 0]} visible={true}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshBasicMaterial color={objectColor} />
+        <meshStandardMaterial color={objectColor} />
       </mesh>
     )
   );
@@ -280,6 +289,8 @@ export default function NftApp() {
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
           {origin && <CameraTracker originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />}
+          <ambientLight />
+          <directionalLight position={[100, 100, 0]} />
         </Suspense>
       </ARCanvas>
     </>

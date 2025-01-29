@@ -22,20 +22,21 @@
  *      }
  */
 
-class AlvaARConnectorTHREE
-{
-    static Initialize( THREE )
-    {
-        return ( pose, rotationQuaternion, translationVector ) =>
-        {
-            const m = new THREE.Matrix4().fromArray( pose );
-            const r = new THREE.Quaternion().setFromRotationMatrix( m );
-            const t = new THREE.Vector3( pose[12], pose[13], pose[14] );
+const m = new THREE.Matrix4()
+const r = new THREE.Quaternion()
+const t = new THREE.Vector3();
 
-            ( rotationQuaternion !== null ) && rotationQuaternion.set( -r.x, r.y, r.z, r.w );
-            ( translationVector !== null ) && translationVector.set( t.x, -t.y, -t.z );
-        }
+class AlvaARConnectorTHREE {
+  static Initialize(THREE) {
+    return (pose, rotationQuaternion, translationVector) => {
+      m.fromArray(pose);
+      r.setFromRotationMatrix(m);
+      t.set(pose[12], pose[13], pose[14]);
+
+      (rotationQuaternion !== null) && rotationQuaternion.set(-r.x, r.y, r.z, r.w);
+      (translationVector !== null) && translationVector.set(t.x, -t.y, -t.z);
     }
+  }
 }
 
 export { AlvaARConnectorTHREE };
