@@ -22,7 +22,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
 
   const onLoaded = () => {
     console.log("✅ ARNft가 로드됨!", arnftRef.current);
-    // setARNft(arnftRef.current as any);
+    setARNft(arnftRef.current as any);
   }
 
   useEffect(() => {
@@ -51,7 +51,6 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
             );
 
             arnftRef.current = arnft;
-            setARNft(arnft);
 
             console.log("✅ ARNft 객체 생성 완료");
 
