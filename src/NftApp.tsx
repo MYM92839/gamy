@@ -1,13 +1,13 @@
-import { BakeShadows, Environment, useGLTF } from '@react-three/drei';
+import { Environment } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { Suspense, createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Back from './assets/icons/Back';
 import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 
-const context = createContext(undefined);
+// const context = createContext(undefined);
 
 
 export function Instances({ url, setOrigin }: any) {
