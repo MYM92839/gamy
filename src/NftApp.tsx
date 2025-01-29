@@ -76,7 +76,7 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
 
   // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
   return objectPlaced ? (
-    <mesh position={[origin.x, origin.y + 1, origin.z]} visible={true}>
+    <mesh position={[origin.x, origin.y, origin.z]} visible={true}>
       <boxGeometry args={[0.5, 0.5, 0.5]} />
       <meshBasicMaterial color="blue" />
     </mesh>
