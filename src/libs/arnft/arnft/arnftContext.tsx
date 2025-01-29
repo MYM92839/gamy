@@ -20,10 +20,10 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOri
   const markersRef = useRef([]);
   const arnftRef = useRef<any>();
 
-  const onLoaded = useCallback(() => {
-    console.log("✅ ARNft가 로드됨!");
+  const onLoaded = () => {
+    console.log("✅ ARNft가 로드됨!", arnft);
     setARNft(arnftRef.current as any);
-  }, []);
+  }
 
   useEffect(() => {
     async function init() {
