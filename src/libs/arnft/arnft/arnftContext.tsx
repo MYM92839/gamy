@@ -1,4 +1,5 @@
 import { useThree } from '@react-three/fiber';
+import * as THREE from 'three'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ARNft } from './arnft';
 
@@ -13,16 +14,15 @@ const constraints = {
 
 const ARNftContext = createContext({});
 
-const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any) => {
+const ARNftProvider = ({ children, video, interpolationFactor, arEnabled, setOrigin }: any) => {
   const { gl, camera } = useThree();
   const [arnft, setARNft] = useState(null);
   const markersRef = useRef([]);
   const arnftRef = useRef<any>();
 
-  const onLoaded = useCallback(() =>
-  //msg: string
-  {
-    setARNft({ ...arnftRef.current as any });
+  const onLoaded = useCallback(() => {
+    console.log("✅ ARNft가 로드됨!");
+    setARNft(arnftRef.current as any);
   }, []);
 
   useEffect(() => {
@@ -31,20 +31,20 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       video.current.srcObject = stream;
       video.current.onloadedmetadata = async (event: any) => {
-        console.log(event.srcElement.videoWidth);
-        console.log(event.srcElement.videoHeight);
+        console.log("🎥 카메라 메타데이터 로드 완료");
+        console.log("📏 비디오 크기:", event.srcElement.videoWidth, "x", event.srcElement.videoHeight);
 
         video.current.play();
 
         gl.domElement.width = event.srcElement.videoWidth;
         gl.domElement.height = event.srcElement.videoHeight;
 
-        gl.domElement.style.objectFit = 'cover';
-
+        gl.domElement.style.objectFit = "cover";
         camera.updateProjectionMatrix();
 
+        console.log("🎯 ARNft 객체 생성 중...");
         const arnft: any = new ARNft(
-          '../data/camera_para.dat',
+          "../data/camera_para.dat",
           video.current,
           gl,
           camera,
@@ -53,23 +53,35 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
         );
 
         arnftRef.current = arnft;
+
+        // ✅ `onOriginDetected`를 여기서 처리
+        arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
+          console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+          setOrigin(adjustedOrigin);
+        };
       };
     }
 
     if (arEnabled) {
+      console.log("🔹 AR 모드 활성화됨! 초기화 시작...");
       init();
+    } else {
+      console.warn("⚠️ AR 모드가 활성화되지 않음.");
     }
-  }, []);
+  }, [arEnabled]);
 
   useEffect(() => {
     if (!arnft) {
+      console.warn("⚠️ ARNft가 아직 로드되지 않음!");
       return;
     }
 
+    console.log("📌 마커 로드 시작...");
     (arnft as any).loadMarkers(markersRef.current);
   }, [arnft]);
 
   const value = useMemo(() => {
+    console.log("📌 ARNftContext에 저장되는 값:", { arnft, markersRef, arEnabled });
     return { arnft, markersRef, arEnabled };
   }, [arnft, markersRef, arEnabled]);
 

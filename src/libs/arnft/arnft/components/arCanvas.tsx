@@ -7,7 +7,7 @@ import { PropsWithChildren, memo, useRef } from 'react';
 import { ARNftProvider } from '../arnftContext';
 import * as THREE from 'three';
 
-function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, ...props }: PropsWithChildren<any>) {
+function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, setOrigin, ...props }: PropsWithChildren<any>) {
   const ref = useRef<any>();
   // const qrBoxEl = useRef<any>();
 
@@ -47,7 +47,7 @@ function ARCanvas({ arEnabled = true, interpolationFactor = 1, children, ...prop
           toneMapping: THREE.ACESFilmicToneMapping,
         }}
       >
-        <ARNftProvider video={ref} interpolationFactor={interpolationFactor} arEnabled={arEnabled}>
+        <ARNftProvider video={ref} interpolationFactor={interpolationFactor} setOrigin={setOrigin} arEnabled={arEnabled}>
           {children}
         </ARNftProvider>
       </Canvas>
