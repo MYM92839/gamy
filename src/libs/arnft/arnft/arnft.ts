@@ -176,6 +176,7 @@ export class ARNft {
   }
 
   onFound(msg: { matrixGL_RH: string; index: string }) {
+    console.log('FOUND');
     const matrix = JSON.parse(msg.matrixGL_RH);
 
     const index = JSON.parse(msg.index);
@@ -192,24 +193,23 @@ export class ARNft {
     const markerPosition = new THREE.Vector3();
     this.markers[index].root.getWorldPosition(markerPosition);
 
-    console.log("✅ 마커 감지됨, 원점 위치 설정:", markerPosition);
+    console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
     // ✅ 초기 카메라 위치 가져오기
     const cameraPosition = new THREE.Vector3();
     this.camera.getWorldPosition(cameraPosition);
 
-    console.log("✅ 감지 시점의 카메라 위치:", cameraPosition);
+    console.log('✅ 감지 시점의 카메라 위치:', cameraPosition);
 
     // ✅ 카메라 기준으로 원점 보정
     const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, cameraPosition);
-    console.log("✅ 보정된 원점 설정:", adjustedOrigin);
+    console.log('✅ 보정된 원점 설정:', adjustedOrigin);
 
     // ✅ `onOriginDetected()` 호출하여 외부에서 원점 설정 가능하도록 함
-    if (typeof this.onOriginDetected === "function") {
+    if (typeof this.onOriginDetected === 'function') {
       this.onOriginDetected(adjustedOrigin);
     }
-}
-
+  }
 
   onLost() {
     this.markers.forEach((marker: { root: { visible: boolean } }) => {
