@@ -176,6 +176,7 @@ export class ARNft {
     });
   }
 
+
   onFound(msg: { matrixGL_RH: string; index: string }) {
     if (this.markerTracked) return; // ✅ 마커가 이미 감지되었다면 실행 안 함
 
@@ -196,8 +197,10 @@ export class ARNft {
     this.markers[index].root.getWorldPosition(markerPosition);
     console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
-    // ✅ 초기 카메라 위치 가져오기 (WebXR 대응)
+    // ✅ 카메라의 위치 가져오기
     const cameraPosition = new THREE.Vector3();
+    this.camera.updateMatrixWorld(true); // ✅ 카메라 행렬 강제 업데이트
+
     if (this.renderer.xr.isPresenting) {
       cameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
     } else {
@@ -210,12 +213,10 @@ export class ARNft {
     const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, cameraPosition);
     console.log('✅ 보정된 원점 설정:', adjustedOrigin);
 
-    // ✅ 마커가 감지되었음을 표시하여 중복 실행 방지
-    this.markerTracked = true;
-
-    // ✅ `onOriginDetected()` 호출하여 외부에서 원점 설정 가능하도록 함
-    if (typeof this.onOriginDetected === 'function') {
+    // ✅ `onOriginDetected()` 실행 (한 번만)
+    if (!this.markerTracked && typeof this.onOriginDetected === 'function') {
       this.onOriginDetected(adjustedOrigin);
+      this.markerTracked = true; // ✅ 마커 감지 완료 상태로 변경
     }
   }
 
