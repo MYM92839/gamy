@@ -7,6 +7,7 @@ import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 
 // const context = createContext(undefined);
+const currentCameraPosition = new THREE.Vector3();
 
 
 export function Instances({ url, setOrigin }: any) {
@@ -37,42 +38,47 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const frustum = useRef(new THREE.Frustum());
   const { arnft } = useARNft();
 
-  useFrame(({ camera, gl }) => {
+  useFrame(({ camera }) => {
     if (!origin || !arnft.initialCameraPosition) return;
 
-    // ✅ 현재 카메라 위치 가져오기
-    const currentCameraPosition = new THREE.Vector3();
-    if (gl.xr.isPresenting) {
-      currentCameraPosition.setFromMatrixPosition(camera.matrixWorld);
-    } else {
-      camera.getWorldPosition(currentCameraPosition);
-    }
+    // ✅ 현재 카메라 위치 가져오기 (WebXR 모드 대응)
+    currentCameraPosition.setFromMatrixPosition(camera.matrixWorld);
 
-    // ✅ 📏 보정된 카메라 위치 계산 (현재 위치 - 최초 위치)
-    const adjustedCameraPosition = new THREE.Vector3().subVectors(currentCameraPosition, arnft.initialCameraPosition);
-    console.log("📍 보정된 카메라 위치:", adjustedCameraPosition);
+    console.log("📍 보정된 카메라 위치:", currentCameraPosition);
 
-    // ✅ 거리 계산
-    const distance = adjustedCameraPosition.distanceTo(origin);
-    console.log("📏 현재 거리:", distance, "카메라 위치:", adjustedCameraPosition, "원점 위치:", origin);
+    // 📏 보정된 카메라 위치 계산 (현재 위치 - 최초 위치)
+    const adjustedCameraPosition = new THREE.Vector3().subVectors(
+      currentCameraPosition,
+      arnft.initialCameraPosition
+    );
 
-    // ✅ Frustum 체크 제거 (강제로 보이게 하기 위해)
+    console.log("📏 현재 거리:", adjustedCameraPosition.distanceTo(origin), "카메라 위치:", adjustedCameraPosition, "원점 위치:", origin);
+
+    // ✅ 카메라의 시야 영역(Frustum) 업데이트
+    const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    frustum.current.setFromProjectionMatrix(matrix);
+
+    // ✅ 원점이 카메라의 뷰포트 안에 있는지 확인
     const isOriginVisible = frustum.current.containsPoint(origin);
     console.log("👀 isOriginVisible:", isOriginVisible);
-    setObjectVisible(true); // 무조건 표시
-    console.log("PLAECED!!!", !objectPlaced, distance, isOriginVisible)
-    // ✅ 원점이 시야 내에 있거나, 마커가 손실되었어도 오브젝트 유지
-    if (!objectPlaced && distance > threshold) {
-      console.log("✅ 오브젝트 생성!");
+
+    setObjectVisible(isOriginVisible);
+
+    // ✅ 원점이 시야 내에 있고, 거리가 기준값 이상이면 오브젝트 배치
+    if (!objectPlaced && adjustedCameraPosition.distanceTo(origin) > threshold && isOriginVisible) {
+      console.log("✅ 거리가 임계값 초과 & 원점이 시야 내에 있음, 오브젝트 생성!");
       setObjectPlaced(true);
     }
 
+  });
+
+  useEffect(() => {
     arnft.onTrackingLost = () => {
       console.log("❌ 마커 손실 감지됨! 하지만 원점은 유지됨.");
       // 마커가 손실되었어도 objectPlaced 상태를 유지
       setObjectPlaced((prev) => prev || true);
     };
-  });
+  }, [arnft])
 
   // ✅ `objectPlaced`가 true이면 오브젝트 계속 유지!
   return objectPlaced ? (
