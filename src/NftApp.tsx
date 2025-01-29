@@ -34,7 +34,7 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const [, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
   const threshold = 0.1;
-  // const frustum = useRef(new THREE.Frustum());
+  const frustum = useRef(new THREE.Frustum());
   const { arnft } = useARNft();
 
   useFrame(({ camera, gl }) => {
