@@ -14,6 +14,7 @@ export class ARNft {
   camera: Camera & { manual?: boolean | undefined };
   onLoaded: (msg: any) => void;
   markers: any[];
+  initialCameraPosition: any;
   canvasProcess: HTMLCanvasElement;
   contextProcess: any;
   markerTracked: boolean = false;
@@ -183,39 +184,60 @@ export class ARNft {
     const matrix = JSON.parse(msg.matrixGL_RH);
     const index = JSON.parse(msg.index);
 
-    // ✅ 마커의 행렬 적용
+    // ✅ 마커의 행렬 설정
     setMatrix(this.markers[index].root.matrix, matrix);
+    this.markers[index].root.matrixAutoUpdate = false; // ✅ 자동 행렬 업데이트 비활성화 (중요)
 
-    // ✅ 마커의 월드 위치를 `matrixGL_RH`에서 직접 가져오기
+    // ✅ 마커의 월드 위치를 `matrixGL_RH`에서 직접 가져오기 (원점으로 설정)
     const markerPosition = new THREE.Vector3(matrix[12], matrix[13], matrix[14]);
     console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
-    // ✅ 카메라 위치 업데이트
-    const cameraPosition = new THREE.Vector3();
-    this.camera.updateMatrixWorld(true);
+    // ✅ 최초 감지 시 카메라 위치 저장 (이후 `useFrame`에서 별도 관리 불필요)
+    if (!this.initialCameraPosition) {
+      this.initialCameraPosition = new THREE.Vector3();
 
-    if (this.renderer.xr.isPresenting) {
-      cameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
-    } else {
-      this.camera.getWorldPosition(cameraPosition);
+      if (this.renderer.xr.isPresenting) {
+        // WebXR 모드에서는 camera.matrixWorld에서 가져오기
+        this.initialCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
+      } else {
+        // 일반 모드에서는 getWorldPosition() 사용
+        this.camera.getWorldPosition(this.initialCameraPosition);
+      }
+      console.log('✅ 최초 감지된 카메라 위치 저장:', this.initialCameraPosition);
     }
 
-    console.log('✅ 감지 시점의 카메라 위치:', cameraPosition);
+    // ✅ 현재 카메라 위치 가져오기
+    const currentCameraPosition = new THREE.Vector3();
+    if (this.renderer.xr.isPresenting) {
+      currentCameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
+    } else {
+      this.camera.getWorldPosition(currentCameraPosition);
+    }
+    console.log('✅ 현재 카메라 위치:', currentCameraPosition);
 
-    // ✅ `matrixGL_RH`를 활용하여 마커와 카메라 거리 계산
-    const adjustedOrigin = new THREE.Vector3().subVectors(markerPosition, cameraPosition);
-    console.log('✅ 보정된 원점 설정:', adjustedOrigin);
+    // ✅ 마커(원점) 기준으로 카메라 위치 보정
+    const adjustedCameraPosition = new THREE.Vector3().subVectors(currentCameraPosition, this.initialCameraPosition);
+    console.log('✅ 보정된 카메라 위치:', adjustedCameraPosition);
 
-    // ✅ `onOriginDetected()` 실행 (한 번만)
+    // ✅ `onOriginDetected()` 호출하여 원점 설정 (최초 한 번만)
     if (!this.markerTracked && typeof this.onOriginDetected === 'function') {
-      this.onOriginDetected(adjustedOrigin);
+      this.onOriginDetected(markerPosition); // ✅ 마커 좌표를 원점으로 유지
       this.markerTracked = true;
     }
   }
 
-  onLost() {
-    this.markers.forEach((marker: { root: { visible: boolean } }) => {
-      marker.root.visible = false;
-    });
-  }
+onLost() {
+    console.log("❌ 마커 손실됨!");
+
+    // ✅ 마커 가시성 제거
+    this.markers.forEach((marker) => (marker.root.visible = false));
+
+    // ✅ 마커 재감지를 위해 `markerTracked` 초기화
+    this.markerTracked = false;
+
+    // ✅ 카메라 위치 다시 초기화하여 보정값 유지
+    this.initialCameraPosition = null;
+}
+
+
 }
