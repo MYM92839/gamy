@@ -178,7 +178,6 @@ export class ARNft {
   onFound(msg: { matrixGL_RH: string; index: string }) {
     console.log('FOUND');
     const matrix = JSON.parse(msg.matrixGL_RH);
-
     const index = JSON.parse(msg.index);
 
     // ✅ 마커의 행렬 설정
@@ -195,9 +194,13 @@ export class ARNft {
 
     console.log('✅ 마커 감지됨, 원점 위치 설정:', markerPosition);
 
-    // ✅ 초기 카메라 위치 가져오기
+    // ✅ 초기 카메라 위치 가져오기 (WebXR 대응)
     const cameraPosition = new THREE.Vector3();
-    this.camera.getWorldPosition(cameraPosition);
+    if (this.renderer.xr.isPresenting) {
+      cameraPosition.setFromMatrixPosition(this.camera.matrixWorld);
+    } else {
+      this.camera.getWorldPosition(cameraPosition);
+    }
 
     console.log('✅ 감지 시점의 카메라 위치:', cameraPosition);
 

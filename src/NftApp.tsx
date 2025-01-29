@@ -17,7 +17,7 @@ export function Instances({ url }: any) {
 const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
   const [objectVisible, setObjectVisible] = useState(false);
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const threshold = 0.1; // ✅ 거리 임계값
+  const threshold = 0.5; // ✅ 거리 임계값
   const frustum = useRef(new THREE.Frustum());
 
   useFrame(({ camera, gl }) => {
@@ -26,10 +26,10 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
     const cameraPosition = new THREE.Vector3();
 
     if (gl.xr.isPresenting) {
-      // ✅ WebXR 모드일 때, `matrixWorld`에서 위치를 직접 추출
+      // ✅ WebXR에서는 matrixWorld에서 직접 위치를 추출해야 함
       cameraPosition.setFromMatrixPosition(camera.matrixWorld);
     } else {
-      // ✅ 일반 모드에서는 기존 `getWorldPosition()` 사용
+      // ✅ 일반 환경에서는 기존 방식 사용
       camera.getWorldPosition(cameraPosition);
     }
 
@@ -43,6 +43,7 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
 
     // ✅ 원점이 카메라의 뷰포트 안에 있는지 확인
     const isOriginVisible = frustum.current.containsPoint(origin);
+    console.log("👀 isOriginVisible:", isOriginVisible);
     setObjectVisible(isOriginVisible);
 
     // ✅ 원점이 시야에 있고, 거리가 기준값 이상이면 오브젝트 배치
@@ -51,7 +52,6 @@ const CameraTracker = ({ origin }: { origin: THREE.Vector3 }) => {
       setObjectPlaced(true);
     }
   });
-
   return objectPlaced ? (
     <mesh position={[origin.x, origin.y + 1, origin.z]} visible={true}>
       <boxGeometry args={[0.5, 0.5, 0.5]} />
