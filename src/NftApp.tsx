@@ -48,6 +48,15 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
 
   const { camera } = useThree();
 
+  useEffect(() => {
+    if (origin && !objectPlaced) {
+      console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", origin);
+      objectPosition.current.copy(origin); // ✅ 원점 한 번만 설정
+      setObjectPosition(origin.clone());
+      setObjectPlaced(true);
+    }
+  }, [origin]);
+
   /** ✅ AlvaAR SLAM 활성화 */
   useEffect(() => {
     if (alvaAR) {
@@ -55,15 +64,6 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
       console.log("✅ AlvaAR SLAM 활성화됨!");
     }
   }, [alvaAR]);
-
-  /** ✅ 원점(origin)이 바뀔 때마다 오브젝트 위치 갱신 */
-  useEffect(() => {
-    if (origin) {
-      console.log("🔄 원점 변경 감지! 오브젝트 위치 갱신:", origin);
-      objectPosition.current.copy(origin);
-      setObjectPosition(origin.clone());
-    }
-  }, [origin]);
 
   /** ✅ useFrame 루프 */
   useFrame(() => {
@@ -155,12 +155,14 @@ const CameraTracker = ({ origin, setObjectPosition, setCameraPosition }: { origi
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
-    <mesh ref={objectRef} position={[origin.x, origin.y, 0]} visible={true}>
+    <mesh ref={objectRef} position={[origin.x, origin.y, origin.z]} visible={true}>
       <boxGeometry args={[1, 1, 1]} />
       <meshBasicMaterial color={objectColor} />
     </mesh>
   );
 };
+
+
 
 // function Box() {
 //   const modelRef = useRef<THREE.Group>(null);
