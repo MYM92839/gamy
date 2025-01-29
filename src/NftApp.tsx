@@ -1,4 +1,3 @@
-import { Environment } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -173,7 +172,7 @@ export default function NftApp() {
           {origin && <CameraTracker origin={origin} />}
 
           {/* 환경 설정 */}
-          <Environment preset="park" />
+          {/* <Environment preset="park" /> */}
         </Suspense>
       </ARCanvas>
     </>
