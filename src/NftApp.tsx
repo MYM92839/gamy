@@ -6,6 +6,7 @@ import { AlvaARConnectorTHREE } from './libs/alvaConnector';
 import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 import { useARNft, useNftMarker } from './libs/XRProvider';
+import { Box } from './ArApp';
 
 const m = new THREE.Matrix4()
 const r = new THREE.Quaternion()
@@ -43,10 +44,10 @@ export function Instances({ url, setOrigin }: any) {
 
 const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
-  const [objectColor] = useState("red");
+  // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const frustum = useRef(new THREE.Frustum());
-  const objectRef = useRef<THREE.Mesh>(null);
+  const objectRef = useRef<THREE.Group>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
 
@@ -158,12 +159,16 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
   return (
-    objectPlaced && (
-      <mesh ref={objectRef} position={[0, 0, 0]} visible={true}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color={objectColor} />
-      </mesh>
-    )
+    // objectPlaced && (
+    // <mesh ref={objectRef} position={[0, 0, 0]} visible={true}>
+    //   <boxGeometry args={[1, 1, 1]} />
+    //   <meshStandardMaterial color={objectColor} />
+    // </mesh>
+    <group ref={objectRef} position={[0, 0, 0]} visible={true}>
+      <Box onRenderEnd={() => { }} on={true} />
+    </group>
+
+    //)
   );
 };
 

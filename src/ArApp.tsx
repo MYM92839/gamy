@@ -242,7 +242,7 @@ function Tree({
   );
 }
 
-function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
+export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
   const [{ nodes, materials, animations }, { nodes: snodes, materials: smaterials, animations: sanimations }] = useGLTF(
