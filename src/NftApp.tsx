@@ -47,7 +47,7 @@ export function Instances({ url, setOrigin }: any) {
 const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
   const [searchParams] = useSearchParams()
-  const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 100
+  const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
   const scale = searchParams.get('scale') ? parseInt(searchParams.get('scale')!) : 1
   const x = searchParams.get('x') ? parseInt(searchParams.get('x')!) : 0
   const y = searchParams.get('x') ? parseInt(searchParams.get('y')!) : 0
@@ -302,7 +302,7 @@ export default function NftApp() {
       >
         <p>안내판의 QR코드를 비춰주세요</p>
       </div>}
-      {!aniStarted && <div
+      {!aniStarted && origin && <div
         style={{
           position: "absolute",
           zIndex: 9999,
