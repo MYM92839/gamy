@@ -25,20 +25,19 @@ export function Instances({ url, setOrigin }: any) {
   useEffect(() => {
     if (!arnft || !arEnabled || !ref.current) return;
 
-    if (!markerTracked.current) {
-      // ✅ 마커 감지 시 실행되는 콜백 설정 (최초 1회)
-      const pre = arnft.onOriginDetected
+    // 이미 한번 설정했다면 재할당 안 함
+    if (markerTracked.current) return;
 
-      arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
-        if (!markerTracked.current) {
-          pre()
-          console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
-          setOrigin(adjustedOrigin);
-          markerTracked.current = true;
-        }
-      };
-    }
-  }, [arEnabled, ref, arnft, setOrigin]); // `arEnabled`가 변경될 때만 실행
+    // 정말 "최초 1회"만
+    arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
+      if (!markerTracked.current) {
+        // 여기서 markerTracked.current = true를 세팅해주면
+        markerTracked.current = true;
+        console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+        setOrigin(adjustedOrigin);
+      }
+    };
+  }, [arnft, arEnabled]);
 
   return <group ref={ref} />;
 }
