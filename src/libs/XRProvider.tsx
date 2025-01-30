@@ -113,7 +113,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
       }
     }
 
-    if (arEnabled) {
+    if (arEnabled && !alvaARRef.current) {
       console.log("🔹 AR 모드 활성화됨! 초기화 시작...");
       init();
     } else {

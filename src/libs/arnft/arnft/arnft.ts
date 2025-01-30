@@ -180,8 +180,6 @@ export class ARNft {
 
   onFound(msg: { matrixGL_RH: string; index: string }) {
     if (this.markerTracked) return; // ✅ 이미 감지되었다면 실행 안 함
-
-    console.log('FOUND');
     const matrix = JSON.parse(msg.matrixGL_RH);
     const index = JSON.parse(msg.index);
 
@@ -211,6 +209,7 @@ export class ARNft {
 
     // ✅ `onOriginDetected()` 호출하여 원점 설정 (최초 한 번만)
     if (!this.markerTracked && typeof this.onOriginDetected === 'function') {
+      console.log("TRANCDKDD")
       this.onOriginDetected(markerPosition);
       this.markerTracked = true;
     }
