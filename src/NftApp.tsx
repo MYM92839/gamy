@@ -279,6 +279,21 @@ export default function NftApp() {
         <p>📍 <b>카메라 위치:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
         <p>🟦 <b>오브젝트 위치:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
       </div>
+      {origin && <div
+        style={{
+          position: "absolute",
+          zIndex: 9999,
+          top: "10px",
+          right: "10px",
+          background: "rgba(0,0,0,0.6)",
+          padding: "10px",
+          borderRadius: "8px",
+          color: "white",
+          fontSize: "14px",
+        }}
+      >
+        <p>보정중입니다....</p>
+      </div>}
       <ARCanvas interpolationFactor={30} id='three-canvas'>
         <Suspense fallback={null}>
           {/* NFT 마커 감지 */}
