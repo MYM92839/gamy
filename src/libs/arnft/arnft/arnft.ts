@@ -208,8 +208,10 @@ export class ARNft {
     console.log('✅ 보정된 카메라 위치:', adjustedCameraPosition);
 
     // ✅ `onOriginDetected()` 호출하여 원점 설정 (최초 한 번만)
+    console.log('TRANCDKDDBef', this.onOriginDetected);
+
     if (!this.markerTracked && typeof this.onOriginDetected === 'function') {
-      console.log("TRANCDKDD")
+      console.log('TRANCDKDD', this.onOriginDetected);
       this.onOriginDetected(markerPosition);
       this.markerTracked = true;
     }

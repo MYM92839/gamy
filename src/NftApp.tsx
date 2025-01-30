@@ -7,6 +7,7 @@ import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 import { useARNft, useNftMarker } from './libs/XRProvider';
 import { Box } from './ArApp';
+import { useSearchParams } from 'react-router-dom';
 
 const m = new THREE.Matrix4()
 const r = new THREE.Quaternion()
@@ -44,14 +45,14 @@ export function Instances({ url, setOrigin }: any) {
 
 const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
+  const [searchParams] = useSearchParams()
+  const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 1.5
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const frustum = useRef(new THREE.Frustum());
   const objectRef = useRef<THREE.Group>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
-
-
   /** ✅ 원점 감지 시 오브젝트 위치 설정 */
 
   /** ✅ AlvaAR SLAM 활성화 */
@@ -124,6 +125,17 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
 
 
         console.log("🟦 오브젝트 위치 업데이트 (반전됨):", objectRef.current.position);
+      }
+
+
+      // 카메라와 오브젝트 간 거리 계산
+      const distance = camera.position.distanceTo(objectPosition.current);
+      console.log("카메라와 오브젝트 간 거리:", distance);
+
+      // 3미터 이상 떨어졌을 때 Box 배치
+      if (distance >= meter && !objectPlaced) {
+        console.log("✅ 카메라가 3미터 이상 떨어짐. 오브젝트 배치 시작");
+        setObjectPlaced(true);
       }
 
 
