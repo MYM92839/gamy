@@ -288,9 +288,9 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
         name="Scene"
         ref={shadowRef}
         dispose={null}
-        scale={[0.01, 0.01, 0.01]}
-        position={[0.1, -0.2, 0]}
-        rotation={[0, Math.PI / 3, 0]}
+        scale={[1, 1, 1]}
+        position={[0, 0, 0]}
+        rotation={[0, 0, 0]}
       >
         <group name="rabbit_silhouette" scale={0.1}>
           <group name="hammer" position={[-9.004, -49.831, 0]} scale={0}>
