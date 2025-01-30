@@ -1,13 +1,13 @@
 import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
+import { Box } from './ArApp';
 import Back from './assets/icons/Back';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
 import ARCanvas from './libs/arnft/arnft/components/arCanvas';
 import { requestCameraPermission } from './libs/util';
 import { useARNft, useNftMarker } from './libs/XRProvider';
-import { Box } from './ArApp';
-import { useSearchParams } from 'react-router-dom';
 
 const m = new THREE.Matrix4()
 const r = new THREE.Quaternion()
@@ -49,7 +49,7 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
   const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 1.5
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const frustum = useRef(new THREE.Frustum());
+  const [objectVisible, setObjectVisible] = useState(false);
   const objectRef = useRef<THREE.Group>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
@@ -135,7 +135,7 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
       // 3미터 이상 떨어졌을 때 Box 배치
       if (distance >= meter && !objectPlaced) {
         console.log("✅ 카메라가 3미터 이상 떨어짐. 오브젝트 배치 시작");
-        setObjectPlaced(true);
+        setObjectVisible(true);
       }
 
 
@@ -144,29 +144,8 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
       console.warn("⚠️ AlvaAR에서 pose를 찾을 수 없음!");
     }
 
-    /** ✅ 카메라 시야 영역(Frustum) 업데이트 */
-    camera.updateMatrixWorld();
-    camera.near = 0.1;
-    camera.far = 100;
-    camera.updateProjectionMatrix();
-
-    const matrix = new THREE.Matrix4().multiplyMatrices(
-      camera.projectionMatrix,
-      camera.matrixWorldInverse
-    );
-    frustum.current.setFromProjectionMatrix(matrix);
-
-    const isOriginVisible = frustum.current.containsPoint(originRef.current);
-    console.log("👀 isOriginVisible:", isOriginVisible);
-
-    /** ✅ 원점이 카메라의 뷰포트 안에 있으면 오브젝트 배치 */
-    if (!objectPlaced) {
-      console.log("✅ 마커 감지됨! 오브젝트 배치 시작");
-      setObjectPlaced(true);
-    }
     gl.autoClear = true
     gl.render(scene, camera)
-
   });
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
@@ -176,10 +155,9 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
     //   <boxGeometry args={[1, 1, 1]} />
     //   <meshStandardMaterial color={objectColor} />
     // </mesh>
-    <group ref={objectRef} position={[0, 0, 0]} visible={true}>
+    objectVisible && (<group ref={objectRef} position={[0, 0, 0]} visible={true}>
       <Box onRenderEnd={() => { }} on={true} />
-    </group>
-
+    </group>)
     //)
   );
 };
