@@ -46,7 +46,7 @@ export function Instances({ url, setOrigin }: any) {
 const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
   const [searchParams] = useSearchParams()
-  const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 1.5
+  const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 100
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const [objectVisible, setObjectVisible] = useState(false);
@@ -133,9 +133,12 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
       console.log("카메라와 오브젝트 간 거리:", distance);
 
       // 3미터 이상 떨어졌을 때 Box 배치
-      if (distance >= meter && !objectPlaced) {
+      if (distance >= meter && objectPlaced) {
         console.log("✅ 카메라가 3미터 이상 떨어짐. 오브젝트 배치 시작");
         setObjectVisible(true);
+      } else {
+        setObjectVisible(false);
+
       }
 
 
