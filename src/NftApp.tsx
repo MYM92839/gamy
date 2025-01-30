@@ -44,10 +44,14 @@ export function Instances({ url, setOrigin }: any) {
   return <group ref={ref} />;
 }
 
-const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCameraPosition: any; setObjectPosition: any }) => {
+const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useARNft();
   const [searchParams] = useSearchParams()
   const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 100
+  const scale = searchParams.get('scale') ? parseInt(searchParams.get('scale')!) : 1
+  const x = searchParams.get('x') ? parseInt(searchParams.get('x')!) : 0
+  const y = searchParams.get('x') ? parseInt(searchParams.get('y')!) : 0
+  const z = searchParams.get('x') ? parseInt(searchParams.get('z')!) : 0
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   const [objectVisible, setObjectVisible] = useState(false);
@@ -136,8 +140,10 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
       // 3미터 이상 떨어졌을 때 Box 배치
       if (distance >= meter && objectPlaced) {
         console.log("✅ 카메라가 3미터 이상 떨어짐. 오브젝트 배치 시작");
+        setAniStarted(true)
         setObjectVisible(true);
       } else {
+        setAniStarted(false)
         setObjectVisible(false);
 
       }
@@ -159,7 +165,7 @@ const CameraTracker = ({ originRef, setCameraPosition }: { originRef: any; setCa
     //   <boxGeometry args={[1, 1, 1]} />
     //   <meshStandardMaterial color={objectColor} />
     // </mesh>
-    objectVisible && (<group ref={objectRef} position={[0, 0, 0]} visible={true}>
+    objectVisible && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
       <Box onRenderEnd={() => { }} on={true} />
     </group>)
     //)
@@ -239,6 +245,7 @@ export default function NftApp() {
   const [origin, setOrigin] = useState(null); // NFT 마커의 위치(원점)
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
+  const [aniStarted, setAniStarted] = useState(false)
   const originRef = useRef(null)
   useEffect(() => {
     requestCameraPermission();
@@ -293,7 +300,22 @@ export default function NftApp() {
           fontSize: "14px",
         }}
       >
-        <p>보정중입니다....</p>
+        <p>안내판의 QR코드를 비춰주세요</p>
+      </div>}
+      {!aniStarted && <div
+        style={{
+          position: "absolute",
+          zIndex: 9999,
+          top: "50%",
+          right: "50%",
+          background: "rgba(0,0,0,0.6)",
+          padding: "10px",
+          borderRadius: "8px",
+          color: "white",
+          fontSize: "14px",
+        }}
+      >
+        <p>뒤쪽 안내발판으로 천천히 이동후 달 조형물을 비춰보세요</p>
       </div>}
       <ARCanvas interpolationFactor={30} id='three-canvas'>
         <Suspense fallback={null}>
@@ -301,7 +323,7 @@ export default function NftApp() {
           <Instances url={"../data/marker/marker"} setOrigin={setOrigin} />
 
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          {origin && <CameraTracker originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />}
+          {origin && <CameraTracker setAniStarted={setAniStarted} originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />}
           <ambientLight />
           <directionalLight position={[100, 100, 0]} />
         </Suspense>
