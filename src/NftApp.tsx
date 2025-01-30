@@ -28,9 +28,11 @@ export function Instances({ url, setOrigin }: any) {
     // 이미 한번 설정했다면 재할당 안 함
     if (markerTracked.current) return;
 
+    const pre = arnft.onOriginDetected
     // 정말 "최초 1회"만
     arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
       if (!markerTracked.current) {
+        if (pre) pre()
         // 여기서 markerTracked.current = true를 세팅해주면
         markerTracked.current = true;
         console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
@@ -278,12 +280,12 @@ export default function NftApp() {
         <p>📍 <b>카메라 위치:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
         <p>🟦 <b>오브젝트 위치:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
       </div>
-      {origin && <div
+      {!origin && <div
         style={{
           position: "absolute",
           zIndex: 9999,
-          top: "10px",
-          right: "10px",
+          top: "50%",
+          right: "50%",
           background: "rgba(0,0,0,0.6)",
           padding: "10px",
           borderRadius: "8px",

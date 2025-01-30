@@ -61,7 +61,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
             if (arnftRef.current) {
               // ✅ AlvaAR 초기화 로직 추가 (마커 감지 후)
               arnftRef.current.onOriginDetected = async (adjustedOrigin: THREE.Vector3) => {
-                console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
+                console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin, alvaInitialized, 'adf');
                 // ✅ AlvaAR가 이미 초기화되었는지 확인
                 if (alvaInitialized) {
                   console.log("🚀 AlvaAR는 이미 초기화됨, 다시 실행하지 않음.");
@@ -69,19 +69,6 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
                 }
                 let videoWidth = video.current.videoWidth;
                 let videoHeight = video.current.videoHeight;
-
-                // ✅ 비디오 크기가 0이면 500ms 기다렸다가 다시 확인
-                if (videoWidth === 0 || videoHeight === 0) {
-                  console.warn("⚠️ 비디오 크기가 0임! 500ms 후 다시 확인...");
-                  await new Promise((resolve) => setTimeout(resolve, 500));
-                  videoWidth = video.current.videoWidth;
-                  videoHeight = video.current.videoHeight;
-                }
-
-                if (videoWidth === 0 || videoHeight === 0) {
-                  console.error("🚨 비디오 크기가 0이므로 AlvaAR 초기화 불가능!");
-                  return;
-                }
 
                 try {
                   console.log("🚀 AlvaAR 초기화 중... width:", videoWidth, "height:", videoHeight);
@@ -113,7 +100,7 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }: any)
       }
     }
 
-    if (arEnabled && !alvaARRef.current) {
+    if (arEnabled) {
       console.log("🔹 AR 모드 활성화됨! 초기화 시작...");
       init();
     } else {
