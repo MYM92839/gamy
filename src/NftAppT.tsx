@@ -5,60 +5,34 @@ import * as THREE from 'three';
 import { Box } from './ArApp';
 import Back from './assets/icons/Back';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
-import ARCanvas from './libs/arnft/arnft/components/arCanvas';
+import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
 import { requestCameraPermission } from './libs/util';
-import { useARNft, useNftMarker } from './libs/XRProvider';
+import { useSlam, } from './libs/SLAMProvider';
 
-const m = new THREE.Matrix4()
-const r = new THREE.Quaternion()
-const t = new THREE.Vector3();
+// const m = new THREE.Matrix4()
+// const r = new THREE.Quaternion()
+// const t = new THREE.Vector3();
 
 
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
-export function Instances({ url, setOrigin }: any) {
-  const ref = useNftMarker(url);
-  const { arEnabled, arnft } = useARNft();
-  const markerTracked = useRef(false); // ✅ 마커 감지 여부 추적
 
-  useEffect(() => {
-    if (!arnft || !arEnabled || !ref.current) return;
-
-    // 이미 한번 설정했다면 재할당 안 함
-    if (markerTracked.current) return;
-
-    const pre = arnft.onOriginDetected
-    // 정말 "최초 1회"만
-    arnft.onOriginDetected = (adjustedOrigin: THREE.Vector3) => {
-      if (!markerTracked.current) {
-        if (pre) pre()
-        // 여기서 markerTracked.current = true를 세팅해주면
-        markerTracked.current = true;
-        console.log("✅ `onOriginDetected()` 호출됨, 원점 설정:", adjustedOrigin);
-        setOrigin(adjustedOrigin);
-      }
-    };
-  }, [arnft, arEnabled]);
-
-  return <group ref={ref} />;
-}
-
-const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
-  const { alvaAR } = useARNft();
+const CameraTracker = ({ setCameraPosition,clicked }: {clicked:boolean; originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
+  const { alvaAR } = useSlam();
   const [searchParams] = useSearchParams()
-  const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
+  // const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
   const scale = searchParams.get('scale') ? parseInt(searchParams.get('scale')!) : 1
   const x = searchParams.get('x') ? parseInt(searchParams.get('x')!) : 0
   const y = searchParams.get('x') ? parseInt(searchParams.get('y')!) : 0
   const z = searchParams.get('x') ? parseInt(searchParams.get('z')!) : 0
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const [objectVisible, setObjectVisible] = useState(false);
+  // const [objectVisible, setObjectVisible] = useState(false);
   const objectRef = useRef<THREE.Group>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
-  const originSet = useRef(false)
+  // const originSet = useRef(false)
   /** ✅ 원점 감지 시 오브젝트 위치 설정 */
 
   /** ✅ AlvaAR SLAM 활성화 */
@@ -71,12 +45,16 @@ const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { origin
 
   /** ✅ useFrame 루프 */
   useFrame(({ camera, gl, scene }) => {
-    if (originRef.current && !objectPlaced) {
-      console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", originRef.current);
-      objectPosition.current.copy(originRef.current); // ✅ 원점 한 번만 설정
-      setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
-    }
+    // if (originRef.current && !objectPlaced) {
+    //   console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", originRef.current);
+    //   objectPosition.current.copy(originRef.current); // ✅ 원점 한 번만 설정
+    //   setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
+    // }
 
+    if(!objectPlaced&& clicked/*  */){
+      objectPosition.current.set(0,0,0)
+      setObjectPlaced(true)
+    }
     if (!origin || !alvaAR || !applyPose.current) {
       console.warn("🚨 useFrame 실행 중 조건 불만족!", { origin, alvaAR, applyPose: applyPose.current });
       return;
@@ -115,39 +93,23 @@ const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { origin
       console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
 
       // 오브젝트
-      if (objectRef.current&& !originSet.current) {
+      // if (objectRef.current && !originSet.current) {
 
-        originSet.current=true
-        m.fromArray(pose);
-        r.setFromRotationMatrix(m);
-        t.set(pose[12], pose[13], pose[14]);
+      //   originSet.current = true
+      //   m.fromArray(pose);
+      //   r.setFromRotationMatrix(m);
+      //   t.set(pose[12], pose[13], pose[14]);
 
-        (objectRef.current.quaternion !== null) && objectRef.current.quaternion.set(r.x, -r.y, -r.z, r.w);
-        (objectRef.current.position !== null) && objectRef.current.position.set(-t.x, t.y, t.z);
+      //   (objectRef.current.quaternion !== null) && objectRef.current.quaternion.set(r.x, -r.y, -r.z, r.w);
+      //   (objectRef.current.position !== null) && objectRef.current.position.set(-t.x, t.y, t.z);
 
-        // applyPose로 오브젝트 위치 업데이트
-        // applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
-        // 오브젝트 위치 반전 (좌우, 앞뒤)
-
-
-        console.log("🟦 오브젝트 위치 업데이트 (반전됨):", objectRef.current.position);
-      }
+      //   // applyPose로 오브젝트 위치 업데이트
+      //   // applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
+      //   // 오브젝트 위치 반전 (좌우, 앞뒤)
 
 
-      // 카메라와 오브젝트 간 거리 계산
-      const distance = camera.position.distanceTo(objectPosition.current);
-      console.log("카메라와 오브젝트 간 거리:", distance);
-
-      // 3미터 이상 떨어졌을 때 Box 배치
-      if (distance >= meter && objectPlaced) {
-        console.log("✅ 카메라가 3미터 이상 떨어짐. 오브젝트 배치 시작");
-        setAniStarted(true)
-        setObjectVisible(true);
-      } else {
-        setAniStarted(false)
-        setObjectVisible(false);
-
-      }
+      //   console.log("🟦 오브젝트 위치 업데이트 (반전됨):", objectRef.current.position);
+      // }
 
 
       setCameraPosition(camera.position.clone());
@@ -159,14 +121,14 @@ const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { origin
     gl.render(scene, camera)
   });
 
-  // ✅ objectPlaced가 true이면 오브젝트 계속 유지!
+  // ✅ objectPlaced가 true이면 오브젝트 계속 유지!/*  */
   return (
     // objectPlaced && (
     // <mesh ref={objectRef} position={[0, 0, 0]} visible={true}>
     //   <boxGeometry args={[1, 1, 1]} />
     //   <meshStandardMaterial color={objectColor} />
     // </mesh>
-    objectVisible && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
+    objectPlaced && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
       <Box onRenderEnd={() => { }} on={true} />
     </group>)
     //)
@@ -243,19 +205,18 @@ const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { origin
 // }
 
 export default function NftAppT() {
-  const [origin, setOrigin] = useState(null); // NFT 마커의 위치(원점)
+  // const [origin, setOrigin] = useState(null); // NFT 마커의 위치(원점)
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
-  const [aniStarted, setAniStarted] = useState(false)
+  // const [aniStarted, setAniStarted] = useState(false)
+  const [clicked,setClicked] = useState(false)
   const originRef = useRef(null)
+
   useEffect(() => {
     requestCameraPermission();
   }, []);
-  useEffect(() => {
-    if (origin) {
-      originRef.current = origin
-    }
-  }, [origin])
+
+
   return (
     <>
       <button
@@ -301,34 +262,19 @@ export default function NftAppT() {
           fontSize: "14px",
         }}
       >
-        <p>안내판의 QR코드를 비춰주세요</p>
+        <p>조형물을 가이드라인 안에 맞춰주세요</p>
+        <button onClick={()=>{setClicked(true)}}>토끼 부르기</button>
       </div>}
-      {!aniStarted && origin && <div
-        style={{
-          position: "absolute",
-          zIndex: 9999,
-          top: "50%",
-          right: "50%",
-          background: "rgba(0,0,0,0.6)",
-          padding: "10px",
-          borderRadius: "8px",
-          color: "white",
-          fontSize: "14px",
-        }}
-      >
-        <p>뒤쪽 안내발판으로 천천히 이동후 달 조형물을 비춰보세요</p>
-      </div>}
-      <ARCanvas interpolationFactor={30} id='three-canvas'>
+
+      <SlamCanvas id='three-canvas'>
         <Suspense fallback={null}>
           {/* NFT 마커 감지 */}
-          <Instances url={"../data/marker/marker"} setOrigin={setOrigin} />
-
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          {origin && <CameraTracker setAniStarted={setAniStarted} originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />}
+          <CameraTracker clicked={clicked} setAniStarted={()=>{/*  */}} originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />
           <ambientLight />
           <directionalLight position={[100, 100, 0]} />
         </Suspense>
-      </ARCanvas>
+      </SlamCanvas>
     </>
   );
 }
