@@ -32,6 +32,7 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
   const objectRef = useRef<THREE.Group>(null);
   const applyPose = useRef<any>(null);
   const objectPosition = useRef(new THREE.Vector3());
+  const sett = useRef(false)
   // const originSet = useRef(false)
   /** ✅ 원점 감지 시 오브젝트 위치 설정 */
 
@@ -92,6 +93,12 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
       applyPose.current(pose, camera.quaternion, camera.position);
       console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
 
+
+      if (objectRef.current && !sett.current) {
+        applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
+        sett.current = true
+      }
+
       // 오브젝트
       // if (objectRef.current && !originSet.current) {
 
@@ -123,12 +130,7 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!/*  */
   return (
-    // objectPlaced && (
-    // <mesh ref={objectRef} position={[0, 0, 0]} visible={true}>
-    //   <boxGeometry args={[1, 1, 1]} />
-    //   <meshStandardMaterial color={objectColor} />
-    // </mesh>
-    objectPlaced && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
+    clicked && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
       <Box onRenderEnd={() => { }} on={true} />
     </group>)
     //)
