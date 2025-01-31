@@ -269,7 +269,7 @@ export default function NftAppT() {
       {!clicked && <div
         style={{
           position: "fixed",
-          zIndex: 9999,
+          zIndex: 99999999,
           top: "53%",
           right: "50%",
           background: "rgba(0,0,0,0.6)",

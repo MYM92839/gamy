@@ -38,7 +38,7 @@ function SlamCanvas({ arEnabled = true, interpolationFactor = 1, children, ...pr
       )}
       <Canvas
         style={{
-          zIndex: 9999,
+          zIndex: 999,
         }}
         id={'three-canvas'}
         camera={props.camera}
