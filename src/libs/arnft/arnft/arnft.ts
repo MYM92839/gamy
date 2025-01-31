@@ -224,7 +224,6 @@ export class ARNft {
       if (typeof this.onOriginDetected === 'function') {
         console.log('TRANCDKDD', this.onOriginDetected);
         this.onOriginDetected(markerPosition);
-        this.markerTracked = true;
       }
     }
   }
