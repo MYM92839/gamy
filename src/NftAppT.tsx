@@ -25,7 +25,7 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
   const scale = searchParams.get('scale') ? parseInt(searchParams.get('scale')!) : 1
   const x = searchParams.get('x') ? parseInt(searchParams.get('x')!) : 0
   const y = searchParams.get('x') ? parseInt(searchParams.get('y')!) : 0
-  const z = searchParams.get('x') ? parseInt(searchParams.get('z')!) : 0
+  const z = searchParams.get('x') ? parseInt(searchParams.get('z')!) : -1
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
   // const [objectVisible, setObjectVisible] = useState(false);
@@ -255,8 +255,8 @@ export default function NftAppT() {
         style={{
           position: "absolute",
           zIndex: 9999,
-          top: "50%",
-          right: "50%",
+          top: "50dvh",
+          left: '50dvw',
           background: "rgba(0,0,0,0.6)",
           padding: "10px",
           borderRadius: "8px",
@@ -270,8 +270,8 @@ export default function NftAppT() {
         style={{
           position: "fixed",
           zIndex: 99999999,
-          top: "53%",
-          right: "50%",
+          top: "60dvh",
+          left: '50dvw',
           background: "rgba(0,0,0,0.6)",
           padding: "10px",
           borderRadius: "8px",
