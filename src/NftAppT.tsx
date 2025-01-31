@@ -265,7 +265,7 @@ export default function NftAppT() {
         }}
       >
         <p>조형물을 가이드라인 안에 맞춰주세요</p>
-        <button onClick={() => { setClicked(true) }}>토끼 부르기</button>
+        <button style={{ zIndex: 99999 }} onClick={() => { setClicked(true) }}>토끼 부르기</button>
       </div>}
 
       <SlamCanvas id='three-canvas'>
