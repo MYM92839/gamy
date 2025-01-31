@@ -45,7 +45,7 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
   }, [alvaAR]);
 
   /** ✅ useFrame 루프 */
-  useFrame(({ camera, gl, scene }) => {
+  useFrame(({ camera }) => {
     // if (originRef.current && !objectPlaced) {
     //   console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", originRef.current);
     //   objectPosition.current.copy(originRef.current); // ✅ 원점 한 번만 설정
