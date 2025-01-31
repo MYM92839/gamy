@@ -17,6 +17,7 @@ import MindApp from './MindApp.tsx';
 import LocationPrompt from './LocApp.tsx';
 import LocationPrompt2 from './LocApp2.tsx';
 import NftApp from './NftApp.tsx';
+import NftAppT from './NftAppT.tsx';
 
 const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
       {
         path: 'test3',
         element: <NftApp />
+      },
+      {
+        path: 'test4',
+        element: <NftAppT />
       },
       {
         path: 'ar/:char',
