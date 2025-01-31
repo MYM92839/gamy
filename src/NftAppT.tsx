@@ -251,6 +251,34 @@ export default function NftAppT() {
         <p>📍 <b>카메라 위치:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
         <p>🟦 <b>오브젝트 위치:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
       </div>
+      {
+        !clicked && <div
+          style={{
+            position: "absolute",
+            width: '50dvw',
+            height: '50dvh',
+            top: "50dvh",
+            left: '50dvw',
+            zIndex: 9999,
+            transform: `translate(-${50}%, -${25}%)`
+
+          }}
+        > <svg
+          width={'200px'}
+          height={'200px'}
+          viewBox="0 0 50 50"
+          fill="none"
+        >
+            <circle
+              cx="25"
+              cy="25"
+              r="24"
+              stroke={"rgba(0,0,0,0.3)"}
+              strokeWidth={'2px'}
+              fill="none"
+            />
+          </svg></div>
+      }
       {!clicked && <div
         style={{
           position: "absolute",
@@ -262,8 +290,10 @@ export default function NftAppT() {
           borderRadius: "8px",
           color: "white",
           fontSize: "14px",
+          transform: `translate(-${50}%, -${50}%)`
         }}
       >
+
         <p>조형물을 가이드라인 안에 맞춰주세요</p>
       </div>}
       {!clicked && <div
@@ -277,6 +307,7 @@ export default function NftAppT() {
           borderRadius: "8px",
           color: "white",
           fontSize: "14px",
+          transform: `translate(-${50}%, -${50}%)`
         }}
       >
         <button style={{ zIndex: 99999 }} onClick={() => { setClicked(true) }}>토끼 부르기</button>
