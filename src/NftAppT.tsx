@@ -24,7 +24,7 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
   // const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
   const scale = searchParams.get('scale') ? parseInt(searchParams.get('scale')!) : 1
   const x = searchParams.get('x') ? parseInt(searchParams.get('x')!) : 0
-  const y = searchParams.get('y') ? parseInt(searchParams.get('y')!) : 1
+  const y = searchParams.get('y') ? parseInt(searchParams.get('y')!) : 0
   const z = searchParams.get('z') ? parseInt(searchParams.get('z')!) : 0
   // const [objectColor] = useState("red");
   const [objectPlaced, setObjectPlaced] = useState(false);
@@ -96,6 +96,11 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
 
       if (objectRef.current && !sett.current) {
         applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
+
+        objectRef.current.position.x = objectRef.current.position.x + x
+        objectRef.current.position.y = objectRef.current.position.y + y
+        objectRef.current.position.z = objectRef.current.position.z + z
+
         sett.current = true
       }
 
@@ -123,9 +128,6 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
     } else {
       console.warn("⚠️ AlvaAR에서 pose를 찾을 수 없음!");
     }
-
-    gl.autoClear = true
-    gl.render(scene, camera)
   });
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!/*  */
