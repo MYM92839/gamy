@@ -53,7 +53,7 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
     // }
 
     if (!objectPlaced && clicked/*  */) {
-      objectPosition.current.set(0, 0, 0)
+      objectPosition.current.set(x, y, z)
       setObjectPlaced(true)
     }
     if (!origin || !alvaAR || !applyPose.current) {
