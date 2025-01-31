@@ -18,7 +18,7 @@ import { useSlam, } from './libs/SLAMProvider';
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
 
-const CameraTracker = ({ setCameraPosition,clicked }: {clicked:boolean; originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
+const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
   const { alvaAR } = useSlam();
   const [searchParams] = useSearchParams()
   // const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
@@ -51,8 +51,8 @@ const CameraTracker = ({ setCameraPosition,clicked }: {clicked:boolean; originRe
     //   setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
     // }
 
-    if(!objectPlaced&& clicked/*  */){
-      objectPosition.current.set(0,0,0)
+    if (!objectPlaced && clicked/*  */) {
+      objectPosition.current.set(0, 0, 0)
       setObjectPlaced(true)
     }
     if (!origin || !alvaAR || !applyPose.current) {
@@ -209,7 +209,7 @@ export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
   // const [aniStarted, setAniStarted] = useState(false)
-  const [clicked,setClicked] = useState(false)
+  const [clicked, setClicked] = useState(false)
   const originRef = useRef(null)
 
   useEffect(() => {
@@ -249,7 +249,7 @@ export default function NftAppT() {
         <p>📍 <b>카메라 위치:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
         <p>🟦 <b>오브젝트 위치:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
       </div>
-      {!origin && <div
+      {!clicked && <div
         style={{
           position: "absolute",
           zIndex: 9999,
@@ -263,14 +263,14 @@ export default function NftAppT() {
         }}
       >
         <p>조형물을 가이드라인 안에 맞춰주세요</p>
-        <button onClick={()=>{setClicked(true)}}>토끼 부르기</button>
+        <button onClick={() => { setClicked(true) }}>토끼 부르기</button>
       </div>}
 
       <SlamCanvas id='three-canvas'>
         <Suspense fallback={null}>
           {/* NFT 마커 감지 */}
           {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          <CameraTracker clicked={clicked} setAniStarted={()=>{/*  */}} originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />
+          <CameraTracker clicked={clicked} setAniStarted={() => {/*  */ }} originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />
           <ambientLight />
           <directionalLight position={[100, 100, 0]} />
         </Suspense>
