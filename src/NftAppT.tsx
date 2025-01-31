@@ -265,6 +265,20 @@ export default function NftAppT() {
         }}
       >
         <p>조형물을 가이드라인 안에 맞춰주세요</p>
+      </div>}
+      {!clicked && <div
+        style={{
+          position: "fixed",
+          zIndex: 9999,
+          top: "53%",
+          right: "50%",
+          background: "rgba(0,0,0,0.6)",
+          padding: "10px",
+          borderRadius: "8px",
+          color: "white",
+          fontSize: "14px",
+        }}
+      >
         <button style={{ zIndex: 99999 }} onClick={() => { setClicked(true) }}>토끼 부르기</button>
       </div>}
 
