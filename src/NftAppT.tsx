@@ -331,7 +331,7 @@ function CameraTracker({
 export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
-  const [planeVisible, setPlaneVisible] = useState(false);
+  const [, setPlaneVisible] = useState(false);
   const [planeFound, setPlaneFound] = useState(false);
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
@@ -404,24 +404,8 @@ export default function NftAppT() {
 
       <div
         style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          zIndex: 9999,
-          color: 'white',
-          background: 'rgba(0,0,0,0.5)',
-          padding: '10px',
-          borderRadius: '8px'
-        }}
-      >
-        <p>
-          <b>Plane Visible?</b> {planeVisible ? 'YES' : 'NO'}
-        </p>
-      </div>
-
-      <div
-        style={{
           position: 'fixed',
+          display: showButton ? 'block' : 'none',
           width: `${domWidth}px`,
           height: `${domHeight}px`,
           top: '50%',
@@ -441,7 +425,7 @@ export default function NftAppT() {
         </svg>
       </div>
 
-      {!planeFound ? (
+      {!planeFound && (
         <>
           <div
             style={{
@@ -457,7 +441,7 @@ export default function NftAppT() {
               fontSize: '14px'
             }}
           >
-            <p>빨간 원 안에 평면을 맞춰주세요.</p>
+            <p>빨간 원 안에 달조형물을 맞춰주세요.</p>
             <p>폰을 천천히 움직여 텍스처·조명을 확보하세요!</p>
           </div>
           {showButton && (
@@ -481,23 +465,6 @@ export default function NftAppT() {
             </button>
           )}
         </>
-      ) : (
-        <div
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: 'rgba(0,0,0,0.6)',
-            color: 'white',
-            padding: '10px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            zIndex: 9999
-          }}
-        >
-          <p>토끼가 소환되었습니다!</p>
-        </div>
       )}
 
       <SlamCanvas id="three-canvas">
