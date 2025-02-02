@@ -1,62 +1,66 @@
-/**
- * NftAppT (모바일 기준 예시)
- * - DOM에 빨간 원 (200×200, 화면 중앙)
- * - Three.js 파란 Plane (planeConfidence로 활성화)
- * - "토끼 부르기" 버튼 (안정화 후)
- * - useParams, useSearchParams로 URL 파라미터 처리
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useFrame } from '@react-three/fiber';
 
+// 예: SlamCanvas, requestCameraPermission, AlvaARConnectorTHREE, useSlam 등
+// 실제 프로젝트 경로/파일에 맞게 import 조정
 import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
 import { requestCameraPermission } from './libs/util';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
 import { useSlam } from './libs/SLAMProvider';
 
-// 예시 아이콘, 모델들
-import Back from './assets/icons/Back';       // 뒤로가기 아이콘
-import { Box, Tree } from './ArApp';         // 3D 오브젝트들
+// 예시 아이콘/모델
+import Back from './assets/icons/Back';
+import { Box, Tree } from './ArApp';
 
-/** ======================
- *  유틸 함수
- =======================*/
+/** =============== 유틸 함수들 =============== */
 
-/** Plane 행렬에서 중심점 → camera.project() → 2D 좌표
- *  => 빨간 원(cx,cy,r) 내부인지 판별
+/**
+ * planeMatrix에서 3D 중심 pos -> camera.project() -> "비디오" 좌표 -> "DOM" 좌표
+ * => "빨간 원(cx, cy, r, DOM좌표)" 내부인지 판정
  */
-function isPlaneInCircle(
+function isPlaneInCircleDom(
   planeMatrix: THREE.Matrix4,
   camera: THREE.PerspectiveCamera,
-  canvasWidth: number,    // 실제 카메라 해상도 가정(예: 1280)
-  canvasHeight: number,   // 예: 720
-  circleCenterX: number,  // 2D 좌표(픽셀)
+  videoWidth: number,   // ex) 1280
+  videoHeight: number,  // ex) 720
+  domWidth: number,     // ex) 360
+  domHeight: number,    // ex) 640
+  circleCenterX: number,// DOM 좌표
   circleCenterY: number,
   circleRadius: number
 ): boolean {
+  // 1) plane center
   const pos = new THREE.Vector3();
   const rot = new THREE.Quaternion();
   const sca = new THREE.Vector3();
   planeMatrix.decompose(pos, rot, sca);
 
-  // world -> NDC
+  // 2) world -> clip space
   pos.project(camera);
 
-  // -1..1 → 화면 픽셀
-  const halfW = canvasWidth / 2;
-  const halfH = canvasHeight / 2;
-  const screenX = pos.x * halfW + halfW;
-  const screenY = -pos.y * halfH + halfH;
+  // 3) clip(-1..1) -> "비디오 해상도"(0..videoWidth, 0..videoHeight)
+  const halfVw = videoWidth / 2;
+  const halfVh = videoHeight / 2;
+  let videoX = (pos.x * halfVw) + halfVw;
+  let videoY = (-pos.y * halfVh) + halfVh;
 
-  const dx = screenX - circleCenterX;
-  const dy = screenY - circleCenterY;
+  // 4) "비디오" -> "DOM" 스케일링
+  //    예: 1280->360, 720->640
+  const scaleX = domWidth / videoWidth;
+  const scaleY = domHeight / videoHeight;
+  const domX = videoX * scaleX;
+  const domY = videoY * scaleY;
+
+  // 5) circle 판정 (DOM 좌표)
+  const dx = domX - circleCenterX;
+  const dy = domY - circleCenterY;
   const dist2 = dx*dx + dy*dy;
   return dist2 <= (circleRadius * circleRadius);
 }
 
-/** Matrix4 두 개의 위치/회전 차이를 간단히 계산 */
+/** Matrix4 두 개의 위치/회전 차이를 계산 */
 function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
   const pos1 = new THREE.Vector3();
   const pos2 = new THREE.Vector3();
@@ -75,9 +79,7 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 }
 
 
-/** ======================
- *  CameraTracker
- =======================*/
+/** ============= CameraTracker ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
   setPlaneFound: (b: boolean) => void;
@@ -89,12 +91,16 @@ interface CameraTrackerProps {
   setObjectPosition: (pos: THREE.Vector3) => void;
   onPlaneConfidenceChange?: (val: number) => void;
 
-  // "빨간 원" 판정에 사용할 캔버스/원 정보
-  canvasWidth: number;
-  canvasHeight: number;
-  circleCenterX: number;
-  circleCenterY: number;
-  circleRadius: number;
+  // 해상도 보정용
+  videoWidth: number;   // ex) 1280
+  videoHeight: number;  // ex) 720
+  domWidth: number;     // ex) 360
+  domHeight: number;    // ex) 640
+
+  // 빨간 원 (DOM 좌표)
+  circleX: number;  // ex) 180
+  circleY: number;  // ex) 320
+  circleR: number;  // ex) 100
 }
 
 function CameraTracker({
@@ -107,14 +113,16 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
 
-  canvasWidth,
-  canvasHeight,
-  circleCenterX,
-  circleCenterY,
-  circleRadius,
-}: CameraTrackerProps) {
-
-  // URL 파라미터 (마커없는 AR이지만, 모델·스케일·오프셋 지정)
+  videoWidth,
+  videoHeight,
+  domWidth,
+  domHeight,
+  circleX,
+  circleY,
+  circleR,
+}: CameraTrackerProps)
+{
+  // URL 파라미터(모델 종류, scale, offset)
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
@@ -126,32 +134,31 @@ function CameraTracker({
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 평면 안정도 로직
+  // planeConfidence
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const planeConfidenceThreshold = 5;
-
-  // 이전/후보/최종 Plane 행렬
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
 
-  // 3D 오브젝트 refs
+  // 3D refs
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
 
-  // 오브젝트 배치 완료?
+  // 오브젝트 배치 여부
   const [objectPlaced, setObjectPlaced] = useState(false);
 
   useEffect(() => {
     if (alvaAR) {
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
+      console.log("✅ AlvaAR SLAM Initialized");
     }
   }, [alvaAR]);
 
   useFrame(({ camera }) => {
     if (!alvaAR || !applyPose.current) return;
 
-    // 1) 카메라 pose
+    // 1) 카메라 Pose
     const video = document.getElementById('ar-video') as HTMLVideoElement | null;
     if (!video) return;
 
@@ -169,22 +176,24 @@ function CameraTracker({
       setCameraPosition(camera.position.clone());
     }
 
-    // 2) planeConfidence 로직 (planeFound=false 일 때)
+    // 2) planeConfidence (planeFound=false)
     if (!planeFound) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
         const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-        // "빨간 원" 내부인가?
+        // 빨간 원 DOM 내부?
         const perspCam = camera as THREE.PerspectiveCamera;
-        const inCircle = isPlaneInCircle(
+        const inCircle = isPlaneInCircleDom(
           newMatrix,
           perspCam,
-          canvasWidth,
-          canvasHeight,
-          circleCenterX,
-          circleCenterY,
-          circleRadius
+          videoWidth,
+          videoHeight,
+          domWidth,
+          domHeight,
+          circleX,
+          circleY,
+          circleR
         );
 
         if (!inCircle) {
@@ -196,7 +205,7 @@ function CameraTracker({
             setPlaneConfidence(1);
           } else {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-            // 0.1 정도로 완화
+            // 예) 0.1 완화
             if (diffVal < 0.1) {
               setPlaneConfidence(c => c + 1);
             } else {
@@ -205,40 +214,40 @@ function CameraTracker({
             prevPlaneMatrix.current.copy(newMatrix);
           }
 
-          // threshold
           if (planeConfidence >= planeConfidenceThreshold) {
             candidatePlaneMatrix.current.copy(newMatrix);
             setStablePlane(true);
           }
         }
       } else {
-        // planePose=null
         setPlaneConfidence(0);
         setStablePlane(false);
       }
     }
+
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 3) stablePlane & !planeFound => 파란 Plane 시각화
+    // 3) stablePlane & !planeFound => 파란 Plane 표시
     if (!planeFound && stablePlane && planeRef.current) {
+      planeRef.current.visible = true;
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
       const sc = new THREE.Vector3();
       candidatePlaneMatrix.current.decompose(pos, rot, sc);
 
-      planeRef.current.visible = true;
       planeRef.current.position.copy(pos);
       planeRef.current.quaternion.copy(rot);
-      planeRef.current.scale.set(3, 3, 3); // 필요하면 더 크게
+      planeRef.current.scale.set(3, 3, 3); // 임의 크기
     }
 
-    // 4) 사용자 버튼 눌렀다면 -> 최종 확정
+    // 4) requestFinalizePlane => planeFound=true
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
+      console.log("🎉 planeFound => place object");
     }
 
-    // 5) planeFound & object not placed => 오브젝트 배치
+    // 5) planeFound && objectPlaced=false => 오브젝트 배치
     if (planeFound && !objectPlaced && objectRef.current) {
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
@@ -255,10 +264,11 @@ function CameraTracker({
 
       setObjectPosition(pos.clone());
       setObjectPlaced(true);
+      console.log("✅ Object placed!");
     }
   });
 
-  // 어떤 모델 쓸지 (URL /nft-app?char=moons 등)
+  // char => 'moons'? => Box, else Tree
   const isMoons = (char === 'moons');
 
   return (
@@ -267,7 +277,7 @@ function CameraTracker({
       <mesh ref={planeRef} visible={false}>
         <planeGeometry args={[1,1]} />
         <meshBasicMaterial
-          color="#0000ff"
+          color="#00f"
           opacity={0.3}
           transparent
           side={THREE.DoubleSide}
@@ -277,17 +287,15 @@ function CameraTracker({
       {/* 오브젝트 */}
       {planeFound && (
         <group ref={objectRef}>
-          { isMoons ? <Box onRenderEnd={()=>{}} on /> : <Tree onRenderEnd={()=>{}} on /> }
+          {isMoons ? <Box onRenderEnd={()=>{}} on /> : <Tree onRenderEnd={()=>{}} on />}
         </group>
       )}
     </>
   );
 }
 
-/** ======================
- * NftAppT (메인)
- * 모바일 기준 DOM/CSS
- =======================*/
+
+/** ============= NftAppT (메인) ============= */
 export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
@@ -297,35 +305,38 @@ export default function NftAppT() {
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
 
-  // HUD
   const [planeConfidence, setPlaneConfidence] = useState(0);
 
   useEffect(() => {
-    // 모바일 카메라 권한 요청
+    // 모바일 카메라 권한
     requestCameraPermission();
   }, []);
 
-  // 모바일 기준으로 1280×720 영상이라 가정
-  // (실제로는 video.videoWidth / video.videoHeight를 쓸 수도 있음)
+  /**
+   * 가정:
+   * - 실제 카메라 영상: 1280×720
+   * - DOM 표시(부모 div나 화면) = 360×640
+   * - 빨간 원은 DOM 좌표(180,320)에 반경 100
+   */
   const videoWidth = 1280;
   const videoHeight = 720;
 
-  // 빨간원 중심/반지름 (투영 좌표 기준)
-  // 여기서는 "영상 해상도" 중간으로 가정
-  const circleCenterX = videoWidth / 2;
-  const circleCenterY = videoHeight / 2;
-  const circleRadius = 100;
+  const domWidth = 360;
+  const domHeight = 640;
 
-  // DOM에 표시할 빨간원 스타일 (200×200 고정)
-  // planeFound=true면 파랑색
+  // 빨간 원
+  const circleX = domWidth / 2;   // 180
+  const circleY = domHeight / 2;  // 320
+  const circleR = 100;
+
+  // 원 색 (planeFound? 파랑 : 빨강)
   const circleColor = planeFound ? 'blue' : 'red';
-
-  // "토끼 부르기" 버튼 표시?
-  const showRabbitButton = (!planeFound && stablePlane);
+  // "토끼 부르기" 버튼 표시
+  const showButton = !planeFound && stablePlane;
 
   return (
     <>
-      {/* 뒤로가기 버튼 */}
+      {/* 뒤로가기 */}
       <button
         style={{
           position:'fixed',
@@ -341,7 +352,7 @@ export default function NftAppT() {
         <Back />
       </button>
 
-      {/* HUD (planeConfidence 등) */}
+      {/* HUD */}
       <div
         style={{
           position:'fixed',
@@ -352,7 +363,7 @@ export default function NftAppT() {
           padding:'10px',
           borderRadius:'8px',
           color:'white',
-          fontSize:'14px',
+          fontSize:'14px'
         }}
       >
         <p><b>카메라</b>: {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
@@ -362,23 +373,30 @@ export default function NftAppT() {
         <p><b>stablePlane</b>: {stablePlane ? 'true' : 'false'}</p>
       </div>
 
-      {/* "빨간원" DOM (가운데 200×200px) */}
+      {/* 빨간 원 (DOM) - 360×640 영역 가정 */}
       <div
         style={{
           position:'fixed',
-          width:'200px',
-          height:'200px',
+          width:`${domWidth}px`,   // 360
+          height:`${domHeight}px`, // 640
           top:'50%',
           left:'50%',
-          transform:'translate(-50%, -50%)',
+          transform:'translate(-50%,-50%)',
+          background:'#000',    // 예: 검은 배경(카메라 캔버스 위에 오버레이)
+          overflow:'hidden',
           zIndex:9998,
         }}
       >
-        <svg width='200' height='200' viewBox='0 0 50 50'>
+        {/* svg로 빨간원 */}
+        <svg
+          width={domWidth}   // 360
+          height={domHeight} // 640
+          style={{ position:'absolute', top:0, left:0 }}
+        >
           <circle
-            cx='25'
-            cy='25'
-            r='24'
+            cx={circleX}    // 180
+            cy={circleY}    // 320
+            r={circleR}     // 100
             fill='none'
             stroke={circleColor}
             strokeWidth='2'
@@ -386,28 +404,28 @@ export default function NftAppT() {
         </svg>
       </div>
 
-      {/* 안내 문구 / 버튼 */}
+      {/* 안내/버튼 */}
       {!planeFound ? (
         <>
           <div
             style={{
               position:'fixed',
-              top:'60%',
+              top:'70%',
               left:'50%',
               transform:'translate(-50%, -50%)',
+              zIndex:9999,
               background:'rgba(0,0,0,0.6)',
+              color:'white',
               padding:'10px',
               borderRadius:'8px',
-              color:'white',
-              fontSize:'14px',
-              zIndex:9999,
+              fontSize:'14px'
             }}
           >
-            <p>빨간 원 안에 평면을 인식해 보세요.</p>
-            <p>폰을 천천히 움직여 조명·각도를 맞추면 안정화됩니다.</p>
+            <p>빨간 원 안에 평면을 맞춰주세요.</p>
+            <p>폰을 천천히 움직여 텍스처·조명을 확보하세요!</p>
           </div>
 
-          {showRabbitButton && (
+          {showButton && (
             <button
               style={{
                 position:'fixed',
@@ -419,8 +437,8 @@ export default function NftAppT() {
                 fontSize:'1rem',
                 backgroundColor:'darkblue',
                 color:'white',
-                borderRadius:'8px',
                 border:'none',
+                borderRadius:'8px'
               }}
               onClick={()=> setRequestFinalizePlane(true)}
             >
@@ -436,19 +454,20 @@ export default function NftAppT() {
             left:'50%',
             transform:'translate(-50%, -50%)',
             background:'rgba(0,0,0,0.6)',
+            color:'white',
             padding:'10px',
             borderRadius:'8px',
-            color:'white',
             fontSize:'14px',
-            zIndex:9999,
+            zIndex:9999
           }}
         >
           <p>토끼가 소환되었습니다!</p>
         </div>
       )}
 
-      {/* SLAM + Three.js */}
+      {/* SLAM + Three.js 캔버스 */}
       <SlamCanvas id='three-canvas'>
+        {/* 뒤에 렌더되는 3D 씬 */}
         <React.Suspense fallback={null}>
           <CameraTracker
             planeFound={planeFound}
@@ -461,12 +480,13 @@ export default function NftAppT() {
             setObjectPosition={(pos)=> setObjectPosition(pos)}
             onPlaneConfidenceChange={(val)=> setPlaneConfidence(val)}
 
-            // 투영 좌표 계산용 (camera.project)
-            canvasWidth={videoWidth}
-            canvasHeight={videoHeight}
-            circleCenterX={circleCenterX}
-            circleCenterY={circleCenterY}
-            circleRadius={circleRadius}
+            videoWidth={1280}
+            videoHeight={720}
+            domWidth={360}
+            domHeight={640}
+            circleX={180}
+            circleY={320}
+            circleR={100}
           />
           <ambientLight />
           <directionalLight position={[100,100,0]} />
