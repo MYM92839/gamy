@@ -110,51 +110,56 @@ const CameraTracker = ({
     const ctx = c.getContext("2d");
     c.width = video.videoWidth || 1280;
     c.height = video.videoHeight || 720;
-    ctx.drawImage(video, 0, 0, c.width, c.height);
-    const frame = ctx.getImageData(0, 0, c.width, c.height);
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, c.width, c.height);
+      const frame = ctx.getImageData(0, 0, c.width, c.height);
 
-    // 카메라 업데이트
-    const camPose = alvaAR.findCameraPose(frame);
-    if (camPose) {
-      applyPose.current(camPose, camera.quaternion, camera.position);
-      setCameraPosition(camera.position.clone());
-    }
+      // 카메라 업데이트
+      const camPose = alvaAR.findCameraPose(frame);
+      if (camPose) {
+        applyPose.current(camPose, camera.quaternion, camera.position);
+        setCameraPosition(camera.position.clone());
+      }
 
-    // 2) 평면이 아직 "최종 확정(planeFound=false)"이 아니라면 -> planeConfidence 로직
-    if (!planeFound) {
-      const planePose = alvaAR.findPlane(frame);
-      if (planePose) {
-        const newMatrix = new THREE.Matrix4().fromArray(planePose);
+      // 2) 평면이 아직 "최종 확정(planeFound=false)"이 아니라면 -> planeConfidence 로직
+      if (!planeFound) {
+        const planePose = alvaAR.findPlane(frame);
+        if (planePose) {
+          const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-        // 처음 감지되면 confidence=1
-        if (!prevPlaneMatrix.current) {
-          prevPlaneMatrix.current = newMatrix.clone();
-          setPlaneConfidence(1);
-        } else {
-          // 이전과 비교
-          const diff = matrixDiff(prevPlaneMatrix.current, newMatrix);
-          if (diff < 0.05) {
-            setPlaneConfidence((c) => c + 1);
-          } else {
+          // 처음 감지되면 confidence=1
+          if (!prevPlaneMatrix.current) {
+            prevPlaneMatrix.current = newMatrix.clone();
             setPlaneConfidence(1);
+          } else {
+            // 이전과 비교
+            const diff = matrixDiff(prevPlaneMatrix.current, newMatrix);
+            if (diff < 0.05) {
+              setPlaneConfidence((c) => c + 1);
+            } else {
+              setPlaneConfidence(1);
+            }
+            prevPlaneMatrix.current.copy(newMatrix);
           }
-          prevPlaneMatrix.current.copy(newMatrix);
-        }
 
-        // stablePlane 여부 결정
-        if (planeConfidence >= planeConfidenceThreshold) {
-          // 안정되었다고 판단 -> candidatePlaneMatrix 갱신
-          candidatePlaneMatrix.current.copy(newMatrix);
-          setStablePlane(true);
+          // stablePlane 여부 결정
+          if (planeConfidence >= planeConfidenceThreshold) {
+            // 안정되었다고 판단 -> candidatePlaneMatrix 갱신
+            candidatePlaneMatrix.current.copy(newMatrix);
+            setStablePlane(true);
+          } else {
+            setStablePlane(false);
+          }
         } else {
+          // planePose가 안잡히면 confidence 리셋
+          setPlaneConfidence(0);
           setStablePlane(false);
         }
-      } else {
-        // planePose가 안잡히면 confidence 리셋
-        setPlaneConfidence(0);
-        setStablePlane(false);
       }
     }
+
+
+
 
     // 2-1) 부모에서 planeConfidence 표시하고 싶다면 전달
     onPlaneConfidenceChange && onPlaneConfidenceChange(planeConfidence);
