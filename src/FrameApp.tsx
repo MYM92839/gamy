@@ -5,17 +5,21 @@ import { useParams } from "react-router-dom";
 import Modal from "react-modal";
 
 const customStyles = {
+  overlay: {
+    zIndex: 999,
+  },
   content: {
-    top: "50%",
-    left: "50%",
-    right: "auto",
-    bottom: "auto",
-    marginRight: "-50%",
-    borderRadius: "16px",
-    width: "80%",
-    height: "auto",
-    padding: "8px",
-    transform: "translate(-50%, -50%)",
+    top: '50%',
+    left: '50%',
+    right: 'auto',
+    bottom: 'auto',
+    marginRight: '-50%',
+    borderRadius: '16px',
+    width: '100dvw',
+    height: '100dvh',
+    padding: '8px',
+    transform: 'translate(-50%, -50%)',
+    zIndex: 999,
   },
 };
 
@@ -330,15 +334,26 @@ const FrameApp: React.FC<FrameAppProps> = () => {
             ref={overlayVideoRef}
             playsInline
             muted
-            loop
             autoPlay
             preload="metadata"
             controls={false}
             crossOrigin="anonymous"
             className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
+            // anim 영상이 끝나면 idle 영상으로 전환
+            onEnded={() => {
+              if (overlayVideoRef.current) {
+                // idle 영상으로 소스 변경
+                overlayVideoRef.current.src = `/${char}_idle.mp4`;
+                // idle 영상은 무한 루프로 재생
+                overlayVideoRef.current.loop = true;
+                overlayVideoRef.current.play().catch((err) =>
+                  console.error("Error playing idle video:", err)
+                );
+              }
+            }}
           >
             <source
-              src={`/${char}.mp4`}
+              src={`/${char}_anim.mp4`}
               type="video/mp4"
               onError={(e) => {
                 console.error("Overlay video error:", e);
