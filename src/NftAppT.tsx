@@ -17,8 +17,7 @@ import { Box, Tree } from './ArApp';
 
 /**
  * 평면의 중심을 계산하여 카메라 좌표계의 비디오 좌표로 투영한 후,
- * DOM 좌표로 변환하고, 빨간 원 내부 여부를 판정한다.
- * (평면의 스케일에 따라 toleranceFactor를 적용)
+ * DOM 좌표로 변환하고, 빨간 원 내부 여부(여기서는 사용하지 않음)를 판정한다.
  */
 function isPlaneInCircleDom(
   planeMatrix: THREE.Matrix4,
@@ -88,7 +87,7 @@ interface CameraTrackerProps {
   onPlaneConfidenceChange?: (val: number) => void;
   setPlaneVisible: (v: boolean) => void;
 
-  // 추가: dot 값 디버깅 콜백 (모바일에서도 UI에 표시할 수 있도록)
+  // dot 값 디버그용 콜백
   onDotValueChange?: (dot: number) => void;
 
   videoWidth: number;
@@ -131,7 +130,6 @@ function CameraTracker({
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 평면 안정도 관련 상태
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const planeConfidenceThreshold = 5; // 누적 안정도가 이 값 이상이면 안정 상태로 판단
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
@@ -169,39 +167,41 @@ function CameraTracker({
       setCameraPosition(camera.position.clone());
     }
 
-    // 2) 평면 안정도(Confidence) 업데이트 (planeFound가 false일 때)
+    // 2) 평면 안정도 업데이트 (planeFound가 false일 때)
     if (!planeFound) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
         const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-        // (A) 빨간 원 내부 판정
-        const inCircle = isPlaneInCircleDom(
-          newMatrix,
-          camera as THREE.PerspectiveCamera,
-          video.videoWidth || 1280,
-          video.videoHeight || 720,
-          domWidth,
-          domHeight,
-          circleX,
-          circleY,
-          circleR
-        );
-
-        // (B) 평면의 노멀 검증 및 effectiveFacingWeight 계산
+        // (A) 평면 중심의 DOM 좌표 계산 (빨간 원 중심과의 거리를 측정)
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         newMatrix.decompose(pos, rot, sca);
+        const posProjected = pos.clone().project(camera);
+        const halfVw = video.videoWidth / 2;
+        const halfVh = video.videoHeight / 2;
+        const videoX = (posProjected.x * halfVw) + halfVw;
+        const videoY = (-posProjected.y * halfVh) + halfVh;
+        const scaleX = domWidth / video.videoWidth;
+        const scaleY = domHeight / video.videoHeight;
+        const domX = videoX * scaleX;
+        const domY = videoY * scaleY;
+        const dx = domX - circleX;
+        const dy = domY - circleY;
+        const centerDistance = Math.sqrt(dx * dx + dy * dy);
+        const centerDistanceThreshold = circleR * 1.5; // 임계값 (예: 150 픽셀 if circleR=100)
+
+        // (B) 평면의 노멀 검증 및 effectiveFacingWeight 계산
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        // 원하는 값은 dot이 -0.4 ~ -0.6 범위라면, effectiveDot를 -dot으로 계산
+        // 원하는 경우, dot 값의 부호를 반전하여 effectiveDot으로 사용 (예: 원하는 상태가 -0.4 ~ -0.6)
         const effectiveDot = -dot;
         onDotValueChange?.(dot); // 원래 dot 값 전달 (디버그용)
 
-        const FACING_THRESHOLD = 0.2; // 느슨하게: 0.2
+        const FACING_THRESHOLD = 0.2;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
@@ -210,11 +210,10 @@ function CameraTracker({
         // (C) 평면의 수직성 검사
         const up = new THREE.Vector3(0, 1, 0);
         const verticality = Math.abs(worldNormal.dot(up));
-        const isVertical = verticality < 0.5; // 느슨하게: 0.5
+        const isVertical = verticality < 0.5;
 
-        // 디버그 로그
         console.log("Plane Debug:", {
-          inCircle,
+          centerDistance: centerDistance.toFixed(2),
           dot: dot.toFixed(2),
           effectiveDot: effectiveDot.toFixed(2),
           facingWeight: facingWeight.toFixed(2),
@@ -222,8 +221,8 @@ function CameraTracker({
           isVertical,
         });
 
-        // (D) 조건 만족 시 평면 안정도 업데이트
-        if (inCircle && facingWeight > 0 && isVertical) {
+        // (D) 후보 업데이트 조건: 평면 중심과 빨간 원 중심의 거리가 임계값 이내이며, facingWeight > 0, 그리고 isVertical인 경우
+        if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = 0;
           if (prevPlaneMatrix.current) {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
@@ -234,7 +233,7 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          // EMA 방식으로 candidatePlaneMatrix 업데이트
+          // EMA 업데이트
           const alphaMatrix = 0.3;
           const currentPos = new THREE.Vector3();
           const currentQuat = new THREE.Quaternion();
@@ -325,21 +324,13 @@ function CameraTracker({
 
   return (
     <>
-      {/* 파란 평면 (디버그/후보 표시) */}
       <mesh ref={planeRef} visible={false}>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial
-          color="#00f"
-          opacity={0.3}
-          transparent
-          side={THREE.DoubleSide}
-        />
+        <meshBasicMaterial color="#00f" opacity={0.3} transparent side={THREE.DoubleSide} />
       </mesh>
-
-      {/* 평면 확정 시 오브젝트 배치 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => {}} on /> : <Tree onRenderEnd={() => {}} on/>}
+          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on />}
         </group>
       )}
     </>
@@ -367,7 +358,6 @@ export default function NftAppT() {
   const circleY = domHeight / 2;
   const circleR = 100;
 
-  // UI: planeFound 또는 stablePlane일 때 원 색상을 파란색으로
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
@@ -388,7 +378,6 @@ export default function NftAppT() {
         <Back />
       </button>
 
-      {/* HUD에 카메라, 오브젝트 정보와 dot 값을 표시 */}
       <div
         style={{
           position: 'fixed',
