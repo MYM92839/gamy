@@ -471,7 +471,7 @@ export default function NftAppT() {
         </div>
       )}
 
-      {!planeFound ? (
+      {!planeFound && (
         <>
           <div
             style={{
@@ -511,23 +511,6 @@ export default function NftAppT() {
             </button>
           )}
         </>
-      ) : (
-        <div
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: 'rgba(0,0,0,0.6)',
-            color: 'white',
-            padding: '10px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            zIndex: 9999
-          }}
-        >
-          <p>토끼가 소환되었습니다!</p>
-        </div>
       )}
 
       <SlamCanvas id="three-canvas">
