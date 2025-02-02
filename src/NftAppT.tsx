@@ -325,7 +325,7 @@ function CameraTracker({
       {/* 평면 확정 시 오브젝트 배치 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => {}} /> : <Tree onRenderEnd={() => {}} />}
+          {isMoons ? <Box onRenderEnd={() => {}} on={true} /> : <Tree onRenderEnd={() => {}} on={true} />}
         </group>
       )}
     </>
