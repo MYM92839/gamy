@@ -88,6 +88,9 @@ interface CameraTrackerProps {
   onPlaneConfidenceChange?: (val: number) => void;
   setPlaneVisible: (v: boolean) => void;
 
+  // 추가: dot 값 디버깅을 위한 콜백
+  onDotValueChange?: (dot: number) => void;
+
   videoWidth: number;
   videoHeight: number;
   domWidth: number;
@@ -108,6 +111,7 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
   setPlaneVisible,
+  onDotValueChange, // 새로운 prop
 
   // videoWidth,
   // videoHeight,
@@ -129,7 +133,7 @@ function CameraTracker({
 
   // 평면 안정도 관련 상태
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // 누적 안정도 임계값 (이 값 이상일 때 안정 상태로 판단)
+  const planeConfidenceThreshold = 5;
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -165,7 +169,7 @@ function CameraTracker({
       setCameraPosition(camera.position.clone());
     }
 
-    // 2) 평면 안정도(Confidence) 업데이트 (planeFound가 false일 때)
+    // 2) 평면 안정도 업데이트 (planeFound가 false일 때)
     if (!planeFound) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
@@ -184,7 +188,7 @@ function CameraTracker({
           circleR
         );
 
-        // (B) 평면의 노멀 검증 및 facingWeight 계산
+        // (B) 평면의 노멀 검증 및 facingWeight 계산 (dot 값은 절대값 기반으로 계산)
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
@@ -192,20 +196,23 @@ function CameraTracker({
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
-        const dot = -worldNormal.dot(camVec);
+        const dot = worldNormal.dot(camVec);
+        // dot 값을 디버그 콜백으로 전달 (모바일에서 UI에 표시 가능)
+        onDotValueChange?.(dot);
 
-        const FACING_THRESHOLD = 0.2; // 느슨하게: 0.3 -> 0.2
+        const FACING_THRESHOLD = 0.2; // 느슨하게: 0.2
         let facingWeight = 0;
-        if (dot > FACING_THRESHOLD) {
-          facingWeight = (dot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
+        if (Math.abs(dot) > FACING_THRESHOLD) {
+          // dot가 음수이면 절대값을 사용하여 계산
+          facingWeight = (Math.abs(dot) - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
 
         // (C) 평면의 수직성 검사
         const up = new THREE.Vector3(0, 1, 0);
         const verticality = Math.abs(worldNormal.dot(up));
-        const isVertical = verticality < 0.5; // 느슨하게: 0.3 -> 0.5
+        const isVertical = verticality < 0.5; // 느슨하게: 0.5
 
-        // 디버그 로그 출력
+        // 디버그 로그
         console.log("Plane Debug:", {
           inCircle,
           dot: dot.toFixed(2),
@@ -226,7 +233,7 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          // EMA 업데이트 (alphaMatrix 0.3로 올림)
+          // EMA 업데이트
           const alphaMatrix = 0.3;
           const currentPos = new THREE.Vector3();
           const currentQuat = new THREE.Quaternion();
@@ -241,10 +248,7 @@ function CameraTracker({
           currentScale.lerp(newScale, alphaMatrix);
           candidatePlaneMatrix.current.compose(currentPos, currentQuat, currentScale);
 
-          // 디버그: 업데이트된 candidatePlaneMatrix의 위치 출력
-          const debugPos = new THREE.Vector3();
-          candidatePlaneMatrix.current.decompose(debugPos, new THREE.Quaternion(), new THREE.Vector3());
-          console.log("Updated candidatePlaneMatrix Position:", debugPos);
+          console.log("Updated candidatePlaneMatrix Position:", currentPos);
 
           if (newConfidence >= planeConfidenceThreshold) {
             setStablePlane(true);
@@ -285,7 +289,7 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 4) 평면 확정 요청: 버튼 클릭 시
+    // 4) 평면 확정 요청 (버튼 클릭 시)
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
@@ -329,7 +333,7 @@ function CameraTracker({
       {/* 평면 확정 시 오브젝트 배치 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => { }} on={true} /> : <Tree onRenderEnd={() => { }} on={true} />}
+          {isMoons ? <Box onRenderEnd={() => {}} on /> : <Tree onRenderEnd={() => {}} on />}
         </group>
       )}
     </>
@@ -345,6 +349,8 @@ export default function NftAppT() {
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
   const [planeConfidence, setPlaneConfidence] = useState(0);
+  // 새로운 상태: dot 값
+  const [dotValue, setDotValue] = useState(0);
 
   useEffect(() => {
     requestCameraPermission();
@@ -356,7 +362,7 @@ export default function NftAppT() {
   const circleY = domHeight / 2;
   const circleR = 100;
 
-  // UI: 안정 상태일 때 원 색상과 버튼 표시
+  // UI: planeFound 또는 stablePlane일 때 원 색상을 파란색으로
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
@@ -377,6 +383,7 @@ export default function NftAppT() {
         <Back />
       </button>
 
+      {/* HUD에 카메라, 오브젝트 정보와 함께 dot 값 추가 */}
       <div
         style={{
           position: 'fixed',
@@ -404,6 +411,9 @@ export default function NftAppT() {
         </p>
         <p>
           <b>stablePlane</b>: {stablePlane ? 'true' : 'false'}
+        </p>
+        <p>
+          <b>dot</b>: {dotValue.toFixed(2)}
         </p>
       </div>
 
@@ -517,6 +527,8 @@ export default function NftAppT() {
             setCameraPosition={(pos) => setCameraPosition(pos)}
             setObjectPosition={(pos) => setObjectPosition(pos)}
             onPlaneConfidenceChange={(val) => setPlaneConfidence(val)}
+            // 새로 추가: dot 값 업데이트 콜백
+            onDotValueChange={(val) => setDotValue(val)}
             videoWidth={1280}
             videoHeight={720}
             domWidth={360}
