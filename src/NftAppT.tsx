@@ -318,8 +318,8 @@ export default function NftAppT() {
    * - DOM 표시(부모 div나 화면) = 360×640
    * - 빨간 원은 DOM 좌표(180,320)에 반경 100
    */
-  const videoWidth = 1280;
-  const videoHeight = 720;
+  // const videoWidth = 1280;
+  // const videoHeight = 720;
 
   const domWidth = 360;
   const domHeight = 640;
