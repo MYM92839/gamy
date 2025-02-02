@@ -60,6 +60,39 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
   return posDiff + rotDiff;
 }
 
+/**
+ * 빨간 원의 중심을 기준으로, 카메라에서 해당 화면 좌표를 통과하는 광선과
+ * 후보 평면(candidateMatrix)과의 교차점을 계산하여 반환하는 함수.
+ */
+function getIntersectionWithCandidatePlane(
+  camera: THREE.Camera,
+  candidateMatrix: THREE.Matrix4,
+  domWidth: number,
+  domHeight: number,
+  circleX: number,
+  circleY: number
+): THREE.Vector3 | null {
+  // 빨간 원 중심을 NDC로 변환
+  const ndcX = (circleX / domWidth) * 2 - 1;
+  const ndcY = -((circleY / domHeight) * 2 - 1);
+  const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
+  ndc.unproject(camera);
+  const ray = new THREE.Ray(camera.position, ndc.sub(camera.position).normalize());
+
+  const planePos = new THREE.Vector3();
+  const planeQuat = new THREE.Quaternion();
+  const planeScale = new THREE.Vector3();
+  candidateMatrix.decompose(planePos, planeQuat, planeScale);
+  const localNormal = new THREE.Vector3(0, 0, 1);
+  const planeNormal = localNormal.clone().applyQuaternion(planeQuat);
+  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePos);
+  const intersection = new THREE.Vector3();
+  if (ray.intersectPlane(plane, intersection)) {
+    return intersection;
+  }
+  return null;
+}
+
 /** ============= CameraTracker ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
@@ -122,6 +155,9 @@ function CameraTracker({
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
 
+  // finalObjectPosition를 한 번 계산해서 고정할 ref
+  const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
+
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
@@ -171,7 +207,6 @@ function CameraTracker({
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         newMatrix.decompose(pos, rot, sca);
-        // SLAM 시스템의 평면 노멀이 반대로 나온다면, dot 값을 부호 반전하여 effectiveDot 사용
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
@@ -279,11 +314,12 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 5) 평면 확정 후 오브젝트 배치 (토끼의 위치 계산: 빨간 원 중심을 기준으로 교차점 계산)
+    // 5) 평면 확정 후 오브젝트 배치 (토끼의 최종 위치 계산)
+    // 한 번 최종 위치가 결정되면 finalObjectPosition에 저장하여 이후에는 업데이트하지 않음.
     if (planeFound && !objectPlaced && objectRef.current) {
       const intersection = getIntersectionWithCandidatePlane(camera, finalPlaneMatrix.current, domWidth, domHeight, circleX, circleY);
       if (intersection) {
-        // 회전 보정: Y축만 유지하도록 X,Z 회전 제거
+        // 회전 보정: Y축 회전만 유지하도록 X, Z 회전 제거
         const pos = intersection.clone();
         const rot = new THREE.Quaternion();
         {
@@ -296,18 +332,22 @@ function CameraTracker({
           euler.z = 0;
           rot.setFromEuler(euler);
         }
+        // 쿼리 파라미터 offset 적용
         pos.x += offsetX;
         pos.y += offsetY;
         pos.z += offsetZ;
-        objectRef.current.position.copy(pos);
+        // 최종 위치를 저장하여 이후 업데이트 방지
+        finalObjectPosition.current = pos.clone();
+        objectRef.current.position.copy(finalObjectPosition.current);
         objectRef.current.quaternion.copy(rot);
         objectRef.current.scale.setScalar(scale);
-        setObjectPosition(pos.clone());
+        setObjectPosition(finalObjectPosition.current.clone());
         setObjectPlaced(true);
-        console.log("✅ Object placed at intersection:", pos);
+        console.log("✅ Object placed at intersection:", finalObjectPosition.current);
       }
     }
 
+    // 평면 메쉬의 visible 속성은 CameraTracker 내에서 업데이트 후 변경하지 않음.
     if (planeRef.current) {
       setPlaneVisible(planeRef.current.visible);
     } else {
@@ -325,50 +365,17 @@ function CameraTracker({
       </mesh>
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on />}
+          {isMoons ? <Box onRenderEnd={() => {}} on/> : <Tree onRenderEnd={() => {}} on />}
         </group>
       )}
     </>
   );
 }
 
-/**
- * 빨간 원의 중심을 기준으로, 카메라에서 해당 화면 좌표를 통과하는 광선과
- * 후보 평면(candidateMatrix)과의 교차점을 계산하여 반환하는 함수.
- */
-function getIntersectionWithCandidatePlane(
-  camera: THREE.Camera,
-  candidateMatrix: THREE.Matrix4,
-  domWidth: number,
-  domHeight: number,
-  circleX: number,
-  circleY: number
-): THREE.Vector3 | null {
-  const ndcX = (circleX / domWidth) * 2 - 1;
-  const ndcY = -((circleY / domHeight) * 2 - 1);
-  const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
-  ndc.unproject(camera);
-  const ray = new THREE.Ray(camera.position, ndc.sub(camera.position).normalize());
-
-  const planePos = new THREE.Vector3();
-  const planeQuat = new THREE.Quaternion();
-  const planeScale = new THREE.Vector3();
-  candidateMatrix.decompose(planePos, planeQuat, planeScale);
-  const localNormal = new THREE.Vector3(0, 0, 1);
-  const planeNormal = localNormal.clone().applyQuaternion(planeQuat);
-  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePos);
-  const intersection = new THREE.Vector3();
-  if (ray.intersectPlane(plane, intersection)) {
-    return intersection;
-  }
-  return null;
-}
-
 /** ============= NftAppT (메인) ============= */
 export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
-  // planeVisible은 여기서는 사용하지 않고 CameraTracker 내부에서 관리
   const [planeFound, setPlaneFound] = useState(false);
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
@@ -439,7 +446,7 @@ export default function NftAppT() {
         </p>
       </div>
 
-      {/* 버튼을 누른 후 평면 확정되면 빨간 원 svg 숨김 */}
+      {/* 토끼 확정 후엔 빨간 원 SVG 숨김 */}
       {!planeFound && (
         <div
           style={{
@@ -526,7 +533,7 @@ export default function NftAppT() {
       <SlamCanvas id="three-canvas">
         <React.Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => { }}
+            setPlaneVisible={(v) => {}}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
