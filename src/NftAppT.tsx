@@ -142,9 +142,9 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  const offsetX = parseFloat(searchParams.get('x') || '0');
-  const offsetY = parseFloat(searchParams.get('y') || '0');
-  const offsetZ = parseFloat(searchParams.get('z') || '0');
+  // const offsetX = parseFloat(searchParams.get('x') || '0');
+  // const offsetY = parseFloat(searchParams.get('y') || '0');
+  // const offsetZ = parseFloat(searchParams.get('z') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -155,7 +155,7 @@ function CameraTracker({
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
 
-  // finalObjectPosition를 한 번 계산해서 고정할 ref
+  // 최종 오브젝트 위치를 한 번 결정하면 고정할 ref
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
 
   const planeRef = useRef<THREE.Mesh>(null);
@@ -200,7 +200,7 @@ function CameraTracker({
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        const centerDistanceThreshold = circleR * 1.5;
+        const centerDistanceThreshold = circleR * 1.5; // 임계값
 
         // (B) 평면의 노멀 검증 및 effectiveFacingWeight 계산
         const pos = new THREE.Vector3();
@@ -234,7 +234,8 @@ function CameraTracker({
           isVertical,
         });
 
-        // (D) 후보 업데이트 조건: 평면 중심과 빨간 원 중심 사이의 거리가 임계값 이내, facingWeight > 0, 그리고 isVertical
+        // (D) 후보 업데이트 조건:
+        // 평면 중심과 빨간 원 중심 사이의 거리가 임계값 이내, facingWeight > 0, 그리고 isVertical이어야 함.
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = 0;
           if (prevPlaneMatrix.current) {
@@ -246,8 +247,8 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          // EMA 업데이트
-          const alphaMatrix = 0.3;
+          // EMA 업데이트 (스무딩 강화: alphaMatrix를 0.1로 적용)
+          const alphaMatrix = 0.1;
           const currentPos = new THREE.Vector3();
           const currentQuat = new THREE.Quaternion();
           const currentScale = new THREE.Vector3();
@@ -314,44 +315,41 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 5) 평면 확정 후 오브젝트 배치 (토끼의 최종 위치 계산)
-    // 한 번 최종 위치가 결정되면 finalObjectPosition에 저장하여 이후에는 업데이트하지 않음.
+    // 5) 평면 확정 후 오브젝트 배치 (최종 오브젝트 위치 결정)
+    // 한 번 최종 위치가 결정되면 finalObjectPosition를 고정하여 업데이트하지 않음.
     if (planeFound && !objectPlaced && objectRef.current) {
-      const intersection = getIntersectionWithCandidatePlane(camera, finalPlaneMatrix.current, domWidth, domHeight, circleX, circleY);
-      if (intersection) {
-        // 회전 보정: Y축 회전만 유지하도록 X, Z 회전 제거
-        const pos = intersection.clone();
-        const rot = new THREE.Quaternion();
-        {
-          const planePos = new THREE.Vector3();
-          const planeQuat = new THREE.Quaternion();
-          const planeScale = new THREE.Vector3();
-          finalPlaneMatrix.current.decompose(planePos, planeQuat, planeScale);
-          const euler = new THREE.Euler().setFromQuaternion(planeQuat, 'YXZ');
-          euler.x = 0;
-          euler.z = 0;
-          rot.setFromEuler(euler);
+      // 한 번 최종 위치를 계산하면 finalObjectPosition에 저장
+      if (!finalObjectPosition.current) {
+        const intersection = getIntersectionWithCandidatePlane(camera, finalPlaneMatrix.current, domWidth, domHeight, circleX, circleY);
+        let finalPos: THREE.Vector3;
+        if (intersection && intersection.distanceTo(camera.position) <= 10) {
+          finalPos = intersection;
+        } else {
+          // 교차점이 계산되지 않거나, 너무 멀면 후보 평면의 중심을 사용
+          finalPos = new THREE.Vector3();
+          finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
         }
-        // 쿼리 파라미터 offset 적용
-        pos.x += offsetX;
-        pos.y += offsetY;
-        pos.z += offsetZ;
-        // 최종 위치를 저장하여 이후 업데이트 방지
-        finalObjectPosition.current = pos.clone();
-        objectRef.current.position.copy(finalObjectPosition.current);
-        objectRef.current.quaternion.copy(rot);
-        objectRef.current.scale.setScalar(scale);
-        setObjectPosition(finalObjectPosition.current.clone());
-        setObjectPlaced(true);
-        console.log("✅ Object placed at intersection:", finalObjectPosition.current);
+        // 쿼리 파라미터 offset은 제거(현재는 보정 없이 고정)
+        finalObjectPosition.current = finalPos.clone();
       }
+      // 최종 오브젝트 위치는 finalObjectPosition.current로 고정
+      objectRef.current.position.copy(finalObjectPosition.current!);
+      // 회전 보정: finalPlaneMatrix에서 Y축 회전만 남기도록 보정
+      const planeQuat = new THREE.Quaternion();
+      finalPlaneMatrix.current.decompose(new THREE.Vector3(), planeQuat, new THREE.Vector3());
+      const euler = new THREE.Euler().setFromQuaternion(planeQuat, 'YXZ');
+      euler.x = 0;
+      euler.z = 0;
+      const finalQuat = new THREE.Quaternion().setFromEuler(euler);
+      objectRef.current.quaternion.copy(finalQuat);
+      objectRef.current.scale.setScalar(scale);
+      setObjectPosition(finalObjectPosition.current.clone());
+      setObjectPlaced(true);
+      console.log("✅ Object placed at final position:", finalObjectPosition.current);
     }
 
-    // 평면 메쉬의 visible 속성은 CameraTracker 내에서 업데이트 후 변경하지 않음.
     if (planeRef.current) {
       setPlaneVisible(planeRef.current.visible);
-    } else {
-      setPlaneVisible(false);
     }
   });
 
@@ -365,7 +363,7 @@ function CameraTracker({
       </mesh>
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => {}} on/> : <Tree onRenderEnd={() => {}} on />}
+          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on />}
         </group>
       )}
     </>
@@ -516,7 +514,7 @@ export default function NftAppT() {
       <SlamCanvas id="three-canvas">
         <React.Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => {}}
+            setPlaneVisible={() => { }}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
