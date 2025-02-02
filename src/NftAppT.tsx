@@ -2,15 +2,16 @@ import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
-import { Box, Tree } from './ArApp'; // import 경로는 프로젝트에 맞게
-import Back from './assets/icons/Back'; // import 경로는 프로젝트에 맞게
-import { AlvaARConnectorTHREE } from './libs/alvaConnector'; // import 경로는 프로젝트에 맞게
-import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas'; // import 경로는 프로젝트에 맞게
-import { requestCameraPermission } from './libs/util'; // import 경로는 프로젝트에 맞게
-import { useSlam } from './libs/SLAMProvider'; // import 경로는 프로젝트에 맞게
+import { Box, Tree } from './ArApp';
+import Back from './assets/icons/Back';
+import { AlvaARConnectorTHREE } from './libs/alvaConnector';
+import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
+import { requestCameraPermission } from './libs/util';
+import { useSlam } from './libs/SLAMProvider';
 
 /**
- * 행렬 간 차이를 단순 계산(위치 + 회전 차)
+ * 행렬 비교해 위치·회전 차이 계산
+ * => diff값이 작을수록 유사
  */
 function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
   const pos1 = new THREE.Vector3();
@@ -31,28 +32,24 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 }
 
 /**
- * "이 행렬이 수평 바닥인가?" 검사
- * - 바닥(ground)이라면, 회전 행렬에서 "up벡터"가 (0,1,0)에 가깝게 나와야 함
- * - threshold 각도(라디안) 내면 수평면으로 본다 (0.3 ~ 약 17도)
+ * "수평 바닥"인지 판단
+ * 기존: thresholdRadians = 0.3 (약 17도)
+ * -> 여기서는 0.5로 완화(약 28도까지 허용)
  */
-function isGroundPlane(m: THREE.Matrix4, thresholdRadians = 0.3): boolean {
-  // m에서 쿼터니언 추출
-  const tempPos = new THREE.Vector3();
-  const tempRot = new THREE.Quaternion();
-  const tempSca = new THREE.Vector3();
-  m.decompose(tempPos, tempRot, tempSca);
+function isGroundPlane(m: THREE.Matrix4, thresholdRadians = 0.5): boolean {
+  const tmpPos = new THREE.Vector3();
+  const tmpRot = new THREE.Quaternion();
+  const tmpSca = new THREE.Vector3();
+  m.decompose(tmpPos, tmpRot, tmpSca);
 
-  // 로컬 up(0,1,0)에 tempRot 적용 → 월드 up벡터
-  const worldUp = new THREE.Vector3(0, 1, 0).applyQuaternion(tempRot);
+  // 로컬 up(0,1,0) → 월드 up
+  const worldUp = new THREE.Vector3(0, 1, 0).applyQuaternion(tmpRot);
+  const angle = worldUp.angleTo(new THREE.Vector3(0, 1, 0));
 
-  // worldUp이 (0,1,0)과 이루는 각도
-  const angle = worldUp.angleTo(new THREE.Vector3(0, 1, 0)); // 0이면 완전수직, PI면 완전 거꾸로
-
-  // angle이 threshold 이내면 "바닥"으로 판단
   return angle < thresholdRadians;
 }
 
-function CameraTracker({
+const CameraTracker = ({
   planeFound,
   setPlaneFound,
   stablePlane,
@@ -61,52 +58,42 @@ function CameraTracker({
   setCameraPosition,
   setObjectPosition,
   onPlaneConfidenceChange
-}: {
-  planeFound: boolean;
-  setPlaneFound: (v: boolean) => void;
-  stablePlane: boolean;
-  setStablePlane: (v: boolean) => void;
-  requestFinalizePlane: boolean;
-  setCameraPosition: (pos: THREE.Vector3) => void;
-  setObjectPosition: (pos: THREE.Vector3) => void;
-  onPlaneConfidenceChange?: (confidence: number) => void;
-}) {
+}: any) => {
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const { alvaAR } = useSlam();
 
-  // URL 파라미터들
+  // URL 파라미터(스케일, 오프셋)
   const scale = parseFloat(searchParams.get('scale') || '1');
   const offsetX = parseFloat(searchParams.get('x') || '0');
   const offsetY = parseFloat(searchParams.get('y') || '0');
   const offsetZ = parseFloat(searchParams.get('z') || '0');
 
-  // SLAM -> THREE 초기화
+  // AlvaAR -> THREE
   const applyPose = useRef<any>(null);
 
-  // planeConfidence
+  // 평면 안정도 로직
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5;
+  const planeConfidenceThreshold = 5; // 예: 5
 
   // 이전 평면행렬
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
 
-  // 현재 후보(수평면) 행렬
+  // 현재 후보 평면
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
-  // 최종 확정된 행렬
+  // 최종 확정 평면
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
 
-  // plane 시각화용
+  // plane 시각화
   const planeRef = useRef<THREE.Mesh>(null);
 
-  // 오브젝트 배치 ref
+  // 오브젝트
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
   useEffect(() => {
     if (alvaAR) {
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
-      console.log("✅ AlvaAR SLAM 활성화!");
     }
   }, [alvaAR]);
 
@@ -122,34 +109,31 @@ function CameraTracker({
     tmpCanvas.width = video.videoWidth || 1280;
     tmpCanvas.height = video.videoHeight || 720;
     if (ctx) {
-
       ctx.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
-
       const frame = ctx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
 
-      // 카메라 업데이트
+      // SLAM 카메라 업데이트
       const camPose = alvaAR.findCameraPose(frame);
       if (camPose) {
         applyPose.current(camPose, camera.quaternion, camera.position);
         setCameraPosition(camera.position.clone());
       }
 
-      // 2) planeFound=false 라면 -> 바닥인지 체크 + planeConfidence 로직
+      // 2) planeFound=false 상태 -> planeConfidence 로직
       if (!planeFound) {
         const planePose = alvaAR.findPlane(frame);
         if (planePose) {
           const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-          // **수평 바닥인지** 먼저 검사
-          if (isGroundPlane(newMatrix, 0.3)) {
-            // 이전 행렬 없으면 confidence=1
+          // 수평 바닥인지
+          if (isGroundPlane(newMatrix, 0.5)) {
             if (!prevPlaneMatrix.current) {
               prevPlaneMatrix.current = newMatrix.clone();
               setPlaneConfidence(1);
             } else {
-              // diff 비교
+              // 기존 0.05 -> 0.1로 완화
               const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-              if (diffVal < 0.05) {
+              if (diffVal < 0.1) {
                 setPlaneConfidence((c) => c + 1);
               } else {
                 setPlaneConfidence(1);
@@ -157,7 +141,6 @@ function CameraTracker({
               prevPlaneMatrix.current.copy(newMatrix);
             }
 
-            // threshold 이상이면 stablePlane=true
             if (planeConfidence >= planeConfidenceThreshold) {
               candidatePlaneMatrix.current.copy(newMatrix);
               setStablePlane(true);
@@ -165,21 +148,20 @@ function CameraTracker({
               setStablePlane(false);
             }
           } else {
-            // 수평이 아닌 평면이면 confidence 리셋
+            // 수평 아니다
             setPlaneConfidence(0);
             setStablePlane(false);
           }
         } else {
-          // planePose= null => 못찾음
+          // planePose 안 잡힘
           setPlaneConfidence(0);
           setStablePlane(false);
         }
       }
 
-      // 부모 HUD에 confidence 전달
       onPlaneConfidenceChange?.(planeConfidence);
 
-      // 3) stablePlane == true && planeFound == false 시, planeRef에 표시
+      // 3) stablePlane && !planeFound -> planeRef 표시
       if (!planeFound && stablePlane && planeRef.current) {
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
@@ -190,33 +172,29 @@ function CameraTracker({
         planeRef.current.quaternion.copy(rot);
       }
 
-      // 4) requestFinalizePlane === true => 최종 확정
+      // 4) requestFinalizePlane -> 최종 확정
       if (!planeFound && requestFinalizePlane) {
         finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
         setPlaneFound(true);
-        console.log("🎉 바닥 평면 최종 확정! 오브젝트를 놓습니다.");
       }
 
-      // 5) 오브젝트 배치 (planeFound==true && 아직 안 놓았다면)
+      // 5) planeFound && 아직 오브젝트 안 놓은 경우
       if (planeFound && !objectPlaced && objectRef.current) {
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         finalPlaneMatrix.current.decompose(pos, rot, sca);
 
-        // 오프셋
         pos.x += offsetX;
         pos.y += offsetY;
         pos.z += offsetZ;
 
-        // 오브젝트 배치
         objectRef.current.position.copy(pos);
         objectRef.current.quaternion.copy(rot);
         objectRef.current.scale.set(scale, scale, scale);
 
         setObjectPosition(pos.clone());
         setObjectPlaced(true);
-        console.log("✅ 바닥에 오브젝트 배치 완료!");
       }
     }
 
@@ -224,9 +202,7 @@ function CameraTracker({
 
   return (
     <>
-      {/* 평면 시각화 Mesh
-          - planeGeometry를 크게 잡아서 "넓은 땅" 느낌
-          - 예: 5×5 m (혹은 10×10) */}
+      {/* plane 표시 (좀 크게) */}
       <mesh ref={planeRef}>
         <planeGeometry args={[5, 5]} />
         <meshBasicMaterial
@@ -240,11 +216,7 @@ function CameraTracker({
       {/* 오브젝트 */}
       {planeFound && (
         <group ref={objectRef}>
-          {char === 'moons' ? (
-            <Box onRenderEnd={() => { }} on />
-          ) : (
-            <Tree onRenderEnd={() => { }} on />
-          )}
+          {char === 'moons' ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on />}
         </group>
       )}
     </>
@@ -255,37 +227,26 @@ export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
 
-  // planeFound(최종 확정), stablePlane(안정화)
   const [planeFound, setPlaneFound] = useState(false);
   const [stablePlane, setStablePlane] = useState(false);
-
-  // 사용자가 "토끼 부르기" 버튼 누르면 -> true
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
 
-  // 디버깅/표시용 confidence
   const [planeConfidence, setPlaneConfidence] = useState(0);
 
   useEffect(() => {
     requestCameraPermission();
   }, []);
 
-  // 빨강/파랑 원
+  // 가운데 원 색: planeFound ? 파랑 : 빨강
   const circleColor = planeFound ? "blue" : "red";
-
-  // 토끼부르기 버튼 조건
+  // "토끼 부르기" 버튼: !planeFound && stablePlane
   const showButton = !planeFound && stablePlane;
 
   return (
     <>
       {/* 뒤로가기 */}
       <button
-        style={{
-          zIndex: 9999,
-          position: 'fixed',
-          border: 0,
-          backgroundColor: 'transparent',
-          padding: '1rem',
-        }}
+        style={{ zIndex: 9999, position: 'fixed', border: 0, background: 'transparent', padding: '1rem' }}
         onClick={() => window.history.back()}
       >
         <Back />
@@ -305,38 +266,26 @@ export default function NftAppT() {
           fontSize: "14px",
         }}
       >
-        <p>
-          <b>카메라:</b>{" "}
-          {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}
-        </p>
-        <p>
-          <b>오브젝트:</b>{" "}
-          {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}
-        </p>
-        <p>
-          <b>planeConfidence:</b> {planeConfidence}
-        </p>
-        <p>
-          <b>planeFound:</b> {planeFound ? "true" : "false"}
-        </p>
-        <p>
-          <b>stablePlane:</b> {stablePlane ? "true" : "false"}
-        </p>
+        <p><b>카메라:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
+        <p><b>오브젝트:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
+        <p><b>planeConfidence:</b> {planeConfidence}</p>
+        <p><b>planeFound:</b> {planeFound ? "true" : "false"}</p>
+        <p><b>stablePlane:</b> {stablePlane ? "true" : "false"}</p>
       </div>
 
-      {/* 가운데 가이드 원 */}
+      {/* 가운데 원 */}
       <div
         style={{
           position: "absolute",
-          width: "50dvw",
-          height: "50dvh",
-          top: "50dvh",
-          left: "50dvw",
+          width: '50dvw',
+          height: '50dvh',
+          top: '50dvh',
+          left: '50dvw',
           zIndex: 9999,
-          transform: "translate(-50%, -50%)",
+          transform: 'translate(-50%, -50%)',
         }}
       >
-        <svg width="200px" height="200px" viewBox="0 0 50 50">
+        <svg width="200" height="200" viewBox="0 0 50 50">
           <circle
             cx="25"
             cy="25"
@@ -348,9 +297,9 @@ export default function NftAppT() {
         </svg>
       </div>
 
+      {/* 안내 문구 + 버튼 */}
       {!planeFound ? (
         <>
-          {/* 안내 문구 */}
           <div
             style={{
               position: "absolute",
@@ -363,13 +312,26 @@ export default function NftAppT() {
               color: "white",
               fontSize: "14px",
               zIndex: 9999,
+              width: '90vw',
+              maxWidth: '400px',
             }}
           >
             <p>넓은 바닥을 스캔해주세요!</p>
-            <p>수평이 잡히면 planeConfidence가 올라가고, 안정되면 버튼이 생깁니다.</p>
+            <p style={{ marginTop: '8px' }}>
+              <b>안정화 팁:</b>
+              <ul style={{ marginLeft: '16px', paddingLeft: '20px', listStyle: 'circle' }}>
+                <li>주변이 어둡다면, 조명을 더 밝혀주세요.</li>
+                <li>바닥 표면이 너무 매끈하다면, 신문지나 패턴 있는 물건을 잠시 놓아주세요.</li>
+                <li>카메라를 좌우·위아래로 크게 움직여 여러 각도에서 바닥을 스캔해 주세요.</li>
+              </ul>
+            </p>
+            <p style={{ marginTop: '8px' }}>
+              바닥이 "수평"이라고 판단되면 <i>planeConfidence</i>가 올라가고,
+              안정화가 되면 버튼이 나타납니다.
+            </p>
           </div>
 
-          {/* 토끼 부르기 버튼 */}
+          {/* "토끼 부르기" 버튼 */}
           {showButton && (
             <button
               style={{
@@ -403,10 +365,10 @@ export default function NftAppT() {
             borderRadius: "8px",
             color: "white",
             fontSize: "14px",
-            zIndex: 9999,
+            zIndex: 9999
           }}
         >
-          <p>토끼가 바닥에 소환되었습니다!</p>
+          <p>토끼가 소환되었습니다!</p>
         </div>
       )}
 
@@ -419,9 +381,9 @@ export default function NftAppT() {
             stablePlane={stablePlane}
             setStablePlane={setStablePlane}
             requestFinalizePlane={requestFinalizePlane}
-            setCameraPosition={(pos) => setCameraPosition(pos)}
-            setObjectPosition={(pos) => setObjectPosition(pos)}
-            onPlaneConfidenceChange={(val) => setPlaneConfidence(val)}
+            setCameraPosition={setCameraPosition}
+            setObjectPosition={setObjectPosition}
+            onPlaneConfidenceChange={(c: any) => setPlaneConfidence(c)}
           />
           <ambientLight />
           <directionalLight position={[100, 100, 0]} />
