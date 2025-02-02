@@ -66,33 +66,33 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
  *
  * → 이번 예시에서는 이 함수를 사용하지 않습니다.
  */
-function getIntersectionWithCandidatePlane(
-  camera: THREE.Camera,
-  candidateMatrix: THREE.Matrix4,
-  domWidth: number,
-  domHeight: number,
-  circleX: number,
-  circleY: number
-): THREE.Vector3 | null {
-  const ndcX = (circleX / domWidth) * 2 - 1;
-  const ndcY = -((circleY / domHeight) * 2 - 1);
-  const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
-  ndc.unproject(camera);
-  const ray = new THREE.Ray(camera.position, ndc.sub(camera.position).normalize());
+// function getIntersectionWithCandidatePlane(
+//   camera: THREE.Camera,
+//   candidateMatrix: THREE.Matrix4,
+//   domWidth: number,
+//   domHeight: number,
+//   circleX: number,
+//   circleY: number
+// ): THREE.Vector3 | null {
+//   const ndcX = (circleX / domWidth) * 2 - 1;
+//   const ndcY = -((circleY / domHeight) * 2 - 1);
+//   const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
+//   ndc.unproject(camera);
+//   const ray = new THREE.Ray(camera.position, ndc.sub(camera.position).normalize());
 
-  const planePos = new THREE.Vector3();
-  const planeQuat = new THREE.Quaternion();
-  const planeScale = new THREE.Vector3();
-  candidateMatrix.decompose(planePos, planeQuat, planeScale);
-  const localNormal = new THREE.Vector3(0, 0, 1);
-  const planeNormal = localNormal.clone().applyQuaternion(planeQuat);
-  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePos);
-  const intersection = new THREE.Vector3();
-  if (ray.intersectPlane(plane, intersection)) {
-    return intersection;
-  }
-  return null;
-}
+//   const planePos = new THREE.Vector3();
+//   const planeQuat = new THREE.Quaternion();
+//   const planeScale = new THREE.Vector3();
+//   candidateMatrix.decompose(planePos, planeQuat, planeScale);
+//   const localNormal = new THREE.Vector3(0, 0, 1);
+//   const planeNormal = localNormal.clone().applyQuaternion(planeQuat);
+//   const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePos);
+//   const intersection = new THREE.Vector3();
+//   if (ray.intersectPlane(plane, intersection)) {
+//     return intersection;
+//   }
+//   return null;
+// }
 
 /** ============= CameraTracker ============= */
 interface CameraTrackerProps {
