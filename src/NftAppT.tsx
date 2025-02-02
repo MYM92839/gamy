@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useFrame } from '@react-three/fiber';
 
-// 예: SlamCanvas, requestCameraPermission, AlvaARConnectorTHREE, useSlam 등
 // 실제 프로젝트 경로/파일에 맞게 import 조정
 import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
 import { requestCameraPermission } from './libs/util';
@@ -17,8 +16,10 @@ import { Box, Tree } from './ArApp';
 /** =============== 유틸 함수들 =============== */
 
 /**
- * planeMatrix에서 3D 중심 pos -> camera.project() -> "비디오" 좌표 -> "DOM" 좌표
- * => "빨간 원(cx, cy, r, DOM좌표)" 내부인지 판정
+ * planeMatrix에서 3D 중심 pos를 계산하여 카메라 좌표계에서 비디오 좌표로 투영한 뒤,
+ * DOM 좌표로 변환하고, 빨간 원 내부 여부를 판정한다.
+ *
+ * 수정: 평면의 스케일을 고려하여 toleranceFactor를 적용.
  */
 function isPlaneInCircleDom(
   planeMatrix: THREE.Matrix4,
@@ -31,32 +32,30 @@ function isPlaneInCircleDom(
   circleCenterY: number,
   circleRadius: number
 ): boolean {
-  // 1) 평면 중심 계산
   const pos = new THREE.Vector3();
   const rot = new THREE.Quaternion();
   const sca = new THREE.Vector3();
   planeMatrix.decompose(pos, rot, sca);
 
-  // 2) world 좌표 -> clip space (NDC)
-  pos.project(camera);
+  // scale factor에 따른 tolerance 적용 (평면이 크면 조금 여유 있게 판단)
+  const scaleFactor = Math.max(sca.x, sca.y, sca.z);
+  const toleranceFactor = scaleFactor > 1 ? 1.2 : 1;
 
-  // 3) NDC(-1..1) -> 비디오 해상도 좌표
+  pos.project(camera);
   const halfVw = videoWidth / 2;
   const halfVh = videoHeight / 2;
   const videoX = (pos.x * halfVw) + halfVw;
   const videoY = (-pos.y * halfVh) + halfVh;
 
-  // 4) 비디오 좌표 -> DOM 좌표 (필요 시 반올림 또는 보정 가능)
   const scaleX = domWidth / videoWidth;
   const scaleY = domHeight / videoHeight;
   const domX = videoX * scaleX;
   const domY = videoY * scaleY;
 
-  // 5) 빨간 원 내부 판정
   const dx = domX - circleCenterX;
   const dy = domY - circleCenterY;
   const dist2 = dx * dx + dy * dy;
-  return dist2 <= (circleRadius * circleRadius);
+  return dist2 <= (circleRadius * toleranceFactor) * (circleRadius * toleranceFactor);
 }
 
 /** Matrix4 두 개의 위치/회전 차이를 계산 */
@@ -77,7 +76,6 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
   return posDiff + rotDiff;
 }
 
-
 /** ============= CameraTracker ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
@@ -89,18 +87,18 @@ interface CameraTrackerProps {
   setCameraPosition: (pos: THREE.Vector3) => void;
   setObjectPosition: (pos: THREE.Vector3) => void;
   onPlaneConfidenceChange?: (val: number) => void;
-  setPlaneVisible: (v: boolean) => void; // 평면이 visible인지 여부를 부모에게 알림
+  setPlaneVisible: (v: boolean) => void;
 
   // 해상도 보정용
-  videoWidth: number;   // ex) 1280
-  videoHeight: number;  // ex) 720
-  domWidth: number;     // ex) 360
-  domHeight: number;    // ex) 640
+  videoWidth: number;
+  videoHeight: number;
+  domWidth: number;
+  domHeight: number;
 
   // 빨간 원 (DOM 좌표)
-  circleX: number;  // ex) 180
-  circleY: number;  // ex) 320
-  circleR: number;  // ex) 100
+  circleX: number;
+  circleY: number;
+  circleR: number;
 }
 
 function CameraTracker({
@@ -134,9 +132,9 @@ function CameraTracker({
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 평면 안정도 (Confidence) 관련 상태
+  // 평면 안정도(Confidence) 관련 상태
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // 누적된 안정도 기준값
+  const planeConfidenceThreshold = 5; // 누적 기준값
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -199,40 +197,33 @@ function CameraTracker({
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         newMatrix.decompose(pos, rot, sca);
-        // 기본 PlaneGeometry의 로컬 노멀 (0, 0, 1)
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
-        // 카메라에서 평면 중심으로 향하는 단위 벡터
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        // dot 값이 1이면 평면이 정확히 카메라를 향함, 0이면 수직, 음수면 반대 방향
-        // 여기서는 임계값 0.3 이상이면 어느 정도 향한다고 판단
+        // dot가 1이면 정면, 0이면 옆, 음수면 반대 방향
         const FACING_THRESHOLD = 0.3;
         let facingWeight = 0;
         if (dot > FACING_THRESHOLD) {
           facingWeight = (dot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
-          // facingWeight: 0 ~ 1 사이의 값
         }
-        // (C) 추가로 평면이 "설치물"이라면 (땅과 수직한 경우) 검증
-        // 수직 평면의 경우, 평면의 노멀은 수평해야 함 (즉, 업벡터 (0,1,0)와의 내적이 낮아야 함)
+        // (C) 평면이 "설치물"이라면(예, 땅에 평행한 평면) – 여기서는 수직 판정을 위해
         const up = new THREE.Vector3(0, 1, 0);
         const verticality = Math.abs(worldNormal.dot(up));
-        // 예: 수직 평면이면 verticality가 0.3 이하(즉, 평면의 노멀이 수평에 가까움)여야 함.
+        // 수직 평면의 경우, 평면의 노멀은 수평(업벡터와의 내적이 낮아야 함)
         const isVertical = verticality < 0.3;
 
-        // (D) 두 조건 모두 만족해야 안정도 누적
+        // (D) 두 조건 모두 만족하면 안정도 업데이트 (아니면 리셋)
         if (!inCircle || facingWeight <= 0 || !isVertical) {
           setPlaneConfidence(0);
           setStablePlane(false);
         } else {
-          // 평면 변화량 계산 (이전 프레임과의 차이)
           if (!prevPlaneMatrix.current) {
             prevPlaneMatrix.current = newMatrix.clone();
             setPlaneConfidence(facingWeight);
           } else {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-            // 스무딩(EMA) 계수: alpha 값 (0 ~ 1)
-            const alpha = 0.3;
+            const alpha = 0.3; // EMA 계수
             setPlaneConfidence(prev =>
               diffVal < 0.1
                 ? alpha * facingWeight + (1 - alpha) * prev
@@ -240,10 +231,25 @@ function CameraTracker({
             );
             prevPlaneMatrix.current.copy(newMatrix);
           }
-
-          // 누적된 평면 안정도가 기준을 넘으면 안정적(stable)로 판단
+          // (E) 안정도가 기준 이상이면 candidatePlaneMatrix를 EMA 방식으로 부드럽게 업데이트
           if (planeConfidence >= planeConfidenceThreshold) {
-            candidatePlaneMatrix.current.copy(newMatrix);
+            const alphaMatrix = 0.1;
+            const currentPos = new THREE.Vector3();
+            const currentQuat = new THREE.Quaternion();
+            const currentScale = new THREE.Vector3();
+            candidatePlaneMatrix.current.decompose(currentPos, currentQuat, currentScale);
+
+            const newPos = new THREE.Vector3();
+            const newQuat = new THREE.Quaternion();
+            const newScale = new THREE.Vector3();
+            newMatrix.decompose(newPos, newQuat, newScale);
+
+            currentPos.lerp(newPos, alphaMatrix);
+            currentQuat.slerp(newQuat, alphaMatrix);
+            currentScale.lerp(newScale, alphaMatrix);
+
+            candidatePlaneMatrix.current.compose(currentPos, currentQuat, currentScale);
+
             setStablePlane(true);
           }
         }
@@ -255,7 +261,7 @@ function CameraTracker({
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 3) 평면 표시: 안정적(stable) 후보가 있으면 후보 transform 적용, 아니면 기본 위치(카메라 앞)를 사용
+    // 3) 평면 표시: 안정적 후보가 있으면 후보 transform 적용, 그렇지 않으면 기본 위치 (카메라 앞)
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         const pos = new THREE.Vector3();
@@ -266,7 +272,6 @@ function CameraTracker({
         planeRef.current.quaternion.copy(rot);
         planeRef.current.scale.set(3, 3, 3);
       } else {
-        // 기본: 카메라 앞(defaultDistance만큼 떨어진 곳)
         const defaultDistance = 2;
         const camDir = new THREE.Vector3();
         camera.getWorldDirection(camDir);
@@ -278,14 +283,14 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 4) requestFinalizePlane: 최종 확정 시 후보 평면을 final로 지정
+    // 4) requestFinalizePlane: 평면 확정 시 candidate를 최종 평면으로 지정
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
       console.log("🎉 planeFound => place object");
     }
 
-    // 5) 평면 확정 후, 오브젝트 배치 (한 번만 배치)
+    // 5) 평면 확정 후 오브젝트 배치 (최초 한 번)
     if (planeFound && !objectPlaced && objectRef.current) {
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
@@ -312,12 +317,11 @@ function CameraTracker({
     }
   });
 
-  // char 파라미터에 따라 모델 결정 ('moons'이면 Box, 아니면 Tree)
   const isMoons = (char === 'moons');
 
   return (
     <>
-      {/* 파란 평면 (디버그용 혹은 후보 표시) */}
+      {/* 파란 평면 (디버그 및 후보 표시) */}
       <mesh ref={planeRef} visible={false}>
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial
@@ -331,7 +335,7 @@ function CameraTracker({
       {/* 평면 확정 시 오브젝트 배치 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => { }} on={true} /> : <Tree onRenderEnd={() => { }} on={true} />}
+          {isMoons ? <Box onRenderEnd={() => {}} on={true} /> : <Tree onRenderEnd={() => {}} on={true} />}
         </group>
       )}
     </>
@@ -344,40 +348,27 @@ export default function NftAppT() {
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
   const [planeVisible, setPlaneVisible] = useState(false);
 
-  // planeFound / stablePlane / finalize 상태
   const [planeFound, setPlaneFound] = useState(false);
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
-
   const [planeConfidence, setPlaneConfidence] = useState(0);
 
   useEffect(() => {
-    // 모바일 카메라 권한 요청
     requestCameraPermission();
   }, []);
 
-  /**
-   * 가정:
-   * - 실제 카메라 영상: 1280×720
-   * - DOM 표시 영역: 360×640
-   * - 빨간 원: DOM 좌표 (180,320) 반경 100
-   */
   const domWidth = 360;
   const domHeight = 640;
 
-  // 빨간 원
   const circleX = domWidth / 2;   // 180
   const circleY = domHeight / 2;  // 320
   const circleR = 100;
 
-  // 원 색상: 평면 확정 여부에 따라 변경
   const circleColor = planeFound ? 'blue' : 'red';
-  // "토끼 부르기" 버튼 표시 여부
   const showButton = !planeFound && stablePlane;
 
   return (
     <>
-      {/* 뒤로가기 버튼 */}
       <button
         style={{
           position: 'fixed',
@@ -393,7 +384,6 @@ export default function NftAppT() {
         <Back />
       </button>
 
-      {/* HUD */}
       <div
         style={{
           position: 'fixed',
@@ -433,7 +423,6 @@ export default function NftAppT() {
         <p><b>Plane Visible?</b> {planeVisible ? 'YES' : 'NO'}</p>
       </div>
 
-      {/* 빨간 원 (DOM 영역) */}
       <div
         style={{
           position: 'fixed',
@@ -463,7 +452,6 @@ export default function NftAppT() {
         </svg>
       </div>
 
-      {/* 안내 문구 및 버튼 */}
       {!planeFound ? (
         <>
           <div
@@ -524,7 +512,6 @@ export default function NftAppT() {
         </div>
       )}
 
-      {/* SLAM + Three.js 캔버스 */}
       <SlamCanvas id="three-canvas">
         <React.Suspense fallback={null}>
           <CameraTracker
