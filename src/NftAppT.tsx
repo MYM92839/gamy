@@ -16,19 +16,18 @@ import { Box, Tree } from './ArApp';
 /** =============== 유틸 함수들 =============== */
 
 /**
- * planeMatrix에서 3D 중심 pos를 계산하여 카메라 좌표계에서 비디오 좌표로 투영한 뒤,
+ * 평면의 중심을 계산하여 카메라 좌표계의 비디오 좌표로 투영한 후,
  * DOM 좌표로 변환하고, 빨간 원 내부 여부를 판정한다.
- *
- * 수정: 평면의 스케일을 고려하여 toleranceFactor를 적용.
+ * (평면의 크기에 따라 toleranceFactor를 적용)
  */
 function isPlaneInCircleDom(
   planeMatrix: THREE.Matrix4,
   camera: THREE.PerspectiveCamera,
-  videoWidth: number,   // ex) 1280
-  videoHeight: number,  // ex) 720
-  domWidth: number,     // ex) 360
-  domHeight: number,    // ex) 640
-  circleCenterX: number,// DOM 좌표
+  videoWidth: number,
+  videoHeight: number,
+  domWidth: number,
+  domHeight: number,
+  circleCenterX: number,
   circleCenterY: number,
   circleRadius: number
 ): boolean {
@@ -37,7 +36,7 @@ function isPlaneInCircleDom(
   const sca = new THREE.Vector3();
   planeMatrix.decompose(pos, rot, sca);
 
-  // scale factor에 따른 tolerance 적용 (평면이 크면 조금 여유 있게 판단)
+  // 평면의 스케일에 따라 toleranceFactor 적용
   const scaleFactor = Math.max(sca.x, sca.y, sca.z);
   const toleranceFactor = scaleFactor > 1 ? 1.2 : 1;
 
@@ -55,7 +54,7 @@ function isPlaneInCircleDom(
   const dx = domX - circleCenterX;
   const dy = domY - circleCenterY;
   const dist2 = dx * dx + dy * dy;
-  return dist2 <= (circleRadius * toleranceFactor) * (circleRadius * toleranceFactor);
+  return dist2 <= (circleRadius * toleranceFactor) ** 2;
 }
 
 /** Matrix4 두 개의 위치/회전 차이를 계산 */
@@ -134,7 +133,7 @@ function CameraTracker({
 
   // 평면 안정도(Confidence) 관련 상태
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // 누적 기준값
+  const planeConfidenceThreshold = 5; // 누적 안정도가 이 값 이상일 때 안정 상태로 판단
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -192,7 +191,7 @@ function CameraTracker({
           circleR
         );
 
-        // (B) 평면의 노멀 검증 및 가중치 계산
+        // (B) 평면의 노멀 검증 및 facingWeight 계산
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
@@ -201,67 +200,65 @@ function CameraTracker({
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        // dot가 1이면 정면, 0이면 옆, 음수면 반대 방향
         const FACING_THRESHOLD = 0.3;
         let facingWeight = 0;
         if (dot > FACING_THRESHOLD) {
           facingWeight = (dot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
-        // (C) 평면이 "설치물"이라면(예, 땅에 평행한 평면) – 여기서는 수직 판정을 위해
+
+        // (C) 평면의 수직성 검사: 수직 평면이면 (업 벡터와의 내적이 낮아야 함)
         const up = new THREE.Vector3(0, 1, 0);
         const verticality = Math.abs(worldNormal.dot(up));
-        // 수직 평면의 경우, 평면의 노멀은 수평(업벡터와의 내적이 낮아야 함)
-        const isVertical = verticality < 0.3;
+        const isVertical = verticality < 0.3; // 수직이면 true
 
-        // (D) 두 조건 모두 만족하면 안정도 업데이트 (아니면 리셋)
-        if (!inCircle || facingWeight <= 0 || !isVertical) {
-          setPlaneConfidence(0);
-          setStablePlane(false);
-        } else {
-          if (!prevPlaneMatrix.current) {
-            prevPlaneMatrix.current = newMatrix.clone();
-            setPlaneConfidence(facingWeight);
-          } else {
+        // (D) 조건: 빨간 원 내부, facingWeight > 0, 그리고 수직이면 → 누적 안정도 업데이트
+        if (inCircle && facingWeight > 0 && isVertical) {
+          // 누적 안정도를 갱신 (조건이 계속 만족되면 누적, 아니면 리셋)
+          let newConfidence = 0;
+          if (prevPlaneMatrix.current) {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-            const alpha = 0.3; // EMA 계수
-            setPlaneConfidence(prev =>
-              diffVal < 0.1
-                ? alpha * facingWeight + (1 - alpha) * prev
-                : facingWeight
-            );
-            prevPlaneMatrix.current.copy(newMatrix);
+            // diff가 작으면 안정한 상태로 누적
+            newConfidence = diffVal < 0.1 ? planeConfidence + facingWeight : facingWeight;
+          } else {
+            newConfidence = facingWeight;
           }
-          // (E) 안정도가 기준 이상이면 candidatePlaneMatrix를 EMA 방식으로 부드럽게 업데이트
-          if (planeConfidence >= planeConfidenceThreshold) {
-            const alphaMatrix = 0.1;
-            const currentPos = new THREE.Vector3();
-            const currentQuat = new THREE.Quaternion();
-            const currentScale = new THREE.Vector3();
-            candidatePlaneMatrix.current.decompose(currentPos, currentQuat, currentScale);
+          setPlaneConfidence(newConfidence);
+          prevPlaneMatrix.current = newMatrix.clone();
 
-            const newPos = new THREE.Vector3();
-            const newQuat = new THREE.Quaternion();
-            const newScale = new THREE.Vector3();
-            newMatrix.decompose(newPos, newQuat, newScale);
+          // EMA 방식으로 candidatePlaneMatrix 업데이트 (조건이 만족되면 계속 보정)
+          const alphaMatrix = 0.1;
+          const currentPos = new THREE.Vector3();
+          const currentQuat = new THREE.Quaternion();
+          const currentScale = new THREE.Vector3();
+          candidatePlaneMatrix.current.decompose(currentPos, currentQuat, currentScale);
+          const newPos = new THREE.Vector3();
+          const newQuat = new THREE.Quaternion();
+          const newScale = new THREE.Vector3();
+          newMatrix.decompose(newPos, newQuat, newScale);
+          currentPos.lerp(newPos, alphaMatrix);
+          currentQuat.slerp(newQuat, alphaMatrix);
+          currentScale.lerp(newScale, alphaMatrix);
+          candidatePlaneMatrix.current.compose(currentPos, currentQuat, currentScale);
 
-            currentPos.lerp(newPos, alphaMatrix);
-            currentQuat.slerp(newQuat, alphaMatrix);
-            currentScale.lerp(newScale, alphaMatrix);
-
-            candidatePlaneMatrix.current.compose(currentPos, currentQuat, currentScale);
-
+          // 누적 안정도가 threshold 이상이면 안정 상태로 판단
+          if (newConfidence >= planeConfidenceThreshold) {
             setStablePlane(true);
+          } else {
+            setStablePlane(false);
           }
+        } else {
+          setStablePlane(false);
+          setPlaneConfidence(0);
         }
       } else {
-        setPlaneConfidence(0);
         setStablePlane(false);
+        setPlaneConfidence(0);
       }
     }
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 3) 평면 표시: 안정적 후보가 있으면 후보 transform 적용, 그렇지 않으면 기본 위치 (카메라 앞)
+    // 3) 평면 표시: 조건 만족 시 candidatePlaneMatrix 적용, 아니면 카메라 앞쪽 기본 위치 사용
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         const pos = new THREE.Vector3();
@@ -283,28 +280,25 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 4) requestFinalizePlane: 평면 확정 시 candidate를 최종 평면으로 지정
+    // 4) requestFinalizePlane: 최종 확정 시 candidatePlaneMatrix를 finalPlaneMatrix에 복사
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
       console.log("🎉 planeFound => place object");
     }
 
-    // 5) 평면 확정 후 오브젝트 배치 (최초 한 번)
+    // 5) 평면 확정 후 오브젝트 배치 (한 번)
     if (planeFound && !objectPlaced && objectRef.current) {
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
       const sca = new THREE.Vector3();
       finalPlaneMatrix.current.decompose(pos, rot, sca);
-
       pos.x += offsetX;
       pos.y += offsetY;
       pos.z += offsetZ;
-
       objectRef.current.position.copy(pos);
       objectRef.current.quaternion.copy(rot);
       objectRef.current.scale.setScalar(scale);
-
       setObjectPosition(pos.clone());
       setObjectPlaced(true);
       console.log("✅ Object placed!");
@@ -317,25 +311,21 @@ function CameraTracker({
     }
   });
 
+  // char 파라미터에 따라 모델 선택 ('moons'이면 Box, 아니면 Tree)
   const isMoons = (char === 'moons');
 
   return (
     <>
-      {/* 파란 평면 (디버그 및 후보 표시) */}
+      {/* 파란 평면 (디버그/후보 표시) */}
       <mesh ref={planeRef} visible={false}>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial
-          color="#00f"
-          opacity={0.3}
-          transparent
-          side={THREE.DoubleSide}
-        />
+        <meshBasicMaterial color="#00f" opacity={0.3} transparent side={THREE.DoubleSide} />
       </mesh>
 
       {/* 평면 확정 시 오브젝트 배치 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => {}} on={true} /> : <Tree onRenderEnd={() => {}} on={true} />}
+          {isMoons ? <Box onRenderEnd={() => {}} /> : <Tree onRenderEnd={() => {}} />}
         </group>
       )}
     </>
@@ -347,7 +337,6 @@ export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
   const [planeVisible, setPlaneVisible] = useState(false);
-
   const [planeFound, setPlaneFound] = useState(false);
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
@@ -359,12 +348,12 @@ export default function NftAppT() {
 
   const domWidth = 360;
   const domHeight = 640;
-
-  const circleX = domWidth / 2;   // 180
-  const circleY = domHeight / 2;  // 320
+  const circleX = domWidth / 2;
+  const circleY = domHeight / 2;
   const circleR = 100;
 
-  const circleColor = planeFound ? 'blue' : 'red';
+  // UI: planeFound가 true이면 원 색상과 버튼 상태 변경
+  const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
   return (
@@ -403,9 +392,15 @@ export default function NftAppT() {
         <p>
           <b>오브젝트</b>: {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}
         </p>
-        <p><b>confidence</b>: {planeConfidence}</p>
-        <p><b>planeFound</b>: {planeFound ? 'true' : 'false'}</p>
-        <p><b>stablePlane</b>: {stablePlane ? 'true' : 'false'}</p>
+        <p>
+          <b>confidence</b>: {planeConfidence}
+        </p>
+        <p>
+          <b>planeFound</b>: {planeFound ? 'true' : 'false'}
+        </p>
+        <p>
+          <b>stablePlane</b>: {stablePlane ? 'true' : 'false'}
+        </p>
       </div>
 
       <div
@@ -420,7 +415,9 @@ export default function NftAppT() {
           borderRadius: '8px'
         }}
       >
-        <p><b>Plane Visible?</b> {planeVisible ? 'YES' : 'NO'}</p>
+        <p>
+          <b>Plane Visible?</b> {planeVisible ? 'YES' : 'NO'}
+        </p>
       </div>
 
       <div
@@ -441,14 +438,7 @@ export default function NftAppT() {
           height={domHeight}
           style={{ position: 'absolute', top: 0, left: 0 }}
         >
-          <circle
-            cx={circleX}
-            cy={circleY}
-            r={circleR}
-            fill="none"
-            stroke={circleColor}
-            strokeWidth="2"
-          />
+          <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
         </svg>
       </div>
 
@@ -471,7 +461,6 @@ export default function NftAppT() {
             <p>빨간 원 안에 평면을 맞춰주세요.</p>
             <p>폰을 천천히 움직여 텍스처·조명을 확보하세요!</p>
           </div>
-
           {showButton && (
             <button
               style={{
