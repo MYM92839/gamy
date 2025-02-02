@@ -382,7 +382,7 @@ export default function NftAppT() {
           top:'50%',
           left:'50%',
           transform:'translate(-50%,-50%)',
-          background:'#000',    // 예: 검은 배경(카메라 캔버스 위에 오버레이)
+          background:'transparent',    // 예: 검은 배경(카메라 캔버스 위에 오버레이)
           overflow:'hidden',
           zIndex:9998,
         }}
