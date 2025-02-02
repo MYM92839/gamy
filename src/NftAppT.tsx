@@ -1,8 +1,8 @@
 import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
-import { Box } from './ArApp';
+import { Box, Tree } from './ArApp';
 import Back from './assets/icons/Back';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
 import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
@@ -19,6 +19,8 @@ import { useSlam, } from './libs/SLAMProvider';
 // const objectPosition = new THREE.Vector3()
 
 const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
+  const { char } = useParams();
+
   const { alvaAR } = useSlam();
   const [searchParams] = useSearchParams()
   // const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
@@ -132,9 +134,13 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
 
   // ✅ objectPlaced가 true이면 오브젝트 계속 유지!/*  */
   return (
-    clicked && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
-      <Box onRenderEnd={() => { }} on={true} />
-    </group>)
+    clicked && (
+      char && char === 'moons' ? <group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
+        <Box onRenderEnd={() => { }} on={true} />
+      </group> : <group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
+        <Tree onRenderEnd={() => { }} on={true} />
+      </group>
+    )
     //)
   );
 };
