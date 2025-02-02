@@ -63,6 +63,8 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 /**
  * 빨간 원의 중심을 기준으로, 카메라에서 해당 화면 좌표를 통과하는 광선과
  * 후보 평면(candidateMatrix)과의 교차점을 계산하여 반환하는 함수.
+ *
+ * → 이번 예시에서는 이 함수를 사용하지 않습니다.
  */
 function getIntersectionWithCandidatePlane(
   camera: THREE.Camera,
@@ -141,7 +143,7 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // 쿼리 파라미터 offset은 제거한 상태로 처리
+  // 쿼리 파라미터 offset 제거
   // const offsetX = parseFloat(searchParams.get('x') || '0');
   // const offsetY = parseFloat(searchParams.get('y') || '0');
   // const offsetZ = parseFloat(searchParams.get('z') || '0');
@@ -150,7 +152,7 @@ function CameraTracker({
   const applyPose = useRef<any>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // 누적 안정도 임계값
+  const planeConfidenceThreshold = 5;
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -182,7 +184,6 @@ function CameraTracker({
     ctx?.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
     const frame = ctx?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     if (!frame) return;
-
     const camPose = alvaAR.findCameraPose(frame);
     if (camPose) {
       applyPose.current(camPose, camera.quaternion, camera.position);
@@ -200,7 +201,7 @@ function CameraTracker({
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        const centerDistanceThreshold = circleR * 1.5; // 예: 150 픽셀 if circleR=100
+        const centerDistanceThreshold = circleR * 1.5;
 
         // (B) 평면의 노멀 검증 및 effectiveFacingWeight 계산
         const pos = new THREE.Vector3();
@@ -211,9 +212,8 @@ function CameraTracker({
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        const effectiveDot = -dot; // 부호 반전: 원하는 상태가 dot -0.4 ~ -0.6 -> effectiveDot 0.4~0.6
+        const effectiveDot = -dot; // 부호 반전 (예: 원래 dot가 -0.4 ~ -0.6이면 effectiveDot는 0.4~0.6)
         onDotValueChange?.(dot);
-
         const FACING_THRESHOLD = 0.2;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
@@ -247,7 +247,7 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          // EMA 업데이트 (스무딩 강화: alphaMatrix를 0.1로 적용)
+          // EMA 업데이트 (스무딩 강화: α=0.1)
           const alphaMatrix = 0.1;
           const currentPos = new THREE.Vector3();
           const currentQuat = new THREE.Quaternion();
@@ -292,7 +292,6 @@ function CameraTracker({
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camDir = new THREE.Vector3().subVectors(camera.position, pos).normalize();
-        // 만약 평면의 노멀과 카메라 방향의 내적이 음수이면, Y축을 기준으로 180도 회전
         if (worldNormal.dot(camDir) < 0) {
           const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
           rot.multiply(flipQuat);
@@ -320,31 +319,26 @@ function CameraTracker({
     }
 
     // 5) 평면 확정 후 오브젝트 배치 (최종 오브젝트 위치 결정)
-    // 토끼의 최종 위치는 후보 평면이 충분히 안정(stable)하고, 평면 크기(스케일)가 일정 임계값 이상일 때 한 번 결정되고 고정됨.
+    // 토끼의 최종 위치는 후보 평면의 중심(즉, finalPlaneMatrix에서 분해한 위치)을 그대로 사용합니다.
     if (planeFound && !objectPlaced && objectRef.current) {
       if (!finalObjectPosition.current) {
         // 후보 평면의 크기를 평가 (평면 스케일)
         const planeScale = new THREE.Vector3();
         candidatePlaneMatrix.current.decompose(new THREE.Vector3(), new THREE.Quaternion(), planeScale);
         const planeSize = Math.max(planeScale.x, planeScale.y, planeScale.z);
-        const sizeThreshold = 0.5; // 환경에 맞게 조정 (예: 0.5 이상일 때 충분한 평면 크기로 판단)
+        const sizeThreshold = 0.5; // 임계값 (예: 0.5 이상이면 충분한 평면 크기로 판단)
         if (planeSize < sizeThreshold) {
           console.log("Plane size too small:", planeSize);
         } else {
-          const intersection = getIntersectionWithCandidatePlane(camera, finalPlaneMatrix.current, domWidth, domHeight, circleX, circleY);
-          let finalPos: THREE.Vector3;
-          if (intersection && intersection.distanceTo(camera.position) <= 10) {
-            finalPos = intersection;
-          } else {
-            finalPos = new THREE.Vector3();
-            finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
-          }
+          // 최종 위치는 finalPlaneMatrix의 분해된 위치를 그대로 사용
+          const finalPos = new THREE.Vector3();
+          finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
           finalObjectPosition.current = finalPos.clone();
         }
       }
       if (finalObjectPosition.current) {
         objectRef.current.position.copy(finalObjectPosition.current);
-        // 회전 보정: 최종 평면의 회전에서 X,Z 회전 제거 (Y축 회전만 유지)
+        // 회전 보정: finalPlaneMatrix에서 Y축 회전만 남기도록 보정
         const planeQuat = new THREE.Quaternion();
         finalPlaneMatrix.current.decompose(new THREE.Vector3(), planeQuat, new THREE.Vector3());
         const euler = new THREE.Euler().setFromQuaternion(planeQuat, 'YXZ');
