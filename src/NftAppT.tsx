@@ -19,42 +19,42 @@ import { Box, Tree } from './ArApp';
  * 평면의 중심을 계산하여 카메라 좌표계의 비디오 좌표로 투영한 후,
  * DOM 좌표로 변환하고, 빨간 원 내부 여부(여기서는 사용하지 않음)를 판정한다.
  */
-function isPlaneInCircleDom(
-  planeMatrix: THREE.Matrix4,
-  camera: THREE.PerspectiveCamera,
-  videoWidth: number,
-  videoHeight: number,
-  domWidth: number,
-  domHeight: number,
-  circleCenterX: number,
-  circleCenterY: number,
-  circleRadius: number
-): boolean {
-  const pos = new THREE.Vector3();
-  const rot = new THREE.Quaternion();
-  const sca = new THREE.Vector3();
-  planeMatrix.decompose(pos, rot, sca);
+// function isPlaneInCircleDom(
+//   planeMatrix: THREE.Matrix4,
+//   camera: THREE.PerspectiveCamera,
+//   videoWidth: number,
+//   videoHeight: number,
+//   domWidth: number,
+//   domHeight: number,
+//   circleCenterX: number,
+//   circleCenterY: number,
+//   circleRadius: number
+// ): boolean {
+//   const pos = new THREE.Vector3();
+//   const rot = new THREE.Quaternion();
+//   const sca = new THREE.Vector3();
+//   planeMatrix.decompose(pos, rot, sca);
 
-  // 평면의 스케일에 따라 toleranceFactor 적용
-  const scaleFactor = Math.max(sca.x, sca.y, sca.z);
-  const toleranceFactor = scaleFactor > 1 ? 1.2 : 1;
+//   // 평면의 스케일에 따라 toleranceFactor 적용
+//   const scaleFactor = Math.max(sca.x, sca.y, sca.z);
+//   const toleranceFactor = scaleFactor > 1 ? 1.2 : 1;
 
-  pos.project(camera);
-  const halfVw = videoWidth / 2;
-  const halfVh = videoHeight / 2;
-  const videoX = (pos.x * halfVw) + halfVw;
-  const videoY = (-pos.y * halfVh) + halfVh;
+//   pos.project(camera);
+//   const halfVw = videoWidth / 2;
+//   const halfVh = videoHeight / 2;
+//   const videoX = (pos.x * halfVw) + halfVw;
+//   const videoY = (-pos.y * halfVh) + halfVh;
 
-  const scaleX = domWidth / videoWidth;
-  const scaleY = domHeight / videoHeight;
-  const domX = videoX * scaleX;
-  const domY = videoY * scaleY;
+//   const scaleX = domWidth / videoWidth;
+//   const scaleY = domHeight / videoHeight;
+//   const domX = videoX * scaleX;
+//   const domY = videoY * scaleY;
 
-  const dx = domX - circleCenterX;
-  const dy = domY - circleCenterY;
-  const dist2 = dx * dx + dy * dy;
-  return dist2 <= (circleRadius * toleranceFactor) ** 2;
-}
+//   const dx = domX - circleCenterX;
+//   const dy = domY - circleCenterY;
+//   const dist2 = dx * dx + dy * dy;
+//   return dist2 <= (circleRadius * toleranceFactor) ** 2;
+// }
 
 /** 두 Matrix4의 위치/회전 차이를 계산 */
 function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
