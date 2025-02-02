@@ -65,33 +65,33 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
  * 후보 평면(candidateMatrix)과의 교차점을 계산하여 반환하는 함수.
  * → 현재 이 함수는 사용하지 않습니다.
  */
-function getIntersectionWithCandidatePlane(
-  camera: THREE.Camera,
-  candidateMatrix: THREE.Matrix4,
-  domWidth: number,
-  domHeight: number,
-  circleX: number,
-  circleY: number
-): THREE.Vector3 | null {
-  const ndcX = (circleX / domWidth) * 2 - 1;
-  const ndcY = -((circleY / domHeight) * 2 - 1);
-  const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
-  ndc.unproject(camera);
-  const ray = new THREE.Ray(camera.position, ndc.sub(camera.position).normalize());
+// function getIntersectionWithCandidatePlane(
+//   camera: THREE.Camera,
+//   candidateMatrix: THREE.Matrix4,
+//   domWidth: number,
+//   domHeight: number,
+//   circleX: number,
+//   circleY: number
+// ): THREE.Vector3 | null {
+//   const ndcX = (circleX / domWidth) * 2 - 1;
+//   const ndcY = -((circleY / domHeight) * 2 - 1);
+//   const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
+//   ndc.unproject(camera);
+//   const ray = new THREE.Ray(camera.position, ndc.sub(camera.position).normalize());
 
-  const planePos = new THREE.Vector3();
-  const planeQuat = new THREE.Quaternion();
-  const planeScale = new THREE.Vector3();
-  candidateMatrix.decompose(planePos, planeQuat, planeScale);
-  const localNormal = new THREE.Vector3(0, 0, 1);
-  const planeNormal = localNormal.clone().applyQuaternion(planeQuat);
-  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePos);
-  const intersection = new THREE.Vector3();
-  if (ray.intersectPlane(plane, intersection)) {
-    return intersection;
-  }
-  return null;
-}
+//   const planePos = new THREE.Vector3();
+//   const planeQuat = new THREE.Quaternion();
+//   const planeScale = new THREE.Vector3();
+//   candidateMatrix.decompose(planePos, planeQuat, planeScale);
+//   const localNormal = new THREE.Vector3(0, 0, 1);
+//   const planeNormal = localNormal.clone().applyQuaternion(planeQuat);
+//   const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePos);
+//   const intersection = new THREE.Vector3();
+//   if (ray.intersectPlane(plane, intersection)) {
+//     return intersection;
+//   }
+//   return null;
+// }
 
 /**
  * AR 시스템이 반환하는 평면 행렬의 translation 요소에 scaleFactor를 곱해
