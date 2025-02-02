@@ -90,6 +90,7 @@ interface CameraTrackerProps {
   setCameraPosition: (pos: THREE.Vector3) => void;
   setObjectPosition: (pos: THREE.Vector3) => void;
   onPlaneConfidenceChange?: (val: number) => void;
+  setPlaneVisible: (v: boolean) => void; // 🟢 plane이 visible인지 여부를 부모에게 알리는 콜백
 
   // 해상도 보정용
   videoWidth: number;   // ex) 1280
@@ -112,6 +113,7 @@ function CameraTracker({
   setCameraPosition,
   setObjectPosition,
   onPlaneConfidenceChange,
+  setPlaneVisible,
 
   videoWidth,
   videoHeight,
@@ -266,6 +268,15 @@ function CameraTracker({
       setObjectPlaced(true);
       console.log("✅ Object placed!");
     }
+
+
+    if (planeRef.current) {
+      // 예: 내부 로직에서 "stablePlane && !planeFound" 시 planeRef.current.visible = true; 등
+      setPlaneVisible(planeRef.current.visible);
+    } else {
+      // planeRef 아직 없음
+      setPlaneVisible(false);
+    }
   });
 
   // char => 'moons'? => Box, else Tree
@@ -299,6 +310,7 @@ function CameraTracker({
 export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
+  const [planeVisible, setPlaneVisible] = useState(false);
 
   // planeFound / stablePlane / finalize
   const [planeFound, setPlaneFound] = useState(false);
@@ -371,6 +383,19 @@ export default function NftAppT() {
         <p><b>confidence</b>: {planeConfidence}</p>
         <p><b>planeFound</b>: {planeFound ? 'true' : 'false'}</p>
         <p><b>stablePlane</b>: {stablePlane ? 'true' : 'false'}</p>
+      </div>
+
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        zIndex: 9999,
+        color: 'white',
+        background: 'rgba(0,0,0,0.5)',
+        padding: '10px',
+        borderRadius: '8px'
+      }}>
+        <p><b>Plane Visible?</b> {planeVisible ? 'YES' : 'NO'}</p>
       </div>
 
       {/* 빨간 원 (DOM) - 360×640 영역 가정 */}
@@ -470,6 +495,7 @@ export default function NftAppT() {
         {/* 뒤에 렌더되는 3D 씬 */}
         <React.Suspense fallback={null}>
           <CameraTracker
+          setPlaneVisible={(v) => setPlaneVisible(v)}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
