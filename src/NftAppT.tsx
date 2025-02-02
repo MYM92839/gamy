@@ -17,28 +17,88 @@ import { useSlam, } from './libs/SLAMProvider';
 // const context = createContext(undefined);
 // const currentCameraPosition = new THREE.Vector3();
 // const objectPosition = new THREE.Vector3()
+/**
+ * 유틸: 두 Matrix4 간 위치·회전 차이를 단순 비교
+ * diff값이 작을수록 유사하다고 봄
+ */
+function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
+  // position & rotation
+  const pos1 = new THREE.Vector3();
+  const pos2 = new THREE.Vector3();
+  const rot1 = new THREE.Quaternion();
+  const rot2 = new THREE.Quaternion();
+  const sca1 = new THREE.Vector3();
+  const sca2 = new THREE.Vector3();
 
-const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; originRef: any; setAniStarted: any; setCameraPosition: any; setObjectPosition: any }) => {
+  m1.decompose(pos1, rot1, sca1);
+  m2.decompose(pos2, rot2, sca2);
+
+  // 위치 차이
+  const posDiff = pos1.distanceTo(pos2);
+
+  // 회전 차이 (쿼터니언 dot product)
+  // dot==1이면 회전이 동일, dot이 낮을수록 회전 차가 큼
+  const dot = Math.abs(rot1.dot(rot2));
+  const rotDiff = 1 - dot; // 간단 처리(0에 가까울수록 동일)
+
+  // 간단히 둘을 합산
+  return posDiff + rotDiff;
+}
+
+interface CameraTrackerProps {
+  setCameraPosition: (pos: THREE.Vector3) => void;
+  setObjectPosition: (pos: THREE.Vector3) => void;
+  onPlaneStable: () => void; // plane이 안정되었음을 부모에게 알리는 콜백
+  onPlaneConfidenceChange: (confidence: number) => void; // 실시간 confidence 업데이트
+}
+
+/**
+ * CameraTracker:
+ * - 1) 카메라 Pose 추적
+ * - 2) 평면 검출 + "안정도" 로직(planeConfidence)
+ * - 3) 평면이 충분히 안정되면(planeFound) Plane 시각화 + 오브젝트 배치
+ */
+const CameraTracker = ({
+  setCameraPosition,
+  setObjectPosition,
+  onPlaneStable,
+  onPlaneConfidenceChange
+}: CameraTrackerProps) => {
   const { char } = useParams();
-
+  const [searchParams] = useSearchParams();
   const { alvaAR } = useSlam();
-  const [searchParams] = useSearchParams()
-  // const meter = searchParams.get('meter') ? parseInt(searchParams.get('meter')!) : 10
-  const scale = searchParams.get('scale') ? parseFloat(searchParams.get('scale')!) : 1
-  const x = searchParams.get('x') ? parseFloat(searchParams.get('x')!) : 0
-  const y = searchParams.get('y') ? parseFloat(searchParams.get('y')!) : 0
-  const z = searchParams.get('z') ? parseFloat(searchParams.get('z')!) : 0
-  // const [objectColor] = useState("red");
-  const [objectPlaced, setObjectPlaced] = useState(false);
-  // const [objectVisible, setObjectVisible] = useState(false);
-  const objectRef = useRef<THREE.Group>(null);
-  const applyPose = useRef<any>(null);
-  const objectPosition = useRef(new THREE.Vector3());
-  const sett = useRef(false)
-  // const originSet = useRef(false)
-  /** ✅ 원점 감지 시 오브젝트 위치 설정 */
 
-  /** ✅ AlvaAR SLAM 활성화 */
+  // 파라미터에서 스케일 / 좌표 오프셋
+  const scale = parseFloat(searchParams.get('scale') || '1');
+  const offsetX = parseFloat(searchParams.get('x') || '0');
+  const offsetY = parseFloat(searchParams.get('y') || '0');
+  const offsetZ = parseFloat(searchParams.get('z') || '0');
+
+  // AlvaAR -> Three.js
+  const applyPose = useRef<any>(null);
+
+  // 평면 확정 여부
+  const [planeFound, setPlaneFound] = useState(false);
+  // 오브젝트 배치 여부
+  const [objectPlaced, setObjectPlaced] = useState(false);
+
+  // 평면 행렬
+  const planeMatrix = useRef(new THREE.Matrix4());
+  // 이전 프레임 평면 행렬
+  const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
+
+  // 평면 안정도
+  const [planeConfidence, setPlaneConfidence] = useState(0);
+  // 임계값(예: 5)
+  const planeConfidenceThreshold = 5;
+
+  // Plane 시각화를 위한 ref
+  const planeRef = useRef<THREE.Mesh>(null);
+
+  // 오브젝트 ref
+  const objectRef = useRef<THREE.Group>(null);
+
+  // AlvaAR SLAM 초기화
   useEffect(() => {
     if (alvaAR) {
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
@@ -46,189 +106,152 @@ const CameraTracker = ({ setCameraPosition, clicked }: { clicked: boolean; origi
     }
   }, [alvaAR]);
 
-  /** ✅ useFrame 루프 */
+  // 매 프레임 동작
   useFrame(({ camera }) => {
-    // if (originRef.current && !objectPlaced) {
-    //   console.log("🔄 원점 감지! 초기 오브젝트 위치 설정:", originRef.current);
-    //   objectPosition.current.copy(originRef.current); // ✅ 원점 한 번만 설정
-    //   setObjectPlaced(true); // ✅ 최초 배치 이후 더 이상 변경되지 않음
-    // }
+    if (!alvaAR || !applyPose.current) return;
 
-    if (!objectPlaced && clicked/*  */) {
-      objectPosition.current.set(x, y, z)
-      setObjectPlaced(true)
-    }
-    if (!origin || !alvaAR || !applyPose.current) {
-      console.warn("🚨 useFrame 실행 중 조건 불만족!", { origin, alvaAR, applyPose: applyPose.current });
-      return;
-    }
-
-    console.log("✅ useFrame 실행!");
-
-    /** ✅ AlvaAR을 사용하여 카메라 위치 업데이트 */
+    /** 1) 카메라 Pose 추적 */
     const video = document.getElementById("ar-video") as HTMLVideoElement;
-    if (!video) {
-      console.error("🚨 비디오 엘리먼트를 찾을 수 없음!");
-      return;
-    }
+    if (!video) return;
 
-    /** ✅ Canvas 생성하여 ar-video 영상 캡처 */
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      console.error("🚨 Canvas 컨텍스트를 찾을 수 없음!");
-      return;
-    }
-
     canvas.width = video.videoWidth || 1280;
     canvas.height = video.videoHeight || 720;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    /** ✅ AlvaAR로 SLAM pose 추출 */
-    const pose = alvaAR.findCameraPose(imageData);
-    if (pose) {
-
-
-      //////
-
-      applyPose.current(pose, camera.quaternion, camera.position);
-      console.log("📍 AlvaAR 카메라 위치 업데이트:", camera.position);
-
-
-      if (objectRef.current && !sett.current) {
-        applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
-
-        objectRef.current.position.x = objectRef.current.position.x + x
-        objectRef.current.position.y = objectRef.current.position.y + y
-        objectRef.current.position.z = objectRef.current.position.z + z
-
-        sett.current = true
-      }
-
-      // 오브젝트
-      // if (objectRef.current && !originSet.current) {
-
-      //   originSet.current = true
-      //   m.fromArray(pose);
-      //   r.setFromRotationMatrix(m);
-      //   t.set(pose[12], pose[13], pose[14]);
-
-      //   (objectRef.current.quaternion !== null) && objectRef.current.quaternion.set(r.x, -r.y, -r.z, r.w);
-      //   (objectRef.current.position !== null) && objectRef.current.position.set(-t.x, t.y, t.z);
-
-      //   // applyPose로 오브젝트 위치 업데이트
-      //   // applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
-      //   // 오브젝트 위치 반전 (좌우, 앞뒤)
-
-
-      //   console.log("🟦 오브젝트 위치 업데이트 (반전됨):", objectRef.current.position);
-      // }
-
-
+    const camPose = alvaAR.findCameraPose(imageData);
+    if (camPose) {
+      applyPose.current(camPose, camera.quaternion, camera.position);
       setCameraPosition(camera.position.clone());
-    } else {
-      console.warn("⚠️ AlvaAR에서 pose를 찾을 수 없음!");
+    }
+
+    /** 2) 평면이 아직 확정되지 않았다면 -> findPlane() */
+    if (!planeFound) {
+      const planePose = alvaAR.findPlane();
+      if (planePose) {
+        // 2-1) 행렬 변환
+        const newMatrix = new THREE.Matrix4().fromArray(planePose);
+
+        // 2-2) 이전 행렬이 없으면(처음 감지) confidence=1
+        if (!prevPlaneMatrix.current) {
+          prevPlaneMatrix.current = newMatrix.clone();
+          setPlaneConfidence(1);
+        } else {
+          // 2-3) 이전 행렬과 비교
+          const diff = matrixDiff(prevPlaneMatrix.current, newMatrix);
+          if (diff < 0.05) {
+            // 차이가 작으면 안정적 => confidence++
+            setPlaneConfidence((c) => c + 1);
+          } else {
+            // 갑자기 튀면 confidence 리셋
+            setPlaneConfidence(1);
+          }
+          prevPlaneMatrix.current = newMatrix.clone();
+        }
+
+        // 2-4) planeConfidence가 임계값 이상이면 "평면 확정"
+        if (planeConfidence >= planeConfidenceThreshold) {
+          planeMatrix.current.copy(newMatrix);
+          setPlaneFound(true);
+          console.log("✅ 평면이 안정적으로 검출되었습니다!");
+          onPlaneStable(); // 부모에게 알림(원 색 변경 등)
+        }
+      }
+    }
+
+    // 부모에게 실시간 confidence 알려주기
+    onPlaneConfidenceChange(planeConfidence);
+
+    /** 3) 평면이 확정(planeFound)되면 => planeRef에 position/quaternion 반영 */
+    if (planeFound && planeRef.current) {
+      const pos = new THREE.Vector3();
+      const rot = new THREE.Quaternion();
+      const sca = new THREE.Vector3();
+      planeMatrix.current.decompose(pos, rot, sca);
+
+      planeRef.current.position.copy(pos);
+      planeRef.current.quaternion.copy(rot);
+      // planeRef.current.scale.set(1,1,1); // 필요시 크기 조절
+    }
+
+    /** 4) 오브젝트가 아직 배치되지 않았다면 -> 배치 */
+    if (planeFound && !objectPlaced && objectRef.current) {
+      const pos = new THREE.Vector3();
+      const rot = new THREE.Quaternion();
+      const sca = new THREE.Vector3();
+      planeMatrix.current.decompose(pos, rot, sca);
+
+      // 추가 오프셋
+      pos.x += offsetX;
+      pos.y += offsetY;
+      pos.z += offsetZ;
+
+      // 오브젝트 배치
+      objectRef.current.position.copy(pos);
+      objectRef.current.quaternion.copy(rot);
+      objectRef.current.scale.set(scale, scale, scale);
+
+      setObjectPosition(pos.clone());
+      setObjectPlaced(true);
+      console.log("✅ 오브젝트 배치 완료!");
     }
   });
 
-  // ✅ objectPlaced가 true이면 오브젝트 계속 유지!/*  */
   return (
-    clicked && (
-      char && char === 'moons' ? <group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
-        <Box onRenderEnd={() => { }} on={true} />
-      </group> : <group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
-        <Tree onRenderEnd={() => { }} on={true} />
-      </group>
-    )
-    //)
+    <>
+      {/* 파란색 반투명 plane 시각화 */}
+      {planeFound && (
+        <mesh ref={planeRef}>
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial
+            color="#0000ff"
+            opacity={0.3}
+            transparent
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {/* 오브젝트 */}
+      {planeFound && (
+        <group ref={objectRef}>
+          {char === 'moons' ? (
+            <Box onRenderEnd={() => {}} on />
+          ) : (
+            <Tree onRenderEnd={() => {}} on />
+          )}
+        </group>
+      )}
+    </>
   );
 };
-
-
-
-// function Box() {
-//   const modelRef = useRef<THREE.Group>(null);
-//   const instances: any = useContext(context);
-//   const [ang, setAng] = useState<[number, number, number]>([0, 0, 0]);
-//   const [pos, setPos] = useState<[number, number, number]>([0, 0, 0]);
-
-//   useFrame(({ gl, camera }) => {
-//     if (gl) {
-//       (camera as THREE.PerspectiveCamera).aspect = window.innerWidth / window.innerHeight;
-//       camera.updateProjectionMatrix();
-//       gl.setSize(window.innerWidth, window.innerHeight);
-//     }
-//   });
-
-//   useEffect(() => {
-//     const getData = async () => {
-//       try {
-//         const res = await fetch('data/angle.json', {
-//           headers: {
-//             'Content-Type': 'application/json',
-//             Accept: 'application/json',
-//           },
-//         });
-//         if (res) {
-//           const js = await res.json();
-//           setAng(js.angle);
-//           setPos(js.position);
-//         }
-//       } catch (e) {
-//         console.log('ERROR', e);
-//       }
-//     };
-
-//     getData();
-//   }, []);
-
-//   return (
-//     <>
-//       <group
-//         ref={modelRef}
-//         dispose={null}
-//         scale={[1.5, 1.5, 1.5]}
-//         position={pos || [0, 1, 1]}
-//         rotation={ang || [Math.PI / 5, 0, 0]}
-//       >
-//         <instances.Blackmetal rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Block rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Brickwall rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Concretea rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Concreteb rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Concretec rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Cooperroof rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Dirt rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Glass rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Painteddoor rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Roof rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Wall rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Windowframe rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Windowframea rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Wood rotation={[Math.PI / 2, 0, 0]} />
-//         <instances.Woodenwall rotation={[Math.PI / 2, 0, 0]} />
-//       </group>
-//       <BakeShadows />
-//     </>
-//   );
-// }
-
+/**
+ * 메인 컴포넌트
+ * - 카메라 권한 요청
+ * - "원" 색상: 평면 안정 전(빨간) / 후(파랑)
+ * - HUD로 카메라/오브젝트 위치, planeConfidence 표시
+ */
 export default function NftAppT() {
-  // const [origin, setOrigin] = useState(null); // NFT 마커의 위치(원점)
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
-  // const [aniStarted, setAniStarted] = useState(false)
-  const [clicked, setClicked] = useState(false)
-  const originRef = useRef(null)
+
+  // 평면 안정 여부
+  const [planeStable, setPlaneStable] = useState(false);
+  // 평면 안정도
+  const [planeConfidence, setPlaneConfidence] = useState(0);
 
   useEffect(() => {
     requestCameraPermission();
   }, []);
 
+  // 원의 색상 결정
+  const circleColor = planeStable ? "blue" : "red";
 
   return (
     <>
+      {/* 뒤로가기 버튼 */}
       <button
         style={{
           zIndex: 999,
@@ -243,89 +266,89 @@ export default function NftAppT() {
           window.history.back();
         }}
       >
-        <Back style={{}} />
+        <Back />
       </button>
-      <div style={{
-        position: "absolute",
-        zIndex: 9999,
-        top: "10px",
-        right: "10px",
-        background: "rgba(0,0,0,0.6)",
-        padding: "10px",
-        borderRadius: "8px",
-        color: "white",
-        fontSize: "14px",
-      }}>
-        <p>📍 <b>카메라 위치:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
-        <p>🟦 <b>오브젝트 위치:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}</p>
-      </div>
-      {
-        !clicked && <div
-          style={{
-            position: "absolute",
-            width: '50dvw',
-            height: '50dvh',
-            top: "50dvh",
-            left: '50dvw',
-            zIndex: 9999,
-            transform: `translate(-${50}%, -${25}%)`
 
-          }}
-        > <svg
-          width={'200px'}
-          height={'200px'}
-          viewBox="0 0 50 50"
-          fill="none"
-        >
-            <circle
-              cx="25"
-              cy="25"
-              r="24"
-              stroke={"rgba(0,0,0,0.3)"}
-              strokeWidth={'2px'}
-              fill="none"
-            />
-          </svg></div>
-      }
-      {!clicked && <div
+      {/* HUD: 카메라/오브젝트 위치, planeConfidence */}
+      <div
         style={{
           position: "absolute",
           zIndex: 9999,
-          top: "50dvh",
-          left: '50dvw',
+          top: "10px",
+          right: "10px",
           background: "rgba(0,0,0,0.6)",
           padding: "10px",
           borderRadius: "8px",
           color: "white",
           fontSize: "14px",
-          transform: `translate(-${50}%, -${50}%)`
         }}
       >
+        <p>
+          <b>카메라:</b> {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}
+        </p>
+        <p>
+          <b>오브젝트:</b> {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}
+        </p>
+        <p>
+          <b>planeConfidence:</b> {planeConfidence}
+        </p>
+      </div>
 
-        <p>조형물을 가이드라인 안에 맞춰주세요</p>
-      </div>}
-      {!clicked && <div
+      {/* 가운데 가이드 원 */}
+      <div
         style={{
-          position: "fixed",
-          zIndex: 99999999,
-          top: "60dvh",
-          left: '50dvw',
+          position: "absolute",
+          width: "50dvw",
+          height: "50dvh",
+          top: "50dvh",
+          left: "50dvw",
+          zIndex: 9999,
+          transform: "translate(-50%, -50%)",
+        }}
+      >
+        <svg width="200px" height="200px" viewBox="0 0 50 50">
+          <circle
+            cx="25"
+            cy="25"
+            r="24"
+            fill="none"
+            stroke={circleColor}
+            strokeWidth="2"
+          />
+        </svg>
+      </div>
+
+      {/* 안내 문구 */}
+      <div
+        style={{
+          position: "absolute",
+          zIndex: 9999,
+          top: "70dvh",
+          left: "50dvw",
+          transform: "translate(-50%, -50%)",
           background: "rgba(0,0,0,0.6)",
           padding: "10px",
           borderRadius: "8px",
           color: "white",
           fontSize: "14px",
-          transform: `translate(-${50}%, -${50}%)`
         }}
       >
-        <button style={{ zIndex: 99999 }} onClick={() => { setClicked(true) }}>토끼 부르기</button>
-      </div>}
+        {!planeStable ? (
+          <p>평면 스캔 중... 기기를 움직여주세요!</p>
+        ) : (
+          <p>평면이 안정되었습니다. 오브젝트를 배치했어요!</p>
+        )}
+      </div>
 
-      <SlamCanvas id='three-canvas'>
+      {/* SLAM + Three.js Canvas */}
+      <SlamCanvas id="three-canvas">
         <Suspense fallback={null}>
-          {/* NFT 마커 감지 */}
-          {/* 카메라 이동 추적 및 거리 기반 오브젝트 배치 */}
-          <CameraTracker clicked={clicked} setAniStarted={() => {/*  */ }} originRef={originRef} setCameraPosition={setCameraPosition} setObjectPosition={setObjectPosition} />
+          <CameraTracker
+            setCameraPosition={(pos) => setCameraPosition(pos)}
+            setObjectPosition={(pos) => setObjectPosition(pos)}
+            onPlaneStable={() => setPlaneStable(true)}
+            onPlaneConfidenceChange={(conf) => setPlaneConfidence(conf)}
+          />
           <ambientLight />
           <directionalLight position={[100, 100, 0]} />
         </Suspense>
@@ -333,5 +356,6 @@ export default function NftAppT() {
     </>
   );
 }
+
 
 // useGLTF.preload('data/mp.glb');
