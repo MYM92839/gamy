@@ -121,101 +121,105 @@ function CameraTracker({
     const ctx = tmpCanvas.getContext("2d");
     tmpCanvas.width = video.videoWidth || 1280;
     tmpCanvas.height = video.videoHeight || 720;
-    ctx.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
+    if (ctx) {
 
-    const frame = ctx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
+      ctx.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
 
-    // 카메라 업데이트
-    const camPose = alvaAR.findCameraPose(frame);
-    if (camPose) {
-      applyPose.current(camPose, camera.quaternion, camera.position);
-      setCameraPosition(camera.position.clone());
-    }
+      const frame = ctx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
 
-    // 2) planeFound=false 라면 -> 바닥인지 체크 + planeConfidence 로직
-    if (!planeFound) {
-      const planePose = alvaAR.findPlane(frame);
-      if (planePose) {
-        const newMatrix = new THREE.Matrix4().fromArray(planePose);
+      // 카메라 업데이트
+      const camPose = alvaAR.findCameraPose(frame);
+      if (camPose) {
+        applyPose.current(camPose, camera.quaternion, camera.position);
+        setCameraPosition(camera.position.clone());
+      }
 
-        // **수평 바닥인지** 먼저 검사
-        if (isGroundPlane(newMatrix, 0.3)) {
-          // 이전 행렬 없으면 confidence=1
-          if (!prevPlaneMatrix.current) {
-            prevPlaneMatrix.current = newMatrix.clone();
-            setPlaneConfidence(1);
-          } else {
-            // diff 비교
-            const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-            if (diffVal < 0.05) {
-              setPlaneConfidence((c) => c + 1);
-            } else {
+      // 2) planeFound=false 라면 -> 바닥인지 체크 + planeConfidence 로직
+      if (!planeFound) {
+        const planePose = alvaAR.findPlane(frame);
+        if (planePose) {
+          const newMatrix = new THREE.Matrix4().fromArray(planePose);
+
+          // **수평 바닥인지** 먼저 검사
+          if (isGroundPlane(newMatrix, 0.3)) {
+            // 이전 행렬 없으면 confidence=1
+            if (!prevPlaneMatrix.current) {
+              prevPlaneMatrix.current = newMatrix.clone();
               setPlaneConfidence(1);
+            } else {
+              // diff 비교
+              const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
+              if (diffVal < 0.05) {
+                setPlaneConfidence((c) => c + 1);
+              } else {
+                setPlaneConfidence(1);
+              }
+              prevPlaneMatrix.current.copy(newMatrix);
             }
-            prevPlaneMatrix.current.copy(newMatrix);
-          }
 
-          // threshold 이상이면 stablePlane=true
-          if (planeConfidence >= planeConfidenceThreshold) {
-            candidatePlaneMatrix.current.copy(newMatrix);
-            setStablePlane(true);
+            // threshold 이상이면 stablePlane=true
+            if (planeConfidence >= planeConfidenceThreshold) {
+              candidatePlaneMatrix.current.copy(newMatrix);
+              setStablePlane(true);
+            } else {
+              setStablePlane(false);
+            }
           } else {
+            // 수평이 아닌 평면이면 confidence 리셋
+            setPlaneConfidence(0);
             setStablePlane(false);
           }
         } else {
-          // 수평이 아닌 평면이면 confidence 리셋
+          // planePose= null => 못찾음
           setPlaneConfidence(0);
           setStablePlane(false);
         }
-      } else {
-        // planePose= null => 못찾음
-        setPlaneConfidence(0);
-        setStablePlane(false);
+      }
+
+      // 부모 HUD에 confidence 전달
+      onPlaneConfidenceChange?.(planeConfidence);
+
+      // 3) stablePlane == true && planeFound == false 시, planeRef에 표시
+      if (!planeFound && stablePlane && planeRef.current) {
+        const pos = new THREE.Vector3();
+        const rot = new THREE.Quaternion();
+        const sca = new THREE.Vector3();
+        candidatePlaneMatrix.current.decompose(pos, rot, sca);
+
+        planeRef.current.position.copy(pos);
+        planeRef.current.quaternion.copy(rot);
+      }
+
+      // 4) requestFinalizePlane === true => 최종 확정
+      if (!planeFound && requestFinalizePlane) {
+        finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
+        setPlaneFound(true);
+        console.log("🎉 바닥 평면 최종 확정! 오브젝트를 놓습니다.");
+      }
+
+      // 5) 오브젝트 배치 (planeFound==true && 아직 안 놓았다면)
+      if (planeFound && !objectPlaced && objectRef.current) {
+        const pos = new THREE.Vector3();
+        const rot = new THREE.Quaternion();
+        const sca = new THREE.Vector3();
+        finalPlaneMatrix.current.decompose(pos, rot, sca);
+
+        // 오프셋
+        pos.x += offsetX;
+        pos.y += offsetY;
+        pos.z += offsetZ;
+
+        // 오브젝트 배치
+        objectRef.current.position.copy(pos);
+        objectRef.current.quaternion.copy(rot);
+        objectRef.current.scale.set(scale, scale, scale);
+
+        setObjectPosition(pos.clone());
+        setObjectPlaced(true);
+        console.log("✅ 바닥에 오브젝트 배치 완료!");
       }
     }
 
-    // 부모 HUD에 confidence 전달
-    onPlaneConfidenceChange?.(planeConfidence);
-
-    // 3) stablePlane == true && planeFound == false 시, planeRef에 표시
-    if (!planeFound && stablePlane && planeRef.current) {
-      const pos = new THREE.Vector3();
-      const rot = new THREE.Quaternion();
-      const sca = new THREE.Vector3();
-      candidatePlaneMatrix.current.decompose(pos, rot, sca);
-
-      planeRef.current.position.copy(pos);
-      planeRef.current.quaternion.copy(rot);
-    }
-
-    // 4) requestFinalizePlane === true => 최종 확정
-    if (!planeFound && requestFinalizePlane) {
-      finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
-      setPlaneFound(true);
-      console.log("🎉 바닥 평면 최종 확정! 오브젝트를 놓습니다.");
-    }
-
-    // 5) 오브젝트 배치 (planeFound==true && 아직 안 놓았다면)
-    if (planeFound && !objectPlaced && objectRef.current) {
-      const pos = new THREE.Vector3();
-      const rot = new THREE.Quaternion();
-      const sca = new THREE.Vector3();
-      finalPlaneMatrix.current.decompose(pos, rot, sca);
-
-      // 오프셋
-      pos.x += offsetX;
-      pos.y += offsetY;
-      pos.z += offsetZ;
-
-      // 오브젝트 배치
-      objectRef.current.position.copy(pos);
-      objectRef.current.quaternion.copy(rot);
-      objectRef.current.scale.set(scale, scale, scale);
-
-      setObjectPosition(pos.clone());
-      setObjectPlaced(true);
-      console.log("✅ 바닥에 오브젝트 배치 완료!");
-    }
   });
 
   return (
@@ -237,9 +241,9 @@ function CameraTracker({
       {planeFound && (
         <group ref={objectRef}>
           {char === 'moons' ? (
-            <Box onRenderEnd={() => {}} on />
+            <Box onRenderEnd={() => { }} on />
           ) : (
-            <Tree onRenderEnd={() => {}} on />
+            <Tree onRenderEnd={() => { }} on />
           )}
         </group>
       )}
