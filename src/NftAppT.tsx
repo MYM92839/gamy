@@ -200,7 +200,7 @@ function CameraTracker({
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        const FACING_THRESHOLD = 0.3;
+        const FACING_THRESHOLD = 0.2;
         let facingWeight = 0;
         if (dot > FACING_THRESHOLD) {
           facingWeight = (dot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
@@ -209,7 +209,7 @@ function CameraTracker({
         // (C) 평면의 수직성 검사: 수직 평면이면 (업 벡터와의 내적이 낮아야 함)
         const up = new THREE.Vector3(0, 1, 0);
         const verticality = Math.abs(worldNormal.dot(up));
-        const isVertical = verticality < 0.3; // 수직이면 true
+        const isVertical = verticality < 0.5; // 수직이면 true
 
         // (D) 조건: 빨간 원 내부, facingWeight > 0, 그리고 수직이면 → 누적 안정도 업데이트
         if (inCircle && facingWeight > 0 && isVertical) {
