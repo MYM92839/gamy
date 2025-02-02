@@ -284,7 +284,7 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
   }, [nodes]);
 
   return (
-    <group {...props} position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]} dispose={null}>
+    <group {...props} position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} dispose={null}>
       <group name="Scene"
         ref={shadowRef}
         dispose={null}
