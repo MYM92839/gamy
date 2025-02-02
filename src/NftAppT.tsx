@@ -47,7 +47,6 @@ function isPlaneInCircleDom(
   let videoY = (-pos.y * halfVh) + halfVh;
 
   // 4) "비디오" -> "DOM" 스케일링
-  //    예: 1280->360, 720->640
   const scaleX = domWidth / videoWidth;
   const scaleY = domHeight / videoHeight;
   const domX = videoX * scaleX;
@@ -56,7 +55,7 @@ function isPlaneInCircleDom(
   // 5) circle 판정 (DOM 좌표)
   const dx = domX - circleCenterX;
   const dy = domY - circleCenterY;
-  const dist2 = dx*dx + dy*dy;
+  const dist2 = dx * dx + dy * dy;
   return dist2 <= (circleRadius * circleRadius);
 }
 
@@ -184,13 +183,12 @@ function CameraTracker({
       if (planePose) {
         const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-        // 빨간 원 DOM 내부?
-        const perspCam = camera as THREE.PerspectiveCamera;
+        // 기존: 빨간 원 DOM 내부 판정
         const inCircle = isPlaneInCircleDom(
           newMatrix,
-          perspCam,
-          videoWidth,
-          videoHeight,
+          camera as THREE.PerspectiveCamera,
+          video.videoWidth || 1280,
+          video.videoHeight || 720,
           domWidth,
           domHeight,
           circleX,
@@ -198,7 +196,23 @@ function CameraTracker({
           circleR
         );
 
-        if (!inCircle) {
+        // ★ 추가: 평면이 카메라를 향하고 있는지 확인
+        const pos = new THREE.Vector3();
+        const rot = new THREE.Quaternion();
+        const sca = new THREE.Vector3();
+        newMatrix.decompose(pos, rot, sca);
+        // 기본 PlaneGeometry의 로컬 노멀은 (0, 0, 1)
+        const localNormal = new THREE.Vector3(0, 0, 1);
+        // 회전을 적용하여 월드 노멀 계산
+        const worldNormal = localNormal.clone().applyQuaternion(rot);
+        // 평면 center에서 카메라까지의 단위 벡터 계산
+        const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
+        const dot = worldNormal.dot(camVec);
+        // dot 값이 높을수록 평면의 front(노멀 방향)가 카메라를 향함 (여기서는 0.5 이상이면 통과)
+        const isFacing = dot > 0.5; // 필요에 따라 임계값 조정
+
+        // 두 조건 모두 만족해야 안정적이라고 판단
+        if (!inCircle || !isFacing) {
           setPlaneConfidence(0);
           setStablePlane(false);
         } else {
@@ -207,7 +221,7 @@ function CameraTracker({
             setPlaneConfidence(1);
           } else {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-            // 예) 0.1 완화
+            // 예: diff 값이 0.1 이하이면 안정적이라고 판단
             if (diffVal < 0.1) {
               setPlaneConfidence(c => c + 1);
             } else {
@@ -234,8 +248,8 @@ function CameraTracker({
       planeRef.current.visible = true;
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
-      const sc = new THREE.Vector3();
-      candidatePlaneMatrix.current.decompose(pos, rot, sc);
+      const sca = new THREE.Vector3();
+      candidatePlaneMatrix.current.decompose(pos, rot, sca);
 
       planeRef.current.position.copy(pos);
       planeRef.current.quaternion.copy(rot);
@@ -253,8 +267,8 @@ function CameraTracker({
     if (planeFound && !objectPlaced && objectRef.current) {
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
-      const sc = new THREE.Vector3();
-      finalPlaneMatrix.current.decompose(pos, rot, sc);
+      const sca = new THREE.Vector3();
+      finalPlaneMatrix.current.decompose(pos, rot, sca);
 
       pos.x += offsetX;
       pos.y += offsetY;
@@ -269,12 +283,9 @@ function CameraTracker({
       console.log("✅ Object placed!");
     }
 
-
     if (planeRef.current) {
-      // 예: 내부 로직에서 "stablePlane && !planeFound" 시 planeRef.current.visible = true; 등
       setPlaneVisible(planeRef.current.visible);
     } else {
-      // planeRef 아직 없음
       setPlaneVisible(false);
     }
   });
@@ -286,7 +297,7 @@ function CameraTracker({
     <>
       {/* 파란 Plane */}
       <mesh ref={planeRef} visible={false}>
-        <planeGeometry args={[1,1]} />
+        <planeGeometry args={[1, 1]} />
         <meshBasicMaterial
           color="#00f"
           opacity={0.3}
@@ -298,7 +309,7 @@ function CameraTracker({
       {/* 오브젝트 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={()=>{}} on /> : <Tree onRenderEnd={()=>{}} on />}
+          {isMoons ? <Box onRenderEnd={() => {}} on /> : <Tree onRenderEnd={() => {}} on />}
         </group>
       )}
     </>
@@ -330,9 +341,6 @@ export default function NftAppT() {
    * - DOM 표시(부모 div나 화면) = 360×640
    * - 빨간 원은 DOM 좌표(180,320)에 반경 100
    */
-  // const videoWidth = 1280;
-  // const videoHeight = 720;
-
   const domWidth = 360;
   const domHeight = 640;
 
@@ -351,15 +359,15 @@ export default function NftAppT() {
       {/* 뒤로가기 */}
       <button
         style={{
-          position:'fixed',
-          top:'1rem',
-          left:'1rem',
-          zIndex:9999,
-          background:'transparent',
-          border:'none',
-          padding:'1rem'
+          position: 'fixed',
+          top: '1rem',
+          left: '1rem',
+          zIndex: 9999,
+          background: 'transparent',
+          border: 'none',
+          padding: '1rem'
         }}
-        onClick={()=> window.history.back()}
+        onClick={() => window.history.back()}
       >
         <Back />
       </button>
@@ -367,15 +375,15 @@ export default function NftAppT() {
       {/* HUD */}
       <div
         style={{
-          position:'fixed',
-          top:'1rem',
-          right:'1rem',
-          zIndex:9999,
-          background:'rgba(0,0,0,0.6)',
-          padding:'10px',
-          borderRadius:'8px',
-          color:'white',
-          fontSize:'14px'
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)',
+          padding: '10px',
+          borderRadius: '8px',
+          color: 'white',
+          fontSize: '14px'
         }}
       >
         <p><b>카메라</b>: {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}</p>
@@ -401,27 +409,27 @@ export default function NftAppT() {
       {/* 빨간 원 (DOM) - 360×640 영역 가정 */}
       <div
         style={{
-          position:'fixed',
-          width:`${domWidth}px`,   // 360
-          height:`${domHeight}px`, // 640
-          top:'50%',
-          left:'50%',
-          transform:'translate(-50%,-50%)',
-          background:'transparent',    // 예: 검은 배경(카메라 캔버스 위에 오버레이)
-          overflow:'hidden',
-          zIndex:9998,
+          position: 'fixed',
+          width: `${domWidth}px`,
+          height: `${domHeight}px`,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%,-50%)',
+          background: 'transparent',
+          overflow: 'hidden',
+          zIndex: 9998,
         }}
       >
         {/* svg로 빨간원 */}
         <svg
-          width={domWidth}   // 360
-          height={domHeight} // 640
-          style={{ position:'absolute', top:0, left:0 }}
+          width={domWidth}
+          height={domHeight}
+          style={{ position: 'absolute', top: 0, left: 0 }}
         >
           <circle
-            cx={circleX}    // 180
-            cy={circleY}    // 320
-            r={circleR}     // 100
+            cx={circleX}
+            cy={circleY}
+            r={circleR}
             fill='none'
             stroke={circleColor}
             strokeWidth='2'
@@ -434,16 +442,16 @@ export default function NftAppT() {
         <>
           <div
             style={{
-              position:'fixed',
-              top:'70%',
-              left:'50%',
-              transform:'translate(-50%, -50%)',
-              zIndex:9999,
-              background:'rgba(0,0,0,0.6)',
-              color:'white',
-              padding:'10px',
-              borderRadius:'8px',
-              fontSize:'14px'
+              position: 'fixed',
+              top: '70%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999,
+              background: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              padding: '10px',
+              borderRadius: '8px',
+              fontSize: '14px'
             }}
           >
             <p>빨간 원 안에 평면을 맞춰주세요.</p>
@@ -453,19 +461,19 @@ export default function NftAppT() {
           {showButton && (
             <button
               style={{
-                position:'fixed',
-                bottom:'10%',
-                left:'50%',
-                transform:'translateX(-50%)',
-                zIndex:99999,
-                padding:'1rem',
-                fontSize:'1rem',
-                backgroundColor:'darkblue',
-                color:'white',
-                border:'none',
-                borderRadius:'8px'
+                position: 'fixed',
+                bottom: '10%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 99999,
+                padding: '1rem',
+                fontSize: '1rem',
+                backgroundColor: 'darkblue',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px'
               }}
-              onClick={()=> setRequestFinalizePlane(true)}
+              onClick={() => setRequestFinalizePlane(true)}
             >
               토끼 부르기
             </button>
@@ -474,16 +482,16 @@ export default function NftAppT() {
       ) : (
         <div
           style={{
-            position:'fixed',
-            top:'50%',
-            left:'50%',
-            transform:'translate(-50%, -50%)',
-            background:'rgba(0,0,0,0.6)',
-            color:'white',
-            padding:'10px',
-            borderRadius:'8px',
-            fontSize:'14px',
-            zIndex:9999
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            zIndex: 9999
           }}
         >
           <p>토끼가 소환되었습니다!</p>
@@ -495,16 +503,16 @@ export default function NftAppT() {
         {/* 뒤에 렌더되는 3D 씬 */}
         <React.Suspense fallback={null}>
           <CameraTracker
-          setPlaneVisible={(v) => setPlaneVisible(v)}
+            setPlaneVisible={(v) => setPlaneVisible(v)}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
             setStablePlane={setStablePlane}
             requestFinalizePlane={requestFinalizePlane}
 
-            setCameraPosition={(pos)=> setCameraPosition(pos)}
-            setObjectPosition={(pos)=> setObjectPosition(pos)}
-            onPlaneConfidenceChange={(val)=> setPlaneConfidence(val)}
+            setCameraPosition={(pos) => setCameraPosition(pos)}
+            setObjectPosition={(pos) => setObjectPosition(pos)}
+            onPlaneConfidenceChange={(val) => setPlaneConfidence(val)}
 
             videoWidth={1280}
             videoHeight={720}
@@ -515,7 +523,7 @@ export default function NftAppT() {
             circleR={100}
           />
           <ambientLight />
-          <directionalLight position={[100,100,0]} />
+          <directionalLight position={[100, 100, 0]} />
         </React.Suspense>
       </SlamCanvas>
     </>
