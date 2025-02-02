@@ -192,7 +192,8 @@ function CameraTracker({
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
-        const dot = worldNormal.dot(camVec);
+        const dot = -worldNormal.dot(camVec);
+
         const FACING_THRESHOLD = 0.2; // 느슨하게: 0.3 -> 0.2
         let facingWeight = 0;
         if (dot > FACING_THRESHOLD) {
