@@ -396,7 +396,7 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
         receiveShadow
         geometry={snodes.cramp.geometry}
         material={smaterials.cramp}
-        position={[-0.78, 0.304, -3]}
+        position={[-0.78, 0.004, -3]}
         rotation={[Math.PI / 2, 0, 0]}
         scale={0.01}
       />
