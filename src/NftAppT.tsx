@@ -72,7 +72,6 @@ function getIntersectionWithCandidatePlane(
   circleX: number,
   circleY: number
 ): THREE.Vector3 | null {
-  // 빨간 원 중심을 NDC로 변환
   const ndcX = (circleX / domWidth) * 2 - 1;
   const ndcY = -((circleY / domHeight) * 2 - 1);
   const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
@@ -142,6 +141,7 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
+  // 쿼리 파라미터 offset은 제거한 상태로 처리
   // const offsetX = parseFloat(searchParams.get('x') || '0');
   // const offsetY = parseFloat(searchParams.get('y') || '0');
   // const offsetZ = parseFloat(searchParams.get('z') || '0');
@@ -200,7 +200,7 @@ function CameraTracker({
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        const centerDistanceThreshold = circleR * 1.5; // 임계값
+        const centerDistanceThreshold = circleR * 1.5; // 예: 150 픽셀 if circleR=100
 
         // (B) 평면의 노멀 검증 및 effectiveFacingWeight 계산
         const pos = new THREE.Vector3();
@@ -211,7 +211,7 @@ function CameraTracker({
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        const effectiveDot = -dot; // 부호 반전
+        const effectiveDot = -dot; // 부호 반전: 원하는 상태가 dot -0.4 ~ -0.6 -> effectiveDot 0.4~0.6
         onDotValueChange?.(dot);
 
         const FACING_THRESHOLD = 0.2;
@@ -288,11 +288,15 @@ function CameraTracker({
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         candidatePlaneMatrix.current.decompose(pos, rot, sca);
-        // 회전 보정: Euler 각도로 변환 후 X, Z 회전 제거
-        const euler = new THREE.Euler().setFromQuaternion(rot, 'YXZ');
-        euler.x = 0;
-        euler.z = 0;
-        rot.setFromEuler(euler);
+        // 회전 보정: 후보 평면의 노멀 방향이 카메라를 향하도록 보정
+        const localNormal = new THREE.Vector3(0, 0, 1);
+        const worldNormal = localNormal.clone().applyQuaternion(rot);
+        const camDir = new THREE.Vector3().subVectors(camera.position, pos).normalize();
+        // 만약 평면의 노멀과 카메라 방향의 내적이 음수이면, Y축을 기준으로 180도 회전
+        if (worldNormal.dot(camDir) < 0) {
+          const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+          rot.multiply(flipQuat);
+        }
         planeRef.current.position.copy(pos);
         planeRef.current.quaternion.copy(rot);
         planeRef.current.scale.set(3, 3, 3);
@@ -316,36 +320,43 @@ function CameraTracker({
     }
 
     // 5) 평면 확정 후 오브젝트 배치 (최종 오브젝트 위치 결정)
-    // 한 번 최종 위치가 결정되면 finalObjectPosition를 고정하여 업데이트하지 않음.
+    // 토끼의 최종 위치는 후보 평면이 충분히 안정(stable)하고, 평면 크기(스케일)가 일정 임계값 이상일 때 한 번 결정되고 고정됨.
     if (planeFound && !objectPlaced && objectRef.current) {
-      // 한 번 최종 위치를 계산하면 finalObjectPosition에 저장
       if (!finalObjectPosition.current) {
-        const intersection = getIntersectionWithCandidatePlane(camera, finalPlaneMatrix.current, domWidth, domHeight, circleX, circleY);
-        let finalPos: THREE.Vector3;
-        if (intersection && intersection.distanceTo(camera.position) <= 10) {
-          finalPos = intersection;
+        // 후보 평면의 크기를 평가 (평면 스케일)
+        const planeScale = new THREE.Vector3();
+        candidatePlaneMatrix.current.decompose(new THREE.Vector3(), new THREE.Quaternion(), planeScale);
+        const planeSize = Math.max(planeScale.x, planeScale.y, planeScale.z);
+        const sizeThreshold = 0.5; // 환경에 맞게 조정 (예: 0.5 이상일 때 충분한 평면 크기로 판단)
+        if (planeSize < sizeThreshold) {
+          console.log("Plane size too small:", planeSize);
         } else {
-          // 교차점이 계산되지 않거나, 너무 멀면 후보 평면의 중심을 사용
-          finalPos = new THREE.Vector3();
-          finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
+          const intersection = getIntersectionWithCandidatePlane(camera, finalPlaneMatrix.current, domWidth, domHeight, circleX, circleY);
+          let finalPos: THREE.Vector3;
+          if (intersection && intersection.distanceTo(camera.position) <= 10) {
+            finalPos = intersection;
+          } else {
+            finalPos = new THREE.Vector3();
+            finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
+          }
+          finalObjectPosition.current = finalPos.clone();
         }
-        // 쿼리 파라미터 offset은 제거(현재는 보정 없이 고정)
-        finalObjectPosition.current = finalPos.clone();
       }
-      // 최종 오브젝트 위치는 finalObjectPosition.current로 고정
-      objectRef.current.position.copy(finalObjectPosition.current!);
-      // 회전 보정: finalPlaneMatrix에서 Y축 회전만 남기도록 보정
-      const planeQuat = new THREE.Quaternion();
-      finalPlaneMatrix.current.decompose(new THREE.Vector3(), planeQuat, new THREE.Vector3());
-      const euler = new THREE.Euler().setFromQuaternion(planeQuat, 'YXZ');
-      euler.x = 0;
-      euler.z = 0;
-      const finalQuat = new THREE.Quaternion().setFromEuler(euler);
-      objectRef.current.quaternion.copy(finalQuat);
-      objectRef.current.scale.setScalar(scale);
-      setObjectPosition(finalObjectPosition.current.clone());
-      setObjectPlaced(true);
-      console.log("✅ Object placed at final position:", finalObjectPosition.current);
+      if (finalObjectPosition.current) {
+        objectRef.current.position.copy(finalObjectPosition.current);
+        // 회전 보정: 최종 평면의 회전에서 X,Z 회전 제거 (Y축 회전만 유지)
+        const planeQuat = new THREE.Quaternion();
+        finalPlaneMatrix.current.decompose(new THREE.Vector3(), planeQuat, new THREE.Vector3());
+        const euler = new THREE.Euler().setFromQuaternion(planeQuat, 'YXZ');
+        euler.x = 0;
+        euler.z = 0;
+        const finalQuat = new THREE.Quaternion().setFromEuler(euler);
+        objectRef.current.quaternion.copy(finalQuat);
+        objectRef.current.scale.setScalar(scale);
+        setObjectPosition(finalObjectPosition.current.clone());
+        setObjectPlaced(true);
+        console.log("✅ Object placed at final position:", finalObjectPosition.current);
+      }
     }
 
     if (planeRef.current) {
@@ -469,7 +480,7 @@ export default function NftAppT() {
         </div>
       )}
 
-      {!planeFound && (
+      {!planeFound ? (
         <>
           <div
             style={{
@@ -509,6 +520,23 @@ export default function NftAppT() {
             </button>
           )}
         </>
+      ) : (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            zIndex: 9999
+          }}
+        >
+          <p>토끼가 소환되었습니다!</p>
+        </div>
       )}
 
       <SlamCanvas id="three-canvas">
