@@ -18,7 +18,7 @@ import { Box, Tree } from './ArApp';
 /**
  * 평면의 중심을 계산하여 카메라 좌표계의 비디오 좌표로 투영한 후,
  * DOM 좌표로 변환하고, 빨간 원 내부 여부를 판정한다.
- * (평면의 크기에 따라 toleranceFactor를 적용)
+ * (평면의 스케일에 따라 toleranceFactor를 적용)
  */
 function isPlaneInCircleDom(
   planeMatrix: THREE.Matrix4,
@@ -88,13 +88,11 @@ interface CameraTrackerProps {
   onPlaneConfidenceChange?: (val: number) => void;
   setPlaneVisible: (v: boolean) => void;
 
-  // 해상도 보정용
   videoWidth: number;
   videoHeight: number;
   domWidth: number;
   domHeight: number;
 
-  // 빨간 원 (DOM 좌표)
   circleX: number;
   circleY: number;
   circleR: number;
@@ -119,7 +117,6 @@ function CameraTracker({
   circleY,
   circleR,
 }: CameraTrackerProps) {
-  // URL 파라미터 (모델 종류, scale, offset)
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
@@ -127,22 +124,18 @@ function CameraTracker({
   const offsetY = parseFloat(searchParams.get('y') || '0');
   const offsetZ = parseFloat(searchParams.get('z') || '0');
 
-  // SLAM
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 평면 안정도(Confidence) 관련 상태
+  // 평면 안정도 관련 상태
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // 누적 안정도가 이 값 이상일 때 안정 상태로 판단
+  const planeConfidenceThreshold = 5; // 누적 안정도 임계값 (이 값 이상일 때 안정 상태로 판단)
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
 
-  // 3D 오브젝트 레퍼런스
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
-
-  // 오브젝트 배치 여부
   const [objectPlaced, setObjectPlaced] = useState(false);
 
   useEffect(() => {
@@ -178,7 +171,7 @@ function CameraTracker({
       if (planePose) {
         const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-        // (A) 빨간 원 내부 판정 (DOM 좌표 변환)
+        // (A) 빨간 원 내부 판정
         const inCircle = isPlaneInCircleDom(
           newMatrix,
           camera as THREE.PerspectiveCamera,
@@ -200,24 +193,31 @@ function CameraTracker({
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        const FACING_THRESHOLD = 0.2;
+        const FACING_THRESHOLD = 0.2; // 느슨하게: 0.3 -> 0.2
         let facingWeight = 0;
         if (dot > FACING_THRESHOLD) {
           facingWeight = (dot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
 
-        // (C) 평면의 수직성 검사: 수직 평면이면 (업 벡터와의 내적이 낮아야 함)
+        // (C) 평면의 수직성 검사
         const up = new THREE.Vector3(0, 1, 0);
         const verticality = Math.abs(worldNormal.dot(up));
-        const isVertical = verticality < 0.5; // 수직이면 true
+        const isVertical = verticality < 0.5; // 느슨하게: 0.3 -> 0.5
 
-        // (D) 조건: 빨간 원 내부, facingWeight > 0, 그리고 수직이면 → 누적 안정도 업데이트
+        // 디버그 로그 출력
+        console.log("Plane Debug:", {
+          inCircle,
+          dot: dot.toFixed(2),
+          facingWeight: facingWeight.toFixed(2),
+          verticality: verticality.toFixed(2),
+          isVertical,
+        });
+
+        // (D) 조건 만족 시 평면 안정도 업데이트
         if (inCircle && facingWeight > 0 && isVertical) {
-          // 누적 안정도를 갱신 (조건이 계속 만족되면 누적, 아니면 리셋)
           let newConfidence = 0;
           if (prevPlaneMatrix.current) {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
-            // diff가 작으면 안정한 상태로 누적
             newConfidence = diffVal < 0.1 ? planeConfidence + facingWeight : facingWeight;
           } else {
             newConfidence = facingWeight;
@@ -225,8 +225,8 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          // EMA 방식으로 candidatePlaneMatrix 업데이트 (조건이 만족되면 계속 보정)
-          const alphaMatrix = 0.4;
+          // EMA 업데이트 (alphaMatrix 0.3로 올림)
+          const alphaMatrix = 0.3;
           const currentPos = new THREE.Vector3();
           const currentQuat = new THREE.Quaternion();
           const currentScale = new THREE.Vector3();
@@ -240,7 +240,11 @@ function CameraTracker({
           currentScale.lerp(newScale, alphaMatrix);
           candidatePlaneMatrix.current.compose(currentPos, currentQuat, currentScale);
 
-          // 누적 안정도가 threshold 이상이면 안정 상태로 판단
+          // 디버그: 업데이트된 candidatePlaneMatrix의 위치 출력
+          const debugPos = new THREE.Vector3();
+          candidatePlaneMatrix.current.decompose(debugPos, new THREE.Quaternion(), new THREE.Vector3());
+          console.log("Updated candidatePlaneMatrix Position:", debugPos);
+
           if (newConfidence >= planeConfidenceThreshold) {
             setStablePlane(true);
           } else {
@@ -258,7 +262,7 @@ function CameraTracker({
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 3) 평면 표시: 조건 만족 시 candidatePlaneMatrix 적용, 아니면 카메라 앞쪽 기본 위치 사용
+    // 3) 평면 표시: 안정 상태이면 candidatePlaneMatrix 적용, 아니면 기본 위치(카메라 앞)
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         const pos = new THREE.Vector3();
@@ -280,7 +284,7 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 4) requestFinalizePlane: 최종 확정 시 candidatePlaneMatrix를 finalPlaneMatrix에 복사
+    // 4) 평면 확정 요청: 버튼 클릭 시
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
@@ -311,12 +315,11 @@ function CameraTracker({
     }
   });
 
-  // char 파라미터에 따라 모델 선택 ('moons'이면 Box, 아니면 Tree)
   const isMoons = (char === 'moons');
 
   return (
     <>
-      {/* 파란 평면 (디버그/후보 표시) */}
+      {/* 파란 평면 (디버그 및 후보 표시) */}
       <mesh ref={planeRef} visible={false}>
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial color="#00f" opacity={0.3} transparent side={THREE.DoubleSide} />
@@ -325,7 +328,7 @@ function CameraTracker({
       {/* 평면 확정 시 오브젝트 배치 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => {}} on={true} /> : <Tree onRenderEnd={() => {}} on={true} />}
+          {isMoons ? <Box onRenderEnd={() => { }} on={true} /> : <Tree onRenderEnd={() => { }} on={true} />}
         </group>
       )}
     </>
@@ -352,7 +355,7 @@ export default function NftAppT() {
   const circleY = domHeight / 2;
   const circleR = 100;
 
-  // UI: planeFound가 true이면 원 색상과 버튼 상태 변경
+  // UI: 안정 상태일 때 원 색상과 버튼 표시
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
