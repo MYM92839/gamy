@@ -61,9 +61,22 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 }
 
 /**
- * 빨간 원의 중심을 기준으로, 카메라에서 해당 화면 좌표를 통과하는 광선과
- * 후보 평면(candidateMatrix)과의 교차점을 계산하여 반환하는 함수.
- * → 현재 이 함수는 사용하지 않습니다.
+ * AR 시스템이 반환하는 평면 행렬의 translation 요소에 scaleFactor를 곱해
+ * 단위 보정을 적용한 새 Matrix4를 반환합니다.
+ * 예를 들어, AR 시스템이 센티미터 단위로 값을 반환한다면 scaleFactor를 0.01로 적용하여 미터 단위로 변환합니다.
+ */
+function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
+  const elements = matrix.elements.slice(); // 복사본 생성
+  elements[12] *= scaleFactor;
+  elements[13] *= scaleFactor;
+  elements[14] *= scaleFactor;
+  const newMat = new THREE.Matrix4();
+  newMat.fromArray(elements);
+  return newMat;
+}
+
+/**
+ * (참고용) 빨간 원 교차점 계산 함수 – 이번 예제에서는 사용하지 않습니다.
  */
 // function getIntersectionWithCandidatePlane(
 //   camera: THREE.Camera,
@@ -92,20 +105,6 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 //   }
 //   return null;
 // }
-
-/**
- * AR 시스템이 반환하는 평면 행렬의 translation 요소에 scaleFactor를 곱해
- * 단위(예: 센티미터 → 미터) 보정을 적용한 새 행렬을 반환합니다.
- */
-function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
-  const elements = matrix.elements.slice(); // 복사본 생성
-  elements[12] *= scaleFactor;
-  elements[13] *= scaleFactor;
-  elements[14] *= scaleFactor;
-  const newMat = new THREE.Matrix4();
-  newMat.fromArray(elements);
-  return newMat;
-}
 
 /** ============= CameraTracker ============= */
 interface CameraTrackerProps {
@@ -162,7 +161,7 @@ function CameraTracker({
   const applyPose = useRef<any>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // 누적 안정도 임계값
+  const planeConfidenceThreshold = 5;
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -174,7 +173,7 @@ function CameraTracker({
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
-  // translation 단위 보정을 위한 scale factor (예: AR 시스템이 센티미터 단위라면 0.01)
+  // translation 단위 보정을 위한 scale factor (예: AR 시스템이 센티미터 단위 → 미터 단위: 0.01)
   const translationScale = 0.01;
 
   useEffect(() => {
@@ -207,7 +206,7 @@ function CameraTracker({
     if (!planeFound) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
-        // AR 시스템이 반환하는 행렬에 대해 translation 보정을 적용합니다.
+        // AR 시스템이 반환하는 행렬에 단위 보정을 적용합니다.
         let newMatrix = new THREE.Matrix4().fromArray(planePose);
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
@@ -216,7 +215,7 @@ function CameraTracker({
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        const centerDistanceThreshold = circleR * 1.5; // 예: 원 반경의 1.5배
+        const centerDistanceThreshold = circleR * 1.5;
 
         // (B) 평면의 노멀 검증 및 effectiveFacingWeight 계산
         const pos = new THREE.Vector3();
@@ -249,7 +248,8 @@ function CameraTracker({
           isVertical,
         });
 
-        // (D) 후보 업데이트 조건: 평면 중심과 빨간 원 중심 사이의 거리가 임계값 이내, facingWeight > 0, 그리고 isVertical
+        // (D) 후보 업데이트 조건:
+        // 평면 중심과 빨간 원 중심 사이의 거리가 임계값 이내, facingWeight > 0, 그리고 isVertical이어야 함.
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = 0;
           if (prevPlaneMatrix.current) {
@@ -295,19 +295,19 @@ function CameraTracker({
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 3) 평면 표시: 안정 상태이면 candidatePlaneMatrix 적용, 아니면 기본 위치(카메라 앞)
+    // 3) 평면 표시: 후보 평면의 회전 보정 (Y축 기준 90도 회전 적용)
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         candidatePlaneMatrix.current.decompose(pos, rot, sca);
-        // 회전 보정: 후보 평면의 노멀 방향이 카메라를 향하도록 보정
+        // 기존 180도 회전 대신 Y축 기준 90도 회전 적용
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camDir = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         if (worldNormal.dot(camDir) < 0) {
-          const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+          const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
           rot.multiply(flipQuat);
         }
         planeRef.current.position.copy(pos);
@@ -333,7 +333,7 @@ function CameraTracker({
     }
 
     // 5) 평면 확정 후 오브젝트 배치 (최종 오브젝트 위치 결정)
-    // 최종 오브젝트 위치는 후보 평면(finalPlaneMatrix)에서 분해한 위치를 그대로 사용
+    // 최종 오브젝트 위치는 candidate 평면의 중심(finalPlaneMatrix에서 분해한 위치)을 그대로 사용합니다.
     if (planeFound && !objectPlaced && objectRef.current) {
       if (!finalObjectPosition.current) {
         const finalPos = new THREE.Vector3();
@@ -342,14 +342,13 @@ function CameraTracker({
       }
       if (finalObjectPosition.current) {
         objectRef.current.position.copy(finalObjectPosition.current);
-        // 회전 보정: finalPlaneMatrix에서 Y축 회전만 남기도록 보정
+        // 최종 오브젝트의 회전 보정: Y축 기준 90도 회전 적용
         const planeQuat = new THREE.Quaternion();
         finalPlaneMatrix.current.decompose(new THREE.Vector3(), planeQuat, new THREE.Vector3());
-        const euler = new THREE.Euler().setFromQuaternion(planeQuat, 'YXZ');
-        euler.x = 0;
-        euler.z = 0;
-        const finalQuat = new THREE.Quaternion().setFromEuler(euler);
-        objectRef.current.quaternion.copy(finalQuat);
+        const flipAngle = Math.PI / 2; // 90도
+        const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), flipAngle);
+        planeQuat.multiply(flipQuat);
+        objectRef.current.quaternion.copy(planeQuat);
         objectRef.current.scale.setScalar(scale);
         setObjectPosition(finalObjectPosition.current.clone());
         setObjectPlaced(true);
@@ -399,7 +398,6 @@ export default function NftAppT() {
   const circleY = domHeight / 2;
   const circleR = 100;
 
-  // 평면이 확정되거나 안정 상태이면 원 색상을 파란색으로
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
@@ -453,7 +451,6 @@ export default function NftAppT() {
         </p>
       </div>
 
-      {/* 토끼 확정 후엔 빨간 원 SVG 숨김 */}
       {!planeFound && (
         <div
           style={{
@@ -478,7 +475,7 @@ export default function NftAppT() {
         </div>
       )}
 
-      {!planeFound && (
+      {!planeFound ? (
         <>
           <div
             style={{
@@ -518,6 +515,23 @@ export default function NftAppT() {
             </button>
           )}
         </>
+      ) : (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            zIndex: 9999
+          }}
+        >
+          <p>토끼가 소환되었습니다!</p>
+        </div>
       )}
 
       <SlamCanvas id="three-canvas">
