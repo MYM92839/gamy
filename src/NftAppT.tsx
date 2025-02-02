@@ -1,40 +1,31 @@
-import { useFrame } from '@react-three/fiber';
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import * as THREE from 'three';
-import { Box, Tree } from './ArApp';
-import Back from './assets/icons/Back';
-import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
-import { useSlam } from './libs/SLAMProvider';
-import { requestCameraPermission } from './libs/util';
-import { AlvaARConnectorTHREE } from './libs/alvaConnector';
-
 /**
- * 3D 평면 중심(planeMatrix) -> 2D 스크린 좌표로 투영 후,
- * 빨간 원(circleCenterX, circleCenterY, circleRadius) 내부인지 확인
+ * NftAppT.tsx
+ * TypeScript + React + Three.js + React Router v6 (useParams, useSearchParams)
+ * - DOM에 빨간원
+ * - Three.js에 파란 Plane
+ * - planeConfidence 로직
+ * - "토끼 부르기" 버튼
  */
 
-function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
-  const pos1 = new THREE.Vector3();
-  const pos2 = new THREE.Vector3();
-  const rot1 = new THREE.Quaternion();
-  const rot2 = new THREE.Quaternion();
-  const sca1 = new THREE.Vector3();
-  const sca2 = new THREE.Vector3();
+import React, { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
+import { useParams, useSearchParams } from 'react-router-dom';
 
-  m1.decompose(pos1, rot1, sca1);
-  m2.decompose(pos2, rot2, sca2);
+import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
+import { requestCameraPermission } from './libs/util';
+import { AlvaARConnectorTHREE } from './libs/alvaConnector';
+import { useSlam } from './libs/SLAMProvider';
 
-  const posDiff = pos1.distanceTo(pos2);
-  const dot = Math.abs(rot1.dot(rot2));
-  const rotDiff = 1 - dot;
+// 예시 컴포넌트 (모델들, 아이콘 등)
+import Back from './assets/icons/Back';
+import { Box, Tree } from './ArApp';
 
-  return posDiff + rotDiff;
-}
-
-
-
-export function isPlaneInCircle(
+/**
+ * planeMatrix에서 3D 중심 → camera.project() → 2D 좌표
+ * -> 빨간원(cx, cy, r) 내부인지 검사
+ */
+function isPlaneInCircle(
   planeMatrix: THREE.Matrix4,
   camera: THREE.PerspectiveCamera,
   canvasWidth: number,
@@ -43,30 +34,45 @@ export function isPlaneInCircle(
   circleCenterY: number,
   circleRadius: number
 ): boolean {
-  // 1) plane center
   const pos = new THREE.Vector3();
   const rot = new THREE.Quaternion();
   const sca = new THREE.Vector3();
   planeMatrix.decompose(pos, rot, sca);
 
-  // 2) world coords -> NDC via project()
+  // world -> NDC
   pos.project(camera);
 
-  // pos.x, pos.y in [-1..1]
+  // -1..1 → 화면 픽셀
   const halfW = canvasWidth / 2;
   const halfH = canvasHeight / 2;
   const screenX = pos.x * halfW + halfW;
   const screenY = -pos.y * halfH + halfH;
 
-  // 3) circle check
   const dx = screenX - circleCenterX;
   const dy = screenY - circleCenterY;
   const dist2 = dx * dx + dy * dy;
-
-  return dist2 <= circleRadius * circleRadius;
+  return dist2 <= (circleRadius * circleRadius);
 }
 
-// Props 정의
+/** 두 행렬의 위치/회전 차이 간단 계산 */
+function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
+  const pos1 = new THREE.Vector3();
+  const pos2 = new THREE.Vector3();
+  const rot1 = new THREE.Quaternion();
+  const rot2 = new THREE.Quaternion();
+  const sc1 = new THREE.Vector3();
+  const sc2 = new THREE.Vector3();
+
+  m1.decompose(pos1, rot1, sc1);
+  m2.decompose(pos2, rot2, sc2);
+
+  const posDiff = pos1.distanceTo(pos2);
+  const dot = Math.abs(rot1.dot(rot2));
+  const rotDiff = 1 - dot;
+  return posDiff + rotDiff;
+}
+
+// CameraTracker 컴포넌트
 interface CameraTrackerProps {
   planeFound: boolean;
   setPlaneFound: (v: boolean) => void;
@@ -77,18 +83,15 @@ interface CameraTrackerProps {
   setObjectPosition: (pos: THREE.Vector3) => void;
   onPlaneConfidenceChange?: (val: number) => void;
 
-  // "빨간 원" 정보
+  // DOM 빨간원
   circleCenterX: number;
   circleCenterY: number;
   circleRadius: number;
   canvasWidth: number;
   canvasHeight: number;
-
-  // 나머지 설정
 }
 
-// CameraTracker 컴포넌트
-export const CameraTracker: React.FC<CameraTrackerProps> = ({
+function CameraTracker({
   planeFound,
   setPlaneFound,
   stablePlane,
@@ -102,48 +105,45 @@ export const CameraTracker: React.FC<CameraTrackerProps> = ({
   circleRadius,
   canvasWidth,
   canvasHeight,
-}) => {
-  // 1) URL 파라미터 처리
-  const { char } = useParams(); // 예: /nft-app/moons
-  const [searchParams] = useSearchParams();
+}: CameraTrackerProps) {
 
+  // 1) url params
+  const { char } = useParams(); // 예) /nft-app/moons
+  const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
   const offsetX = parseFloat(searchParams.get('x') || '0');
   const offsetY = parseFloat(searchParams.get('y') || '0');
   const offsetZ = parseFloat(searchParams.get('z') || '0');
 
-  // Slam
+  // SLAM
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // planeConfidence 로직
+  // planeConfidence
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const planeConfidenceThreshold = 5;
 
-  // Plane 행렬 관련 refs
-  const finalPlaneMatrix = useRef(new THREE.Matrix4());
-  const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
+  const candidatePlaneMatrix = useRef(new THREE.Matrix4());
+  const finalPlaneMatrix = useRef(new THREE.Matrix4());
 
-  // 시각화/오브젝트 ref
+  // plane, object
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
-
-  // 오브젝트 배치 여부
   const [objectPlaced, setObjectPlaced] = useState(false);
 
   useEffect(() => {
     if (alvaAR) {
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
-      console.log("✅ AlvaAR SLAM 활성화됨!");
+      console.log("✅ AlvaAR SLAM Ready!");
     }
   }, [alvaAR]);
 
   useFrame(({ camera }) => {
     if (!alvaAR || !applyPose.current) return;
 
-    // 1) 카메라 Pose 업데이트
-    const video = document.getElementById('ar-video') as HTMLVideoElement;
+    // 1) 카메라 pose
+    const video = document.getElementById("ar-video") as HTMLVideoElement | null;
     if (!video) return;
 
     const tmpCanvas = document.createElement('canvas');
@@ -154,22 +154,23 @@ export const CameraTracker: React.FC<CameraTrackerProps> = ({
     const frame = ctx?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     if (!frame) return;
 
-    const pose = alvaAR.findCameraPose(frame);
-    if (pose) {
-      applyPose.current(pose, camera.quaternion, camera.position);
+    const camPose = alvaAR.findCameraPose(frame);
+    if (camPose) {
+      applyPose.current(camPose, camera.quaternion, camera.position);
       setCameraPosition(camera.position.clone());
     }
 
-    // 2) planeConfidence 로직 (planeFound==false 상태)
+    // 2) planeConfidence 로직 (planeFound == false)
     if (!planeFound) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
         const newMatrix = new THREE.Matrix4().fromArray(planePose);
 
-        // "빨간 원" 내부인가?
+        // "빨간 원" 내부?
+        const perspectiveCam = camera as THREE.PerspectiveCamera;
         const inCircle = isPlaneInCircle(
           newMatrix,
-          camera as THREE.PerspectiveCamera,
+          perspectiveCam,
           canvasWidth,
           canvasHeight,
           circleCenterX,
@@ -178,15 +179,17 @@ export const CameraTracker: React.FC<CameraTrackerProps> = ({
         );
 
         if (!inCircle) {
+          // 원 바깥 -> confidence reset
           setPlaneConfidence(0);
           setStablePlane(false);
         } else {
-          // 원 안에 있으면 => diff 비교
+          // 원 안
           if (!prevPlaneMatrix.current) {
             prevPlaneMatrix.current = newMatrix.clone();
             setPlaneConfidence(1);
           } else {
             const diffVal = matrixDiff(prevPlaneMatrix.current, newMatrix);
+            // 0.1정도 완화
             if (diffVal < 0.1) {
               setPlaneConfidence(c => c + 1);
             } else {
@@ -195,74 +198,75 @@ export const CameraTracker: React.FC<CameraTrackerProps> = ({
             prevPlaneMatrix.current.copy(newMatrix);
           }
 
-          // threshold 이상이면 stablePlane=true
+          // threshold 넘어가면
           if (planeConfidence >= planeConfidenceThreshold) {
             candidatePlaneMatrix.current.copy(newMatrix);
             setStablePlane(true);
           }
         }
       } else {
-        // planePose = null
+        // planePose= null
         setPlaneConfidence(0);
         setStablePlane(false);
       }
     }
 
+    // HUD
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 3) stablePlane && !planeFound => planeRef 표시
+    // 3) stablePlane && !planeFound => planeRef 시각화
     if (!planeFound && stablePlane && planeRef.current) {
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
-      const sca = new THREE.Vector3();
-      candidatePlaneMatrix.current.decompose(pos, rot, sca);
+      const sc = new THREE.Vector3();
+      candidatePlaneMatrix.current.decompose(pos, rot, sc);
 
       planeRef.current.position.copy(pos);
       planeRef.current.quaternion.copy(rot);
-      planeRef.current.scale.set(5, 5, 5); // 예시 (plane 크게)
+      planeRef.current.scale.set(3, 3, 3); // plane 크기 임의
       planeRef.current.visible = true;
     }
 
-    // 4) requestFinalizePlane => 최종 확정
+    // 4) 버튼 누르면 -> 최종 확정
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
-      console.log("🎉 Plane 확정");
-      setPlaneFound(true);
+      console.log("🎉 Plane Found => place object");
+      (setPlaneFound)(true);
     }
 
-    // 5) planeFound && 오브젝트 아직 배치 안했으면 => 오브젝트 배치
+    // 5) planeFound && 오브젝트 배치 안했다면
     if (planeFound && !objectPlaced && objectRef.current) {
       const pos = new THREE.Vector3();
       const rot = new THREE.Quaternion();
-      const sca = new THREE.Vector3();
-      finalPlaneMatrix.current.decompose(pos, rot, sca);
+      const sc = new THREE.Vector3();
+      finalPlaneMatrix.current.decompose(pos, rot, sc);
 
-      pos.x += offsetX;
+      pos.x += offsetX; // url 파라미터
       pos.y += offsetY;
       pos.z += offsetZ;
 
       objectRef.current.position.copy(pos);
       objectRef.current.quaternion.copy(rot);
-      objectRef.current.scale.set(scale, scale, scale);
+      objectRef.current.scale.setScalar(scale);
 
       setObjectPosition(pos.clone());
       setObjectPlaced(true);
-      console.log("✅ 오브젝트 배치 완료!");
+      console.log("✅ Object placed!");
     }
   });
 
-  // 캐릭터 판단
-  const isMoons = char === 'moons';
+  // char
+  const isMoons = (char === 'moons');
 
   return (
     <>
       {/* 파란 plane */}
       <mesh ref={planeRef} visible={false}>
-        <planeGeometry args={[1, 1]} />
+        <planeGeometry args={[1,1]} />
         <meshBasicMaterial
           color="#0000ff"
-          opacity={0.3}
           transparent
+          opacity={0.3}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -270,62 +274,56 @@ export const CameraTracker: React.FC<CameraTrackerProps> = ({
       {/* 오브젝트 */}
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? (
-            <Box onRenderEnd={() => { }} on />
-          ) : (
-            <Tree onRenderEnd={() => { }} on />
-          )}
+          {isMoons ? <Box onRenderEnd={()=>{}} on /> : <Tree onRenderEnd={()=>{}} on />}
         </group>
       )}
     </>
   );
-};
+}
 
-
-
-
+// 메인 NftAppT
 export default function NftAppT() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
 
-  // planeFound/stablePlane
+  // planeFound / stablePlane / 버튼
   const [planeFound, setPlaneFound] = useState(false);
   const [stablePlane, setStablePlane] = useState(false);
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
 
-  // HUD
+  // planeConfidence HUD
   const [planeConfidence, setPlaneConfidence] = useState(0);
 
   useEffect(() => {
     requestCameraPermission();
   }, []);
 
-  // 가정: 1280×720
+  // 예: 비디오 크기 (1280x720 등)
   const videoWidth = 1280;
   const videoHeight = 720;
 
-  // 빨간 원
+  // 빨간 원 DOM 위치/크기
+  const circleRadius = 100;
   const circleCenterX = videoWidth / 2;
   const circleCenterY = videoHeight / 2;
-  const circleRadius = 100;
 
   // 원 색
-  const circleColor = planeFound ? 'blue' : 'red';
-  // 버튼
-  const showButton = !planeFound && stablePlane;
+  const circleColor = planeFound ? "blue" : "red";
+  // 토끼 부르기 버튼 표시 여부
+  const showRabbitButton = !planeFound && stablePlane;
 
   return (
     <>
-      {/* 뒤로가기 */}
+      {/* 뒤로가기 버튼 */}
       <button
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
+          top: '1rem',
+          left: '1rem',
           zIndex: 9999,
           background: 'transparent',
-          border: 0,
-          padding: '1rem'
+          border: 'none',
+          padding: '1rem',
         }}
         onClick={() => window.history.back()}
       >
@@ -336,8 +334,8 @@ export default function NftAppT() {
       <div
         style={{
           position: 'absolute',
-          top: '10px',
-          right: '10px',
+          top: '1rem',
+          right: '1rem',
           zIndex: 9999,
           background: 'rgba(0,0,0,0.6)',
           padding: '10px',
@@ -353,7 +351,7 @@ export default function NftAppT() {
         <p><b>stablePlane:</b> {stablePlane ? "true" : "false"}</p>
       </div>
 
-      {/* 빨간 원 SVG */}
+      {/* 빨간 원 DOM */}
       <div
         style={{
           position: 'absolute',
@@ -367,7 +365,7 @@ export default function NftAppT() {
         <svg
           width={videoWidth}
           height={videoHeight}
-          style={{ position:'absolute', top:0, left:0 }}
+          style={{ position: 'absolute', top: 0, left: 0 }}
         >
           <circle
             cx={circleCenterX}
@@ -380,39 +378,40 @@ export default function NftAppT() {
         </svg>
       </div>
 
+      {/* 안내/버튼 */}
       {!planeFound ? (
         <>
           <div
             style={{
               position: 'absolute',
-              top: '60%',
+              top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              background:'rgba(0,0,0,0.6)',
-              padding:'10px',
-              borderRadius:'8px',
-              color:'white',
-              fontSize:'14px',
+              background: 'rgba(0,0,0,0.6)',
+              padding: '10px',
+              borderRadius: '8px',
+              color: 'white',
+              fontSize: '14px',
               zIndex:9999
             }}
           >
-            <p>빨간 원 안에 평면을 맞춰주세요!</p>
-            <p>안정화되면 [토끼 부르기] 버튼이 나타납니다.</p>
+            <p>빨간 원 안에 평면을 맞추어 주세요!</p>
+            <p>안정화되면 토끼 부르기 버튼이 나타납니다.</p>
           </div>
 
-          {showButton && (
+          {showRabbitButton && (
             <button
               style={{
-                position:'absolute',
-                bottom:'10%',
-                left:'50%',
-                transform:'translateX(-50%)',
+                position: 'absolute',
+                bottom: '10%',
+                left: '50%',
+                transform: 'translateX(-50%)',
                 zIndex:99999,
-                padding:'1rem',
-                fontSize:'1rem',
-                backgroundColor:'darkblue',
-                color:'white',
-                borderRadius:'8px',
+                padding: '1rem',
+                fontSize: '1rem',
+                backgroundColor: 'darkblue',
+                color: 'white',
+                borderRadius: '8px',
                 border:'none'
               }}
               onClick={() => setRequestFinalizePlane(true)}
@@ -425,14 +424,14 @@ export default function NftAppT() {
         <div
           style={{
             position: 'absolute',
-            top: '60%',
+            top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            background:'rgba(0,0,0,0.6)',
-            padding:'10px',
-            borderRadius:'8px',
-            color:'white',
-            fontSize:'14px',
+            background: 'rgba(0,0,0,0.6)',
+            padding: '10px',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
             zIndex:9999
           }}
         >
@@ -440,19 +439,21 @@ export default function NftAppT() {
         </div>
       )}
 
-      {/* SLAM Canvas */}
+      {/* SLAM + Three.js */}
       <SlamCanvas id="three-canvas">
-        <Suspense fallback={null}>
+        <React.Suspense fallback={null}>
           <CameraTracker
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
             setStablePlane={setStablePlane}
             requestFinalizePlane={requestFinalizePlane}
-            setCameraPosition={(pos)=>setCameraPosition(pos)}
-            setObjectPosition={(pos)=>setObjectPosition(pos)}
-            onPlaneConfidenceChange={(val)=>setPlaneConfidence(val)}
 
+            setCameraPosition={(pos)=> setCameraPosition(pos)}
+            setObjectPosition={(pos)=> setObjectPosition(pos)}
+            onPlaneConfidenceChange={(val)=> setPlaneConfidence(val)}
+
+            // 빨간원 좌표/크기
             circleCenterX={circleCenterX}
             circleCenterY={circleCenterY}
             circleRadius={circleRadius}
@@ -460,8 +461,8 @@ export default function NftAppT() {
             canvasHeight={videoHeight}
           />
           <ambientLight />
-          <directionalLight position={[100, 100, 0]} />
-        </Suspense>
+          <directionalLight position={[100,100,0]} />
+        </React.Suspense>
       </SlamCanvas>
     </>
   );
