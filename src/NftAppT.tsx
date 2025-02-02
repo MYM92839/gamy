@@ -516,7 +516,7 @@ export default function NftAppT() {
       <SlamCanvas id="three-canvas">
         <React.Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={(v) => {}}
+            setPlaneVisible={() => {}}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
