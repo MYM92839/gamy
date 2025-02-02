@@ -354,26 +354,23 @@ export default function NftAppT() {
       {/* 빨간 원 DOM */}
       <div
         style={{
-          position: 'absolute',
-          width: `${videoWidth}px`,
-          height: `${videoHeight}px`,
-          top: 0,
-          left: 0,
-          zIndex: 9998
+          position: "absolute",
+          width: '50dvw',
+          height: '50dvh',
+          top: '50dvh',
+          left: '50dvw',
+          zIndex: 9999,
+          transform: 'translate(-50%, -50%)',
         }}
       >
-        <svg
-          width={videoWidth}
-          height={videoHeight}
-          style={{ position: 'absolute', top: 0, left: 0 }}
-        >
+        <svg width="200" height="200" viewBox="0 0 50 50">
           <circle
-            cx={circleCenterX}
-            cy={circleCenterY}
-            r={circleRadius}
+            cx="25"
+            cy="25"
+            r="24"
             fill="none"
             stroke={circleColor}
-            strokeWidth={2}
+            strokeWidth="2"
           />
         </svg>
       </div>
