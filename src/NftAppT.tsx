@@ -114,8 +114,8 @@ function CameraTracker({
   onPlaneConfidenceChange,
   setPlaneVisible,
 
-  videoWidth,
-  videoHeight,
+  // videoWidth,
+  // videoHeight,
   domWidth,
   domHeight,
   circleX,
