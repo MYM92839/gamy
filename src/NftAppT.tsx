@@ -226,7 +226,7 @@ function CameraTracker({
           prevPlaneMatrix.current = newMatrix.clone();
 
           // EMA 방식으로 candidatePlaneMatrix 업데이트 (조건이 만족되면 계속 보정)
-          const alphaMatrix = 0.1;
+          const alphaMatrix = 0.4;
           const currentPos = new THREE.Vector3();
           const currentQuat = new THREE.Quaternion();
           const currentScale = new THREE.Vector3();
