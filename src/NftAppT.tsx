@@ -61,22 +61,7 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 }
 
 /**
- * AR 시스템이 반환하는 평면 행렬의 translation 요소에 scaleFactor를 곱해
- * 단위 보정을 적용한 새 Matrix4를 반환합니다.
- * 예를 들어, AR 시스템이 센티미터 단위로 값을 반환한다면 scaleFactor를 0.01로 적용하여 미터 단위로 변환합니다.
- */
-function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
-  const elements = matrix.elements.slice(); // 복사본 생성
-  elements[12] *= scaleFactor;
-  elements[13] *= scaleFactor;
-  elements[14] *= scaleFactor;
-  const newMat = new THREE.Matrix4();
-  newMat.fromArray(elements);
-  return newMat;
-}
-
-/**
- * (참고용) 빨간 원 교차점 계산 함수 – 이번 예제에서는 사용하지 않습니다.
+ * (참고용) 빨간 원 교차점 계산 함수 – 현재는 사용하지 않습니다.
  */
 // function getIntersectionWithCandidatePlane(
 //   camera: THREE.Camera,
@@ -105,6 +90,21 @@ function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THR
 //   }
 //   return null;
 // }
+
+/**
+ * AR 시스템이 반환하는 평면 행렬의 translation 요소에 scaleFactor를 곱해
+ * 단위 보정을 적용한 새 Matrix4를 반환합니다.
+ * 예: AR 시스템이 센티미터 단위로 값을 반환하면 scaleFactor를 0.01로 적용하여 미터 단위로 변환합니다.
+ */
+function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
+  const elements = matrix.elements.slice(); // 복사본 생성
+  elements[12] *= scaleFactor;
+  elements[13] *= scaleFactor;
+  elements[14] *= scaleFactor;
+  const newMat = new THREE.Matrix4();
+  newMat.fromArray(elements);
+  return newMat;
+}
 
 /** ============= CameraTracker ============= */
 interface CameraTrackerProps {
@@ -155,13 +155,13 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // 쿼리 파라미터 offset은 제거한 상태로 처리
+  // 쿼리 파라미터 offset은 제거
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5;
+  const planeConfidenceThreshold = 5; // 누적 안정도 임계값
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -175,6 +175,9 @@ function CameraTracker({
 
   // translation 단위 보정을 위한 scale factor (예: AR 시스템이 센티미터 단위 → 미터 단위: 0.01)
   const translationScale = 0.01;
+
+  // 오브젝트의 발을 평면에 딱 붙게 하기 위한 Y 오프셋 (모델에 따라 조정 필요)
+  const objectFootOffset = 0.5; // 예: 0.5미터, 필요에 따라 조정
 
   useEffect(() => {
     if (alvaAR) {
@@ -226,7 +229,7 @@ function CameraTracker({
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
         const dot = worldNormal.dot(camVec);
-        const effectiveDot = -dot; // 부호 반전 (예: 원래 dot가 -0.4 ~ -0.6이면 effectiveDot는 0.4~0.6)
+        const effectiveDot = -dot; // 부호 반전
         onDotValueChange?.(dot);
         const FACING_THRESHOLD = 0.2;
         let facingWeight = 0;
@@ -248,8 +251,7 @@ function CameraTracker({
           isVertical,
         });
 
-        // (D) 후보 업데이트 조건:
-        // 평면 중심과 빨간 원 중심 사이의 거리가 임계값 이내, facingWeight > 0, 그리고 isVertical이어야 함.
+        // (D) 후보 업데이트 조건: 평면 중심과 빨간 원 중심 사이의 거리가 임계값 이내, facingWeight > 0, 그리고 isVertical
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = 0;
           if (prevPlaneMatrix.current) {
@@ -302,7 +304,7 @@ function CameraTracker({
         const rot = new THREE.Quaternion();
         const sca = new THREE.Vector3();
         candidatePlaneMatrix.current.decompose(pos, rot, sca);
-        // 기존 180도 회전 대신 Y축 기준 90도 회전 적용
+        // 회전 보정: 평면의 로컬 노멀이 카메라를 향하도록 90도 회전 적용
         const localNormal = new THREE.Vector3(0, 0, 1);
         const worldNormal = localNormal.clone().applyQuaternion(rot);
         const camDir = new THREE.Vector3().subVectors(camera.position, pos).normalize();
@@ -333,20 +335,22 @@ function CameraTracker({
     }
 
     // 5) 평면 확정 후 오브젝트 배치 (최종 오브젝트 위치 결정)
-    // 최종 오브젝트 위치는 candidate 평면의 중심(finalPlaneMatrix에서 분해한 위치)을 그대로 사용합니다.
+    // 최종 오브젝트 위치는 candidate 평면의 중심(finalPlaneMatrix에서 분해한 위치)을 그대로 사용하되,
+    // 오브젝트의 발이 평면에 딱 붙도록 Y축 오프셋(objectFootOffset)을 적용합니다.
     if (planeFound && !objectPlaced && objectRef.current) {
       if (!finalObjectPosition.current) {
         const finalPos = new THREE.Vector3();
         finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
+        // 오브젝트의 발을 평면에 붙이기 위해 Y축 오프셋 적용 (객체 모델의 높이의 절반 등)
+        finalPos.y -= objectFootOffset;
         finalObjectPosition.current = finalPos.clone();
       }
       if (finalObjectPosition.current) {
         objectRef.current.position.copy(finalObjectPosition.current);
-        // 최종 오브젝트의 회전 보정: Y축 기준 90도 회전 적용
+        // 최종 오브젝트의 회전 보정: Y축 기준 90도 회전 적용 (객체의 등(Back)이 평면을 향하도록)
         const planeQuat = new THREE.Quaternion();
         finalPlaneMatrix.current.decompose(new THREE.Vector3(), planeQuat, new THREE.Vector3());
-        const flipAngle = Math.PI / 2; // 90도
-        const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), flipAngle);
+        const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
         planeQuat.multiply(flipQuat);
         objectRef.current.quaternion.copy(planeQuat);
         objectRef.current.scale.setScalar(scale);
