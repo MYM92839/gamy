@@ -149,6 +149,7 @@ function CameraTracker({
   const x = parseFloat(searchParams.get('x') || '0');
   const y = parseFloat(searchParams.get('y') || '0');
   const z = parseFloat(searchParams.get('z') || '0');
+  const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -241,7 +242,7 @@ function CameraTracker({
         // UI에 보정된 effectiveDot 값을 전달 (안정적일 때 약 0.9 이상)
         onDotValueChange?.(effectiveDot);
         // FACING_THRESHOLD를 0.9로 변경 (effectiveDot이 0.9 이상이어야 안정적)
-        const FACING_THRESHOLD = 0.4;
+        const FACING_THRESHOLD = (t !== undefined || t > 0) ? t : 0.4;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
@@ -262,8 +263,8 @@ function CameraTracker({
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = prevPlaneMatrix.current
             ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1
-                ? planeConfidence + facingWeight
-                : facingWeight)
+              ? planeConfidence + facingWeight
+              : facingWeight)
             : facingWeight;
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
@@ -539,7 +540,7 @@ export default function NftAppT() {
       <SlamCanvas id="three-canvas">
         <React.Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => {}}
+            setPlaneVisible={() => { }}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
