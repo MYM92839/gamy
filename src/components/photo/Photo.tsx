@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 export default function Photo() {
-  return (<div className="w-full h-full min-h-[874px] relative"
+  return (<div className="w-full h-full min-h-[974px] relative"
     style={{ WebkitOverflowScrolling: "touch" }}
 
   >
