@@ -141,9 +141,9 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  const x = parseFloat(searchParams.get('x') || '0');
-  const y = parseFloat(searchParams.get('y') || '0');
-  const z = parseFloat(searchParams.get('z') || '0');
+  // const x = parseFloat(searchParams.get('x') || '0');
+  // const y = parseFloat(searchParams.get('y') || '0');
+  // const z = parseFloat(searchParams.get('z') || '0');
   const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
