@@ -247,6 +247,14 @@ function CameraTracker({
           return; // 이후 평면 인식 로직을 건너뜁니다.
         }
 
+        // (후처리 로직 강화 1) 평면과 카메라 사이의 최대 거리 조건
+        const maxPlaneDistance = 5; // 예: 5미터 이상이면 무시
+        if (candidatePosition.distanceTo(camera.position) > maxPlaneDistance) {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          return;
+        }
+
         // 카메라와 평면 간의 벡터 계산 (카메라가 평면을 바라보는 방향)
         camVec.subVectors(camera.position, tempVec1).normalize();
         const dot = tempVec2.dot(camVec);
@@ -260,11 +268,11 @@ function CameraTracker({
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
 
-        // 평면의 수직성 검사 – 기존에는 up 벡터와의 내적 절대값이 0.5 미만이면 수직으로 판단
-        // 여기서는 더 엄격하게 0.3 이하일 때만 수직(즉, 땅과 평행)으로 판단합니다.
+        // 평면의 수직성 검사 – 수직 임계값을 동적으로 조정
+        // 카메라 높이가 낮은 경우(어린이 시점 등)에는 임계값을 조금 완화합니다.
+        const dynamicVerticalThreshold = camera.position.y < 1.5 ? 0.35 : 0.3;
         const verticality = Math.abs(tempVec2.dot(up));
-        const verticalThreshold = 0.3; // 임계값 조정 가능
-        const isVertical = verticality < verticalThreshold;
+        const isVertical = verticality < dynamicVerticalThreshold;
 
         console.log("Plane Debug:", {
           centerDistance: centerDistance.toFixed(2),
@@ -272,6 +280,7 @@ function CameraTracker({
           effectiveDot: effectiveDot.toFixed(2),
           facingWeight: facingWeight.toFixed(2),
           verticality: verticality.toFixed(2),
+          dynamicVerticalThreshold,
           isVertical,
         });
 
