@@ -117,6 +117,7 @@ interface CameraTrackerProps {
   onPlaneConfidenceChange?: (val: number) => void;
   setPlaneVisible: (v: boolean) => void;
   onDotValueChange?: (dot: number) => void;
+  onDebugUpdate?: (info: any) => void;
   videoWidth: number;
   videoHeight: number;
   domWidth: number;
@@ -137,6 +138,7 @@ function CameraTracker({
   onPlaneConfidenceChange,
   setPlaneVisible,
   onDotValueChange,
+  onDebugUpdate,
   videoWidth,
   videoHeight,
   domWidth,
@@ -156,7 +158,7 @@ function CameraTracker({
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // --- (개선) 안정도 임계값을 약간 낮춤 (예: 3로 설정)
+  // 안정도 임계값 (완화)
   const planeConfidenceThreshold = 3;
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
@@ -166,11 +168,9 @@ function CameraTracker({
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
-  // translation 단위 보정을 위한 scale factor (예: AR 시스템이 센티미터 단위 → 미터 단위: 0.01)
   const translationScale = 0.01;
   const objectFootOffset = 0.5;
 
-  // 임시 캔버스
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
   if (!tmpCanvasRef.current) {
     tmpCanvasRef.current = document.createElement('canvas');
@@ -179,7 +179,7 @@ function CameraTracker({
 
   useEffect(() => {
     if (alvaAR) {
-      // applyPose는 이미 SLAM과 Three.js의 좌표계 차이를 보정합니다.
+      // applyPose는 SLAM과 Three.js의 좌표계 차이를 보정합니다.
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
       console.log("✅ AlvaAR SLAM Initialized");
     }
@@ -199,7 +199,7 @@ function CameraTracker({
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
 
-    // 카메라 포즈 업데이트 (applyPose를 이용하여 좌표계 보정)
+    // 카메라 포즈 업데이트 (좌표계 보정 적용)
     if (frame && alvaAR) {
       const camPose = alvaAR.findCameraPose(frame);
       if (camPose) {
@@ -216,7 +216,6 @@ function CameraTracker({
         let newMatrix = matt.fromArray(planePose);
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
-        // DOM 상 평면 중심 좌표 계산
         const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
           newMatrix,
           camera as THREE.PerspectiveCamera,
@@ -228,18 +227,13 @@ function CameraTracker({
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        // circleR는 빨간 원의 반지름 – 사용자가 나중에 제스처로 조정할 수 있음
         const centerDistanceThreshold = circleR * 1.5;
 
-        // 평면 행렬 분해
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-        // 평면의 노말 계산 (SLAM 시스템의 평면 노말을 그대로 사용)
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
 
-        // 평면이 카메라 앞쪽에 있는지 검사
         const candidatePosition = tempVec1.clone();
         camera.getWorldDirection(cameraForward);
-        // 카메라에서 평면까지의 벡터
         camVec.copy(camera.position).sub(candidatePosition);
         if (camVec.lengthSq() === 0 || tempVec2.lengthSq() === 0) return;
         camVec.normalize();
@@ -248,40 +242,38 @@ function CameraTracker({
           console.warn("dot is NaN", { camVec, tempVec2 });
           return;
         }
-        // dot 값은 음수가 나와야 평면이 카메라를 향하는 것으로 간주됨. 절대값으로 계산
+        // 평면이 카메라를 향하는 정도를 절대값으로 계산
         const effectiveDot = Math.abs(dot);
         onDotValueChange?.(effectiveDot);
 
-        // FACING_THRESHOLD – 필요에 따라 t가 있으면 사용하고, 없으면 기본값 0.4
         const FACING_THRESHOLD = (t !== undefined && t > 0) ? t : 0.4;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
 
-        // 평면의 수직성 검사 – 카메라 높이에 따라 임계값 조정
         const dynamicVerticalThreshold = camera.position.y < 1.5 ? 0.35 : 0.3;
         const verticality = Math.abs(tempVec2.dot(up));
         const isVertical = verticality < dynamicVerticalThreshold;
 
-        console.log("Plane Debug:", {
-          centerDistance: centerDistance.toFixed(2),
-          dot: dot.toFixed(2),
-          effectiveDot: effectiveDot.toFixed(2),
-          facingWeight: facingWeight.toFixed(2),
-          verticality: verticality.toFixed(2),
-          dynamicVerticalThreshold,
-          isVertical,
-        });
+        // 디버깅 정보 업데이트
+        if (onDebugUpdate) {
+          onDebugUpdate({
+            centerDistance: centerDistance.toFixed(2),
+            dot: dot.toFixed(2),
+            effectiveDot: effectiveDot.toFixed(2),
+            facingWeight: facingWeight.toFixed(2),
+            verticality: verticality.toFixed(2),
+            dynamicVerticalThreshold: dynamicVerticalThreshold.toFixed(2),
+          });
+        }
 
-        // 평면과 카메라 사이 최대 거리 (예: 5미터 이상이면 무시)
         if (candidatePosition.distanceTo(camera.position) > 5) {
           setStablePlane(false);
           setPlaneConfidence(0);
           return;
         }
 
-        // 후보 평면 업데이트: 조건 (중심 거리, facingWeight, 수직성) 모두 만족해야 함
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = prevPlaneMatrix.current
             ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1
@@ -291,7 +283,6 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          // 선형 보간을 통한 후보 평면 업데이트
           candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
           newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
           candidatePos.lerp(tempVec1, 0.1);
@@ -300,8 +291,6 @@ function CameraTracker({
           candidatePlaneMatrix.current.compose(candidatePos, candidateQuat, candidateScale);
 
           // 좌표계 보정 (applyPose와 유사하게)
-          // SLAM의 평면 좌표계가 카메라 좌표계와 다르다면, 예를 들어
-          // 회전은 x 성분만, 이동은 y, z 성분만 부호 반전
           candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
           candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
 
@@ -328,11 +317,9 @@ function CameraTracker({
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-        // 동일한 좌표계 보정 적용
         candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
         candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
 
-        // (추가) Y축 기준 90도 회전 보정 – 필요 시 적용
         localNormal.set(0, 0, 1);
         tempQuat1.copy(candidateQuat);
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
@@ -344,12 +331,10 @@ function CameraTracker({
         }
         planeRef.current.position.copy(candidatePos);
         planeRef.current.quaternion.copy(candidateQuat);
-        // 오브젝트 스케일 보정: 빨간 원의 반지름(circleR)과 기준값(someReference)을 비교하여
-        const someReference = 50; // 기준값 – 필요에 따라 조정
+        const someReference = 50;
         const canvasScaleFactor = circleR / someReference;
         planeRef.current.scale.setScalar(3 * canvasScaleFactor);
       } else {
-        // 평면이 안정적이지 않으면 기본 위치 (카메라 앞쪽 일정 거리)
         const defaultDistance = 2;
         camDir.set(0, 0, 0);
         camera.getWorldDirection(camDir);
@@ -372,7 +357,6 @@ function CameraTracker({
     if (planeFound && !objectPlaced && objectRef.current) {
       if (!finalObjectPosition.current) {
         finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-        // 이동 보정 (applyPose와 유사)
         candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
         candidatePos.y -= objectFootOffset;
         finalObjectPosition.current = candidatePos.clone();
@@ -383,14 +367,12 @@ function CameraTracker({
       if (finalObjectPosition.current) {
         objectRef.current.position.copy(finalObjectPosition.current);
         finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
-        // 회전 보정: applyPose와 유사 (x만 반전 후, Y축 기준 90도 회전)
         tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
         flipQuat.set(0, 0, 0, 1);
         flipQuat.setFromAxisAngle(dummy, Math.PI / 2);
         tempQuat1.multiply(flipQuat);
         objectRef.current.quaternion.copy(tempQuat1);
-        // 오브젝트 스케일 보정: candidate 평면 스케일과 빨간 원의 크기 비교
-        const someReference = 50; // 기준값
+        const someReference = 50;
         const canvasScaleFactor = circleR / someReference;
         objectRef.current.scale.setScalar(scale * canvasScaleFactor);
         setObjectPosition(finalObjectPosition.current.clone());
@@ -404,7 +386,6 @@ function CameraTracker({
     }
   });
 
-  // 현재는 char에 따라 Box 또는 Tree를 렌더링
   const isMoons = (char === 'moons');
   return (
     <>
@@ -430,6 +411,8 @@ export default function NftAppT() {
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const [dotValue, setDotValue] = useState(0);
+  // 디버그 정보를 담을 상태
+  const [debugInfo, setDebugInfo] = useState<any>({});
 
   useEffect(() => {
     requestCameraPermission();
@@ -439,7 +422,7 @@ export default function NftAppT() {
   const domHeight = 640;
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
-  const circleR = 100; // 기본 빨간 원 반지름 (추후 사용자 제스처로 조정 가능)
+  const circleR = 100; // 기본 빨간 원 반지름
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
@@ -459,38 +442,44 @@ export default function NftAppT() {
       >
         <Back />
       </button>
+      {/* 디버그 패널 */}
       <div
         style={{
           position: 'fixed',
-          top: '1rem',
-          right: '1rem',
-          zIndex: 9999,
-          background: 'rgba(0,0,0,0.6)',
-          padding: '10px',
-          borderRadius: '8px',
+          bottom: '0',
+          left: '0',
+          zIndex: 100000,
+          background: 'rgba(0,0,0,0.7)',
           color: 'white',
-          fontSize: '14px'
+          padding: '10px',
+          fontSize: '12px',
+          maxHeight: '300px',
+          overflowY: 'auto'
         }}
       >
-        <p>
-          <b>카메라</b>: {cameraPosition.x.toFixed(2)}, {cameraPosition.y.toFixed(2)}, {cameraPosition.z.toFixed(2)}
-        </p>
-        <p>
-          <b>오브젝트</b>: {objectPosition.x.toFixed(2)}, {objectPosition.y.toFixed(2)}, {objectPosition.z.toFixed(2)}
-        </p>
-        <p>
-          <b>confidence</b>: {planeConfidence}
-        </p>
-        <p>
-          <b>planeFound</b>: {planeFound ? 'true' : 'false'}
-        </p>
-        <p>
-          <b>stablePlane</b>: {stablePlane ? 'true' : 'false'}
-        </p>
-        <p>
-          <b>dot</b>: {dotValue.toFixed(2)}
-        </p>
+        <pre>{JSON.stringify(
+          {
+            cameraPosition: {
+              x: cameraPosition.x.toFixed(2),
+              y: cameraPosition.y.toFixed(2),
+              z: cameraPosition.z.toFixed(2)
+            },
+            objectPosition: {
+              x: objectPosition.x.toFixed(2),
+              y: objectPosition.y.toFixed(2),
+              z: objectPosition.z.toFixed(2)
+            },
+            planeConfidence,
+            planeFound,
+            stablePlane,
+            dotValue,
+            debugInfo
+          },
+          null,
+          2
+        )}</pre>
       </div>
+      {/* 평면 디버그용 SVG (빨간 원) */}
       {!planeFound && (
         <div
           style={{
@@ -585,6 +574,7 @@ export default function NftAppT() {
             setObjectPosition={(pos) => setObjectPosition(pos)}
             onPlaneConfidenceChange={(val) => setPlaneConfidence(val)}
             onDotValueChange={(val) => setDotValue(val)}
+            onDebugUpdate={(info) => setDebugInfo(info)}
             videoWidth={1280}
             videoHeight={720}
             domWidth={360}
