@@ -212,12 +212,11 @@ function CameraTracker({
     if (!planeFound && alvaAR) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
-        // 재사용 가능한 Matrix4 객체를 생성하지 않고, 새 Matrix4를 사용한 후 scale 적용
         matt.identity();
         let newMatrix = matt.fromArray(planePose);
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
-        // getPlaneDOMCenter에 재사용 가능한 임시 벡터를 사용하지 않고 호출
+        // DOM 상 평면 중심 좌표 계산 (원 중심과의 거리 계산용)
         const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
           newMatrix,
           camera as THREE.PerspectiveCamera,
@@ -232,24 +231,40 @@ function CameraTracker({
         const centerDistanceThreshold = circleR * 1.5;
 
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-        // 평면 노멀 구하기
+
+        // 평면 노말 구하기
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
-        // 카메라와 평면 간의 벡터
-        camVec.set(0, 0, 0);
+
+        // (추가) 평면이 카메라 앞쪽(시야 내)에 있는지 검사
+        const candidatePosition = tempVec1.clone();
+        const cameraForward = new THREE.Vector3();
+        camera.getWorldDirection(cameraForward);
+        const camToPlane = candidatePosition.clone().sub(camera.position);
+        if (camToPlane.dot(cameraForward) <= 0) {
+          // 평면이 카메라 뒤쪽이면 안정적이지 않으므로 무시합니다.
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          return; // 이후 평면 인식 로직을 건너뜁니다.
+        }
+
+        // 카메라와 평면 간의 벡터 계산 (카메라가 평면을 바라보는 방향)
         camVec.subVectors(camera.position, tempVec1).normalize();
         const dot = tempVec2.dot(camVec);
         const effectiveDot = -dot;
-        // UI에 보정된 effectiveDot 값을 전달 (안정적일 때 약 0.9 이상)
         onDotValueChange?.(effectiveDot);
-        // FACING_THRESHOLD를 0.9로 변경 (effectiveDot이 0.9 이상이어야 안정적)
-        const FACING_THRESHOLD = (t !== undefined || t > 0) ? t : 0.4;
+
+        // FACING_THRESHOLD 값 (필요에 따라 조정; t 값이 있다면 사용)
+        const FACING_THRESHOLD = (t !== undefined && t > 0) ? t : 0.4;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
-        // 평면의 수직성 확인
+
+        // 평면의 수직성 검사 – 기존에는 up 벡터와의 내적 절대값이 0.5 미만이면 수직으로 판단
+        // 여기서는 더 엄격하게 0.3 이하일 때만 수직(즉, 땅과 평행)으로 판단합니다.
         const verticality = Math.abs(tempVec2.dot(up));
-        const isVertical = verticality < 0.5;
+        const verticalThreshold = 0.3; // 임계값 조정 가능
+        const isVertical = verticality < verticalThreshold;
 
         console.log("Plane Debug:", {
           centerDistance: centerDistance.toFixed(2),
@@ -260,6 +275,7 @@ function CameraTracker({
           isVertical,
         });
 
+        // 후보 평면 업데이트: 원 중심과의 거리가 충분히 가까우면서, facingWeight가 일정 이상이고, 평면이 수직일 때만
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = prevPlaneMatrix.current
             ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1
@@ -300,7 +316,7 @@ function CameraTracker({
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-        // 회전 보정: Y축 기준 90도 회전 적용해서 평면의 노멀을 카메라 쪽으로
+        // 회전 보정: Y축 기준 90도 회전 적용해서 평면의 노말을 카메라 쪽으로
         localNormal.set(0, 0, 1);
         tempQuat1.copy(candidateQuat);
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
@@ -315,7 +331,7 @@ function CameraTracker({
         planeRef.current.quaternion.copy(candidateQuat);
         planeRef.current.scale.set(3, 3, 3);
       } else {
-        // 기본 위치 설정
+        // 기본 위치 설정: 카메라 앞쪽 일정 거리
         const defaultDistance = 2;
         camDir.set(0, 0, 0);
         camera.getWorldDirection(camDir);
