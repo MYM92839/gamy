@@ -160,13 +160,13 @@ function CameraTracker({
         const candidatePosition = tempVec1.clone();
         const cameraForward = new THREE.Vector3();
         camera.getWorldDirection(cameraForward);
-        const camToPlane = candidatePosition.clone().sub(camera.position);
-        if (camToPlane.dot(cameraForward) < 0) {
-          setStablePlane(false);
-          setPlaneConfidence(0);
-          onDotValueChange?.(0);
-          return;
-        }
+        // const camToPlane = candidatePosition.clone().sub(camera.position);
+        // if (camToPlane.dot(cameraForward) < 0) {
+        //   setStablePlane(false);
+        //   setPlaneConfidence(0);
+        //   onDotValueChange?.(0);
+        //   return;
+        // }
         // 최대 거리 조건 (5미터)
         if (candidatePosition.distanceTo(camera.position) > 5) {
           setStablePlane(false);

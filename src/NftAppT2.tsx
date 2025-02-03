@@ -204,12 +204,12 @@ function CameraTracker({
         const candidatePosition = tempVec1.clone();
         const cameraForward = new THREE.Vector3();
         camera.getWorldDirection(cameraForward);
-        const camToPlane = candidatePosition.clone().sub(camera.position);
-        if (camToPlane.dot(cameraForward) < 0) {
-          setStablePlane(false);
-          setPlaneConfidence(0);
-          return;
-        }
+        // const camToPlane = candidatePosition.clone().sub(camera.position);
+        // if (camToPlane.dot(cameraForward) < 0) {
+        //   setStablePlane(false);
+        //   setPlaneConfidence(0);
+        //   return;
+        // }
 
         // 최대 거리 조건 (예: 5미터)
         if (candidatePosition.distanceTo(camera.position) > 5) {
@@ -220,7 +220,7 @@ function CameraTracker({
 
         // 수직성 검사: 평면 노말과 월드 up 벡터(0,1,0) 내적 절대값이 0.6 미만이면 안정
         const verticality = Math.abs(tempVec2.dot(up));
-        if (verticality < 0.6 && verticality > -0.6) {
+        if (verticality < 0.6) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
