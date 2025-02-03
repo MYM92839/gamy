@@ -56,20 +56,20 @@ function getPlaneDOMCenter(
   return { x: videoX * scaleX, y: videoY * scaleY };
 }
 
-function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
-  const pos1 = new THREE.Vector3();
-  const pos2 = new THREE.Vector3();
-  const quat1 = new THREE.Quaternion();
-  const quat2 = new THREE.Quaternion();
-  const scale1 = new THREE.Vector3();
-  const scale2 = new THREE.Vector3();
-  m1.decompose(pos1, quat1, scale1);
-  m2.decompose(pos2, quat2, scale2);
-  const posDiff = pos1.distanceTo(pos2);
-  const dot = Math.abs(quat1.dot(quat2));
-  const rotDiff = 1 - dot;
-  return posDiff + rotDiff;
-}
+// function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
+//   const pos1 = new THREE.Vector3();
+//   const pos2 = new THREE.Vector3();
+//   const quat1 = new THREE.Quaternion();
+//   const quat2 = new THREE.Quaternion();
+//   const scale1 = new THREE.Vector3();
+//   const scale2 = new THREE.Vector3();
+//   m1.decompose(pos1, quat1, scale1);
+//   m2.decompose(pos2, quat2, scale2);
+//   const posDiff = pos1.distanceTo(pos2);
+//   const dot = Math.abs(quat1.dot(quat2));
+//   const rotDiff = 1 - dot;
+//   return posDiff + rotDiff;
+// }
 
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
@@ -113,8 +113,8 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
   setPlaneVisible,
-  onDotValueChange,
-  onDebugUpdate,
+  // onDotValueChange,
+  // onDebugUpdate,
   videoWidth,
   videoHeight,
   domWidth,
@@ -126,12 +126,12 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  const t = parseFloat(searchParams.get('t') || '0');
+  // const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  const planeConfidenceThreshold = 3;
+  // const planeConfidenceThreshold = 3;
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
