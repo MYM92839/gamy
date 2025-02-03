@@ -13,6 +13,18 @@ import { useSlam } from './libs/SLAMProvider';
 import Back from './assets/icons/Back';
 import { Box, Tree } from './ArApp';
 
+const tempVec1 = new THREE.Vector3();
+const tempVec2 = new THREE.Vector3();
+const tempQuat1 = new THREE.Quaternion();
+// const tempQuat2 = new THREE.Quaternion();
+const tempScale1 = new THREE.Vector3();
+// const tempScale2 = new THREE.Vector3();
+const candidatePos = new THREE.Vector3();
+const candidateQuat = new THREE.Quaternion();
+const candidateScale = new THREE.Vector3();
+const localNormal = new THREE.Vector3(0, 0, 1);
+
+
 /** =============== 유틸 함수들 =============== */
 
 /**
@@ -60,7 +72,6 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 /**
  * AR 시스템이 반환하는 평면 행렬의 translation 요소에 scaleFactor를 곱해
  * 단위 보정을 적용한 새 Matrix4를 반환합니다.
- * 예를 들어, AR 시스템이 센티미터 단위로 값을 반환하면 scaleFactor를 0.01로 적용하여 미터 단위로 변환합니다.
  */
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice(); // 복사본 생성
@@ -115,7 +126,9 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // 쿼리 파라미터 offset은 제거합니다.
+  const x = parseFloat(searchParams.get('x') || '0');
+  const y = parseFloat(searchParams.get('y') || '0');
+  const z = parseFloat(searchParams.get('z') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -135,6 +148,15 @@ function CameraTracker({
   // 오브젝트의 발을 평면에 딱 붙게 하기 위한 Y 오프셋 (모델에 맞게 조정)
   const objectFootOffset = 0.5;
 
+  // 최적화를 위해 매 프레임 재사용할 임시 객체들을 미리 생성합니다.
+  const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  if (!tmpCanvasRef.current) {
+    tmpCanvasRef.current = document.createElement('canvas');
+  }
+  // useFrame에서 재사용할 임시 객체들
+  const tmpCtx = useRef<CanvasRenderingContext2D | null>(null);
+  // const tempImageData = useRef<ImageData | null>(null);
+
   useEffect(() => {
     if (alvaAR) {
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
@@ -143,32 +165,38 @@ function CameraTracker({
   }, [alvaAR]);
 
   useFrame(({ camera }) => {
-    // 항상 카메라 포즈 업데이트는 실행합니다.
-    let frame;
+    let frame: ImageData | undefined;
     const video = document.getElementById('ar-video') as HTMLVideoElement | null;
-    if (video) {
-      const tmpCanvas = document.createElement('canvas');
-      const ctx = tmpCanvas.getContext('2d');
+    if (video && tmpCanvasRef.current) {
+      const tmpCanvas = tmpCanvasRef.current;
       tmpCanvas.width = video.videoWidth || videoWidth;
       tmpCanvas.height = video.videoHeight || videoHeight;
-      ctx?.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
-      frame = ctx?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
-      if (frame) {
-        const camPose = alvaAR.findCameraPose(frame);
-        if (camPose) {
-          applyPose.current(camPose, camera.quaternion, camera.position);
-          setCameraPosition(camera.position.clone());
-        }
+      if (!tmpCtx.current) {
+        tmpCtx.current = tmpCanvas.getContext('2d');
+      }
+      tmpCtx.current?.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
+      frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
+    }
+
+    // 카메라 포즈 업데이트
+    if (frame && alvaAR) {
+      const camPose = alvaAR.findCameraPose(frame);
+      if (camPose) {
+        // applyPose는 내부에서 전달받은 카메라 quaternion, position을 업데이트합니다.
+        applyPose.current(camPose, camera.quaternion, camera.position);
+        setCameraPosition(camera.position.clone());
       }
     }
 
-    // 평면 인식 및 후보 평면 업데이트는 객체 배치(anchoring)가 확정되지 않은 동안에만 실행합니다.
-    if (!planeFound) {
+    // 평면 인식 및 후보 평면 업데이트 (객체 배치 전까지)
+    if (!planeFound && alvaAR) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
+        // 재사용 가능한 Matrix4 객체를 생성하지 않고, 새 Matrix4를 사용한 후 scale 적용
         let newMatrix = new THREE.Matrix4().fromArray(planePose);
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
+        // getPlaneDOMCenter에 재사용 가능한 임시 벡터를 사용하지 않으므로 그대로 호출
         const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
           newMatrix,
           camera as THREE.PerspectiveCamera,
@@ -182,14 +210,12 @@ function CameraTracker({
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
         const centerDistanceThreshold = circleR * 1.5;
 
-        const pos = new THREE.Vector3();
-        const rot = new THREE.Quaternion();
-        const sca = new THREE.Vector3();
-        newMatrix.decompose(pos, rot, sca);
-        const localNormal = new THREE.Vector3(0, 0, 1);
-        const worldNormal = localNormal.clone().applyQuaternion(rot);
-        const camVec = new THREE.Vector3().subVectors(camera.position, pos).normalize();
-        const dot = worldNormal.dot(camVec);
+        newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
+        // 평면 노멀 구하기
+        tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
+        // 카메라와 평면 간의 벡터
+        const camVec = new THREE.Vector3().subVectors(camera.position, tempVec1).normalize();
+        const dot = tempVec2.dot(camVec);
         const effectiveDot = -dot;
         onDotValueChange?.(dot);
         const FACING_THRESHOLD = 0.2;
@@ -197,8 +223,9 @@ function CameraTracker({
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
+        // 평면의 수직성 확인
         const up = new THREE.Vector3(0, 1, 0);
-        const verticality = Math.abs(worldNormal.dot(up));
+        const verticality = Math.abs(tempVec2.dot(up));
         const isVertical = verticality < 0.5;
 
         console.log("Plane Debug:", {
@@ -217,21 +244,15 @@ function CameraTracker({
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
 
-          const alphaMatrix = 0.1;
-          const currentPos = new THREE.Vector3();
-          const currentQuat = new THREE.Quaternion();
-          const currentScale = new THREE.Vector3();
-          candidatePlaneMatrix.current.decompose(currentPos, currentQuat, currentScale);
-          const newPos = new THREE.Vector3();
-          const newQuat = new THREE.Quaternion();
-          const newScale = new THREE.Vector3();
-          newMatrix.decompose(newPos, newQuat, newScale);
-          currentPos.lerp(newPos, alphaMatrix);
-          currentQuat.slerp(newQuat, alphaMatrix);
-          currentScale.lerp(newScale, alphaMatrix);
-          candidatePlaneMatrix.current.compose(currentPos, currentQuat, currentScale);
+          // 매 프레임 선형 보간을 통해 후보 평면 업데이트
+          candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
+          newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
+          candidatePos.lerp(tempVec1, 0.1);
+          candidateQuat.slerp(tempQuat1, 0.1);
+          candidateScale.lerp(tempScale1, 0.1);
+          candidatePlaneMatrix.current.compose(candidatePos, candidateQuat, candidateScale);
 
-          console.log("Updated candidatePlaneMatrix Position:", currentPos);
+          console.log("Updated candidatePlaneMatrix Position:", candidatePos);
 
           if (newConfidence >= planeConfidenceThreshold) {
             setStablePlane(true);
@@ -250,25 +271,24 @@ function CameraTracker({
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 평면 표시는 객체 배치(anchoring) 전까지 후보 평면을 계속 업데이트합니다.
+    // 평면 표시 (객체 anchoring 전까지 후보 평면 업데이트)
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
-        const pos = new THREE.Vector3();
-        const rot = new THREE.Quaternion();
-        const sca = new THREE.Vector3();
-        candidatePlaneMatrix.current.decompose(pos, rot, sca);
+        candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
         // 회전 보정: Y축 기준 90도 회전 적용해서 평면의 노멀을 카메라 쪽으로
-        const localNormal = new THREE.Vector3(0, 0, 1);
-        const worldNormal = localNormal.clone().applyQuaternion(rot);
-        const camDir = new THREE.Vector3().subVectors(camera.position, pos).normalize();
-        if (worldNormal.dot(camDir) < 0) {
+        localNormal.set(0, 0, 1);
+        tempQuat1.copy(candidateQuat);
+        tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
+        const camDir = new THREE.Vector3().subVectors(camera.position, candidatePos).normalize();
+        if (tempVec2.dot(camDir) < 0) {
           const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-          rot.multiply(flipQuat);
+          candidateQuat.multiply(flipQuat);
         }
-        planeRef.current.position.copy(pos);
-        planeRef.current.quaternion.copy(rot);
+        planeRef.current.position.copy(candidatePos);
+        planeRef.current.quaternion.copy(candidateQuat);
         planeRef.current.scale.set(3, 3, 3);
       } else {
+        // 기본 위치 설정
         const defaultDistance = 2;
         const camDir = new THREE.Vector3();
         camera.getWorldDirection(camDir);
@@ -287,23 +307,28 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 최종 오브젝트 배치는 평면이 확정된 후 한 번만 실행하여 고정(anchor)합니다.
+    // 최종 오브젝트 배치 (평면 확정 후 한 번만 실행)
     if (planeFound && !objectPlaced && objectRef.current) {
       if (!finalObjectPosition.current) {
-        const finalPos = new THREE.Vector3();
-        finalPlaneMatrix.current.decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
-        // 오브젝트의 발이 평면에 딱 붙도록 Y축 오프셋 적용
-        finalPos.y -= objectFootOffset;
-        finalObjectPosition.current = finalPos.clone();
+        finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
+        candidatePos.y -= objectFootOffset;
+        finalObjectPosition.current = candidatePos.clone();
+      }
+      if (x) {
+        finalObjectPosition.current.x += x
+      }
+      if (y) {
+        finalObjectPosition.current.y += y
+      } if (z) {
+        finalObjectPosition.current.z += z
       }
       if (finalObjectPosition.current) {
         objectRef.current.position.copy(finalObjectPosition.current);
-        // 최종 오브젝트의 회전: AR 시스템이 반환한 평면 회전값에 Y축 기준 90도 회전을 적용합니다.
-        const finalQuat = new THREE.Quaternion();
-        finalPlaneMatrix.current.decompose(new THREE.Vector3(), finalQuat, new THREE.Vector3());
+        // 오브젝트 회전: AR 시스템이 반환한 평면 회전값에 Y축 기준 90도 회전 적용
+        finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
         const flipQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-        finalQuat.multiply(flipQuat);
-        objectRef.current.quaternion.copy(finalQuat);
+        tempQuat1.multiply(flipQuat);
+        objectRef.current.quaternion.copy(tempQuat1);
         objectRef.current.scale.setScalar(scale);
         setObjectPosition(finalObjectPosition.current.clone());
         setObjectPlaced(true);
