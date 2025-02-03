@@ -22,8 +22,8 @@ const candidateQuat = new THREE.Quaternion();
 const candidateScale = new THREE.Vector3();
 
 const localNormal = new THREE.Vector3(0, 0, 1);
-const camVec = new THREE.Vector3();
-const up = new THREE.Vector3(0, 1, 0);
+// const camVec = new THREE.Vector3();
+// const up = new THREE.Vector3(0, 1, 0);
 const camDir = new THREE.Vector3();
 const flipQuat = new THREE.Quaternion();
 const dummy = new THREE.Vector3(0, 1, 0);
@@ -61,24 +61,24 @@ function getPlaneDOMCenter(
   return { x: videoX * scaleX, y: videoY * scaleY };
 }
 
-/** 두 Matrix4의 차이를 계산 (간단 비교용) */
-function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
-  const pos1 = new THREE.Vector3();
-  const pos2 = new THREE.Vector3();
-  const quat1 = new THREE.Quaternion();
-  const quat2 = new THREE.Quaternion();
-  const scale1 = new THREE.Vector3();
-  const scale2 = new THREE.Vector3();
-  m1.decompose(pos1, quat1, scale1);
-  m2.decompose(pos2, quat2, scale2);
-  const posDiff = pos1.distanceTo(pos2);
-  const dot = Math.abs(quat1.dot(quat2));
-  const rotDiff = 1 - dot;
-  return posDiff + rotDiff;
-}
+// /** 두 Matrix4의 차이를 계산 (간단 비교용) */
+// function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
+//   const pos1 = new THREE.Vector3();
+//   const pos2 = new THREE.Vector3();
+//   const quat1 = new THREE.Quaternion();
+//   const quat2 = new THREE.Quaternion();
+//   const scale1 = new THREE.Vector3();
+//   const scale2 = new THREE.Vector3();
+//   m1.decompose(pos1, quat1, scale1);
+//   m2.decompose(pos2, quat2, scale2);
+//   const posDiff = pos1.distanceTo(pos2);
+//   const dot = Math.abs(quat1.dot(quat2));
+//   const rotDiff = 1 - dot;
+//   return posDiff + rotDiff;
+// }
 
 /**
- * 평면 행렬의 translation 부분에 scaleFactor를 곱하여 단위 보정 (예: 센티미터 → 미터)
+ * 평면 행렬의 translation 부분에 scaleFactor를 곱해 단위 보정 (예: 센티미터 → 미터)
  */
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
@@ -136,7 +136,7 @@ function CameraTracker({
   // const x = parseFloat(searchParams.get('x') || '0');
   // const y = parseFloat(searchParams.get('y') || '0');
   // const z = parseFloat(searchParams.get('z') || '0');
-  const t = parseFloat(searchParams.get('t') || '0');
+  // const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -145,9 +145,9 @@ function CameraTracker({
   const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  // 안정 상태 임계값 (테스트용으로 완화)
-  const planeConfidenceThreshold = 5;
-  const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
+  // 안정 상태 임계값 (테스트용)
+  // const planeConfidenceThreshold = 5;
+  // const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
@@ -180,7 +180,7 @@ function CameraTracker({
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
 
-    // 카메라 포즈 업데이트 (SLAM 적용)
+    // 카메라 포즈 업데이트
     if (frame && alvaAR) {
       const camPose = alvaAR.findCameraPose(frame);
       if (camPose) {
@@ -206,87 +206,23 @@ function CameraTracker({
           domWidth,
           domHeight
         );
+        // 기존 조건은 centerDistance, effectiveDot, 수직성을 검사했으나,
+        // 여기서는 평면이 감지되면 바로 안정한 것으로 간주하도록 임계값을 완화합니다.
+        // (예: centerDistance 조건만 확인)
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        // 임계값 완화: 평면 투영 중심이 빨간 원의 2배 이내면 조건 통과
-        const centerDistanceThreshold = circleR * 2;
+        const centerDistanceThreshold = circleR * 2; // 완화된 조건
 
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
         // 평면 노말 계산 (기본 (0,0,1)에 후보 회전 적용)
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
 
-        // 평면이 카메라 앞쪽에 있는지 검사
-        const candidatePosition = tempVec1.clone();
-        const cameraForward = new THREE.Vector3();
-        camera.getWorldDirection(cameraForward);
-        const camToPlane = candidatePosition.clone().sub(camera.position);
-        if (camToPlane.dot(cameraForward) <= 0) {
-          setStablePlane(false);
-          setPlaneConfidence(0);
-          return;
-        }
-
-        // 최대 거리 조건 (예: 5미터)
-        const maxPlaneDistance = 5;
-        if (candidatePosition.distanceTo(camera.position) > maxPlaneDistance) {
-          setStablePlane(false);
-          setPlaneConfidence(0);
-          return;
-        }
-
-        // 카메라와 평면의 관계 계산 (내적을 통한 효과값)
-        camVec.subVectors(camera.position, tempVec1).normalize();
-        const dot = tempVec2.dot(camVec);
-        const effectiveDot = -dot; // 평면이 카메라를 향하면 음수 → 절대값 처리
-        onDotValueChange?.(effectiveDot);
-
-        // FACING 조건 (임계값 0.4 기본, 조정 가능)
-        const FACING_THRESHOLD = (t !== undefined && t > 0) ? t : 0.4;
-        let facingWeight = 0;
-        if (effectiveDot > FACING_THRESHOLD) {
-          facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
-        }
-
-        // 수직성 검사: 평면 노말과 월드 업 벡터(0,1,0) 내적 절대값이 0.5 미만이면 안정 (조건 완화)
-        const verticality = Math.abs(tempVec2.dot(up));
-        const isVertical = verticality < 0.5;
-
-        console.log("Plane Debug:", {
-          centerDistance: centerDistance.toFixed(2),
-          effectiveDot: effectiveDot.toFixed(2),
-          facingWeight: facingWeight.toFixed(2),
-          verticality: verticality.toFixed(2),
-          isVertical,
-        });
-
-        // 조건이 만족되면 후보 평면을 안정 상태로 판단
-        if (centerDistance < centerDistanceThreshold && effectiveDot > 0.05 && isVertical) {
-          // 최초 안정 후보 평면 위치 저장 (한 번만)
-          if (!initialCandidatePos.current) {
-            initialCandidatePos.current = candidatePos.clone();
-            console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
-          }
-          // 후보 평면 업데이트 (선형 보간 적용)
-          candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-          newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-          candidatePos.lerp(tempVec1, 0.1);
-          candidateQuat.slerp(tempQuat1, 0.1);
-          candidateScale.lerp(tempScale1, 0.1);
-          candidatePlaneMatrix.current.compose(candidatePos, candidateQuat, candidateScale);
-
-          // 누적 안정도 판단 (예: matrixDiff 조건으로 가중치 계산)
-          let newConfidence = prevPlaneMatrix.current
-            ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1 ? planeConfidence + facingWeight : facingWeight)
-            : facingWeight;
-          setPlaneConfidence(newConfidence);
-          prevPlaneMatrix.current = newMatrix.clone();
-
-          if (newConfidence >= planeConfidenceThreshold) {
-            setStablePlane(true);
-          } else {
-            setStablePlane(false);
-          }
+        // 조건 단순화: planePose가 존재하면 안정한 것으로 판단
+        if (centerDistance < centerDistanceThreshold) {
+          setStablePlane(true);
+          setPlaneConfidence(1);
+          candidatePlaneMatrix.current.copy(newMatrix);
         } else {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -298,8 +234,9 @@ function CameraTracker({
     }
 
     onPlaneConfidenceChange?.(planeConfidence);
+    onDotValueChange?.(0); // 여기서는 효과 내적을 무시하고 0으로 처리할 수도 있음
 
-    // 평면 메시(후보 평면) 업데이트
+    // 평면 메시 업데이트 (후보 평면 표시)
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
@@ -340,7 +277,7 @@ function CameraTracker({
     // 오브젝트 배치: 평면 확정 후, 초기 후보와 현재 후보의 오프셋을 적용하여 최종 배치
     if (planeFound && !objectPlaced && objectRef.current) {
       finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-      // 오프셋 계산: 초기 후보 위치와 현재 후보 위치 차이
+      // 오프셋 계산: 초기 후보와 현재 후보의 차이
       let offset = new THREE.Vector3();
       if (initialCandidatePos.current) {
         offset.subVectors(candidatePos, initialCandidatePos.current);
