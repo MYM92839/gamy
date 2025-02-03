@@ -14,7 +14,6 @@ import { Box, Tree } from './ArApp';
 // --- 전역 임시 객체들 ---
 const tempVec1 = new THREE.Vector3();
 const tempVec2 = new THREE.Vector3();
-
 const tempQuat1 = new THREE.Quaternion();
 const tempScale1 = new THREE.Vector3();
 
@@ -35,6 +34,8 @@ const sca = new THREE.Vector3();
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
+
+// SLAM에서 반환한 평면 행렬을 분해하고, 카메라 투영을 적용하여 DOM 좌표(픽셀)를 계산
 function getPlaneDOMCenter(
   planeMatrix: THREE.Matrix4,
   camera: THREE.PerspectiveCamera,
@@ -57,6 +58,7 @@ function getPlaneDOMCenter(
   return { x: videoX * scaleX, y: videoY * scaleY };
 }
 
+// 평면 행렬의 translation 부분에 scaleFactor를 곱해 단위 보정 (예: 센티미터 → 미터)
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
   elements[12] *= scaleFactor;
@@ -193,13 +195,15 @@ function CameraTracker({
 
         // 카메라에서 후보 평면까지의 방향 벡터 계산
         const camToPlane = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
-        // 평면의 노말 (기본 벡터 (0,0,1)에 후보 회전 적용)
+        // 평면의 노말 벡터 (기본 벡터 (0,0,1)에 후보 회전 적용)
         const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(candidateQuat);
         const dot = planeNormal.dot(camToPlane); // 평면이 카메라를 향하면 dot는 음수
         const effectiveDot = dot < 0 ? -dot : 0;
+        // 수직성 검사: 평면이 바닥(수평)이 아니라면, up 벡터와의 내적 절대값이 0.3 미만이어야 함
+        const verticality = Math.abs(planeNormal.dot(new THREE.Vector3(0, 1, 0)));
 
-        // 임계값 완화: centerDistance < circleR * 1.5, effectiveDot > 0.1
-        if (centerDistance < circleR * 1.5 && effectiveDot > 0.1) {
+        // 임계값 완화: centerDistance < circleR * 1.5, effectiveDot > 0.1, verticality < 0.3
+        if (centerDistance < circleR * 1.5 && effectiveDot > 0.1 && verticality < 0.3) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
@@ -255,7 +259,7 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 오브젝트 배치: 평면 확정 후, 카메라와 오브젝트 사이의 거리는 항상 고정 (1.5미터)
+    // 오브젝트 배치: 평면 확정 후, 카메라와 오브젝트 사이의 거리는 항상 고정 (예: 1.5미터)
     if (planeFound && !objectPlaced && objectRef.current) {
       const fixedDistance = 1.5;
       const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
@@ -287,6 +291,7 @@ function CameraTracker({
   return (
     <>
       <mesh ref={planeRef} visible={false}>
+        {/* 메시의 기하학적 중심을 (0,0,0)으로 맞추기 위해 geometry.center() 호출 권장 */}
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial color="#00f" opacity={0.3} transparent side={THREE.DoubleSide} />
       </mesh>
@@ -317,7 +322,7 @@ export default function NftAppT() {
   const domHeight = 640;
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
-  const circleR = 100;
+  const circleR = 100; // 빨간 원 반지름
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
