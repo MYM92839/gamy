@@ -119,21 +119,18 @@ function CameraTracker({
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
+  // 추가: 초기 후보 평면 위치 저장
+  const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
-  // 추가: 초기 후보 평면 위치 저장
-  const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
-
   const translationScale = 0.01;
   const objectFootOffset = 0.5;
 
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  if (!tmpCanvasRef.current) {
-    tmpCanvasRef.current = document.createElement('canvas');
-  }
+  if (!tmpCanvasRef.current) tmpCanvasRef.current = document.createElement('canvas');
   const tmpCtx = useRef<CanvasRenderingContext2D | null>(null);
 
   useEffect(() => {
@@ -150,9 +147,7 @@ function CameraTracker({
       const tmpCanvas = tmpCanvasRef.current;
       tmpCanvas.width = video.videoWidth || videoWidth;
       tmpCanvas.height = video.videoHeight || videoHeight;
-      if (!tmpCtx.current) {
-        tmpCtx.current = tmpCanvas.getContext('2d');
-      }
+      if (!tmpCtx.current) tmpCtx.current = tmpCanvas.getContext('2d');
       tmpCtx.current?.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
@@ -192,22 +187,29 @@ function CameraTracker({
         candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
         candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
 
-        // 후보 평면 업데이트 시, 최초 안정 후보 평면 위치를 저장
+        // 초기 후보 평면 위치 저장
         if (!initialCandidatePos.current) {
           initialCandidatePos.current = candidatePos.clone();
+          console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
         }
 
-        // 카메라에서 후보 평면까지의 방향 벡터 계산
+        // 카메라에서 후보 평면까지의 방향 벡터
         const camToPlane = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
-        // 평면의 노말 (기본 (0,0,1)에 후보 회전 적용)
+        // 평면의 노말 벡터 계산
         const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(candidateQuat);
         const dot = planeNormal.dot(camToPlane); // 평면이 카메라를 향하면 dot는 음수
         const effectiveDot = dot < 0 ? -dot : 0;
 
-        // 수직성 검사: up 벡터와의 내적 절대값이 0.3 미만이면 수직(벽)
+        // 수직성: up 벡터와의 내적 절대값이 0.3 미만이면 수직 (벽)
         const verticality = Math.abs(planeNormal.dot(new THREE.Vector3(0, 1, 0)));
 
-        // 임계값 완화: centerDistance < circleR * 1.5, effectiveDot > 0.1, verticality < 0.3
+        console.log("Plane Debug:", {
+          centerDistance: centerDistance.toFixed(2),
+          effectiveDot: effectiveDot.toFixed(2),
+          verticality: verticality.toFixed(2),
+        });
+
+        // 후보 평면 조건: centerDistance < circleR * 1.5, effectiveDot > 0.1, verticality < 0.3
         if (centerDistance < centerDistanceThreshold && effectiveDot > 0.1 && verticality < 0.3) {
           setStablePlane(true);
           setPlaneConfidence(1);
@@ -224,7 +226,7 @@ function CameraTracker({
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 평면 메시 업데이트
+    // 평면 메시 업데이트 (후보 평면 표시)
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
@@ -255,25 +257,23 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 평면 확정 요청
+    // 평면 확정 요청 (버튼 클릭 시)
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
       console.log("🎉 planeFound => place object");
     }
 
-    // 오브젝트 배치: 평면 확정 후, 초기 후보 평면과 현재 후보 평면 위치의 오프셋을 반영하여 배치
+    // 오브젝트 배치: 평면 확정 후, 초기 후보와 현재 후보의 오프셋을 반영하여 배치
     if (planeFound && !objectPlaced && objectRef.current) {
       finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-
-      // 오프셋 계산: 초기 안정 후보 평면 위치와 현재 후보 평면 위치의 차이
+      // 오프셋 계산: 초기 후보 위치와 현재 후보 위치 차이
       let offset = new THREE.Vector3();
       if (initialCandidatePos.current) {
-        offset = new THREE.Vector3().subVectors(candidatePos, initialCandidatePos.current);
+        offset.subVectors(candidatePos, initialCandidatePos.current);
+        console.log("Calculated offset:", offset.toArray());
       }
-      // 보정 적용: 후보 위치에 오프셋 추가
       candidatePos.add(offset);
-
       candidatePos.y -= objectFootOffset;
       finalObjectPosition.current = candidatePos.clone();
 
@@ -287,7 +287,7 @@ function CameraTracker({
       objectRef.current.scale.setScalar(scale);
       setObjectPosition(finalObjectPosition.current.clone());
       setObjectPlaced(true);
-      console.log("✅ Object placed at final position:", finalObjectPosition.current);
+      console.log("✅ Object placed at final position:", finalObjectPosition.current.toArray());
     }
 
     if (planeRef.current) {

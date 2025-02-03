@@ -33,13 +33,6 @@ const pos = new THREE.Vector3();
 const rot = new THREE.Quaternion();
 const sca = new THREE.Vector3();
 
-const pos1 = new THREE.Vector3();
-const pos2 = new THREE.Vector3();
-const rot1 = new THREE.Quaternion();
-const rot2 = new THREE.Quaternion();
-const sc1 = new THREE.Vector3();
-const sc2 = new THREE.Vector3();
-
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
@@ -66,16 +59,17 @@ function getPlaneDOMCenter(
 }
 
 function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
-  pos1.set(0, 0, 0);
-  pos2.set(0, 0, 0);
-  rot1.set(0, 0, 0, 1);
-  rot2.set(0, 0, 0, 1);
-  sc1.set(0, 0, 0);
-  sc2.set(0, 0, 0);
-  m1.decompose(pos1, rot1, sc1);
-  m2.decompose(pos2, rot2, sc2);
+  // 간단한 비교 함수 (테스트용)
+  const pos1 = new THREE.Vector3();
+  const pos2 = new THREE.Vector3();
+  const quat1 = new THREE.Quaternion();
+  const quat2 = new THREE.Quaternion();
+  const scale1 = new THREE.Vector3();
+  const scale2 = new THREE.Vector3();
+  m1.decompose(pos1, quat1, scale1);
+  m2.decompose(pos2, quat2, scale2);
   const posDiff = pos1.distanceTo(pos2);
-  const dot = Math.abs(rot1.dot(rot2));
+  const dot = Math.abs(quat1.dot(quat2));
   const rotDiff = 1 - dot;
   return posDiff + rotDiff;
 }
@@ -141,7 +135,7 @@ function CameraTracker({
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 추가: 초기 후보 평면 위치를 저장하는 ref
+  // 초기 후보 평면 위치 저장
   const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
@@ -157,9 +151,7 @@ function CameraTracker({
   const objectFootOffset = 0.5;
 
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  if (!tmpCanvasRef.current) {
-    tmpCanvasRef.current = document.createElement('canvas');
-  }
+  if (!tmpCanvasRef.current) tmpCanvasRef.current = document.createElement('canvas');
   const tmpCtx = useRef<CanvasRenderingContext2D | null>(null);
 
   useEffect(() => {
@@ -176,9 +168,7 @@ function CameraTracker({
       const tmpCanvas = tmpCanvasRef.current;
       tmpCanvas.width = video.videoWidth || videoWidth;
       tmpCanvas.height = video.videoHeight || videoHeight;
-      if (!tmpCtx.current) {
-        tmpCtx.current = tmpCanvas.getContext('2d');
-      }
+      if (!tmpCtx.current) tmpCtx.current = tmpCanvas.getContext('2d');
       tmpCtx.current?.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
@@ -216,10 +206,10 @@ function CameraTracker({
 
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
 
-        // 평면 노말 구하기
+        // 평면 노말 계산
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
 
-        // 평면이 카메라 앞쪽(시야 내)에 있는지 검사
+        // 평면이 카메라 앞쪽에 있는지 검사
         const candidatePosition = tempVec1.clone();
         const cameraForward = new THREE.Vector3();
         camera.getWorldDirection(cameraForward);
@@ -238,38 +228,33 @@ function CameraTracker({
           return;
         }
 
-        // 카메라와 평면 간의 벡터 계산 (카메라가 평면을 바라보는 방향)
+        // 카메라와 평면 간 벡터 계산
         camVec.subVectors(camera.position, tempVec1).normalize();
         const dot = tempVec2.dot(camVec);
         const effectiveDot = -dot;
         onDotValueChange?.(effectiveDot);
 
         const FACING_THRESHOLD = (t !== undefined && t > 0) ? t : 0.4;
-        let facingWeight = 0;
-        if (effectiveDot > FACING_THRESHOLD) {
-          facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
-        }
+        let facingWeight = effectiveDot > FACING_THRESHOLD ? (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD) : 0;
 
-        // 수직성 검사: 평면이 수직(벽처럼)인 경우, up 벡터와의 내적 절대값이 0.3 미만이어야 함
+        // 수직성: 평면 노말과 월드 업 벡터의 내적 절대값
         const verticality = Math.abs(tempVec2.dot(up));
         const isVertical = verticality < 0.3;
 
         console.log("Plane Debug:", {
           centerDistance: centerDistance.toFixed(2),
-          dot: dot.toFixed(2),
           effectiveDot: effectiveDot.toFixed(2),
           facingWeight: facingWeight.toFixed(2),
           verticality: verticality.toFixed(2),
           isVertical,
         });
 
-        // 후보 평면 업데이트 조건 (복합 조건)
+        // 후보 평면 조건이 만족되면
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
-          // 오프셋 계산을 위한 초기 후보 저장 (최초 안정 평면이 잡힐 때)
           if (!initialCandidatePos.current) {
             initialCandidatePos.current = candidatePos.clone();
+            console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
           }
-          // 후보 평면 업데이트 보간
           candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
           newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
           candidatePos.lerp(tempVec1, 0.1);
@@ -277,15 +262,8 @@ function CameraTracker({
           candidateScale.lerp(tempScale1, 0.1);
           candidatePlaneMatrix.current.compose(candidatePos, candidateQuat, candidateScale);
 
-          // 오프셋: 최초 안정 후보와 현재 후보의 차이 계산
-          const offset = new THREE.Vector3().subVectors(candidatePos, initialCandidatePos.current);
-          console.log("Offset:", offset.toArray());
-
-          // 누적 안정도 판단 (예시: matrixDiff 조건)
           let newConfidence = prevPlaneMatrix.current
-            ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1
-                ? planeConfidence + facingWeight
-                : facingWeight)
+            ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1 ? planeConfidence + facingWeight : facingWeight)
             : facingWeight;
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
@@ -345,14 +323,14 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 오브젝트 배치: 평면 확정 후, 최종 후보 평면 위치에서 오프셋 보정을 적용하여 오브젝트 배치
+    // 오브젝트 배치: 평면 확정 후, 초기 후보와 현재 후보의 오프셋을 보정하여 배치
     if (planeFound && !objectPlaced && objectRef.current) {
-      // 최종 후보 평면의 위치를 기준으로 오브젝트 배치 (초기 후보 오프셋 적용)
       finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-      // 오프셋 적용: 초기 후보 평면 위치와 현재 후보 평면 위치 차이를 최종 위치에 반영
-      let offset = new THREE.Vector3(0, 0, 0);
+      // 오프셋 계산: 초기 후보 위치와 현재 후보 위치 차이
+      let offset = new THREE.Vector3();
       if (initialCandidatePos.current) {
-        offset = new THREE.Vector3().subVectors(candidatePos, initialCandidatePos.current);
+        offset.subVectors(candidatePos, initialCandidatePos.current);
+        console.log("Calculated offset:", offset.toArray());
       }
       candidatePos.add(offset);
       candidatePos.y -= objectFootOffset;
@@ -368,7 +346,7 @@ function CameraTracker({
       objectRef.current.scale.setScalar(scale);
       setObjectPosition(finalObjectPosition.current.clone());
       setObjectPlaced(true);
-      console.log("✅ Object placed at final position:", finalObjectPosition.current);
+      console.log("✅ Object placed at final position:", finalObjectPosition.current.toArray());
     }
 
     if (planeRef.current) {
