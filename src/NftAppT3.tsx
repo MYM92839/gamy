@@ -132,7 +132,7 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  const t = parseFloat(searchParams.get('t') || '0');
+  // const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -141,8 +141,8 @@ function CameraTracker({
   const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const planeConfidenceThreshold = 5; // (테스트용)
-  const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
+  // const planeConfidenceThreshold = 5; // (테스트용)
+  // const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
@@ -203,8 +203,8 @@ function CameraTracker({
         );
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
-        const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        const centerDistanceThreshold = circleR * 2; // 조건 완화
+        // const centerDistance = Math.sqrt(dx * dx + dy * dy);
+        // const centerDistanceThreshold = circleR * 2; // 조건 완화
 
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
 
