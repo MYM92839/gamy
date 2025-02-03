@@ -14,6 +14,7 @@ import PhotoChar from './pages/PhotoChar.tsx';
 import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
 import NftAppT2 from './NftAppT2.tsx';
+import NftAppT3 from './NftAppT3.tsx';
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
       {
         path: 'ar2/:char',
         element: <NftAppT2 />
+      },
+      {
+        path: 'ar3/:char',
+        element: <NftAppT3 />
       },
       {
         path: 'frame/:char',
