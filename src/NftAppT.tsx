@@ -13,6 +13,9 @@ import { useSlam } from './libs/SLAMProvider';
 import Back from './assets/icons/Back';
 import { Box, Tree } from './ArApp';
 
+const cameraForward = new THREE.Vector3();
+
+
 // 최적화를 위해 재사용할 임시 객체들
 const tempVec1 = new THREE.Vector3();
 const tempVec2 = new THREE.Vector3();
@@ -216,7 +219,7 @@ function CameraTracker({
         let newMatrix = matt.fromArray(planePose);
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
-        // DOM 상 평면 중심 좌표 계산 (원 중심과의 거리 계산용)
+        // DOM 상 평면 중심 좌표 계산 (빨간 원 중심과의 거리 계산용)
         const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
           newMatrix,
           camera as THREE.PerspectiveCamera,
@@ -230,6 +233,7 @@ function CameraTracker({
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
         const centerDistanceThreshold = circleR * 1.5;
 
+        // 평면 행렬 분해
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
 
         // 평면 노말 구하기
@@ -237,39 +241,30 @@ function CameraTracker({
 
         // (추가) 평면이 카메라 앞쪽(시야 내)에 있는지 검사
         const candidatePosition = tempVec1.clone();
-        const cameraForward = new THREE.Vector3();
         camera.getWorldDirection(cameraForward);
-        const camToPlane = candidatePosition.clone().sub(camera.position);
-        if (camToPlane.dot(cameraForward) <= 0) {
-          // 평면이 카메라 뒤쪽이면 안정적이지 않으므로 무시합니다.
-          setStablePlane(false);
-          setPlaneConfidence(0);
-          return; // 이후 평면 인식 로직을 건너뜁니다.
-        }
-
-        // (후처리 로직 강화 1) 평면과 카메라 사이의 최대 거리 조건
-        const maxPlaneDistance = 5; // 예: 5미터 이상이면 무시
-        if (candidatePosition.distanceTo(camera.position) > maxPlaneDistance) {
-          setStablePlane(false);
-          setPlaneConfidence(0);
+        // const camToPlane = candidatePosition.clone().sub(camera.position);
+        // dot 계산 전에 벡터 길이 검사
+        camVec.copy(camera.position).sub(candidatePosition);
+        if (camVec.lengthSq() === 0 || tempVec2.lengthSq() === 0) {
           return;
         }
-
-        // 카메라와 평면 간의 벡터 계산 (카메라가 평면을 바라보는 방향)
-        camVec.subVectors(camera.position, tempVec1).normalize();
+        camVec.normalize();
         const dot = tempVec2.dot(camVec);
+        if (isNaN(dot)) {
+          console.warn("dot is NaN", { camVec, tempVec2 });
+          return;
+        }
         const effectiveDot = -dot;
         onDotValueChange?.(effectiveDot);
 
-        // FACING_THRESHOLD 값 (필요에 따라 조정; t 값이 있다면 사용)
+        // FACING_THRESHOLD 값 (t 값이 있다면 사용)
         const FACING_THRESHOLD = (t !== undefined && t > 0) ? t : 0.4;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
         }
 
-        // 평면의 수직성 검사 – 수직 임계값을 동적으로 조정
-        // 카메라 높이가 낮은 경우(어린이 시점 등)에는 임계값을 조금 완화합니다.
+        // 평면의 수직성 검사 – 카메라 높이에 따라 임계값 조정
         const dynamicVerticalThreshold = camera.position.y < 1.5 ? 0.35 : 0.3;
         const verticality = Math.abs(tempVec2.dot(up));
         const isVertical = verticality < dynamicVerticalThreshold;
@@ -284,12 +279,20 @@ function CameraTracker({
           isVertical,
         });
 
-        // 후보 평면 업데이트: 원 중심과의 거리가 충분히 가까우면서, facingWeight가 일정 이상이고, 평면이 수직일 때만
+        // (후처리 로직 강화 1) 평면과 카메라 사이 최대 거리 조건
+        const maxPlaneDistance = 5; // 5미터 이상이면 무시
+        if (candidatePosition.distanceTo(camera.position) > maxPlaneDistance) {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          return;
+        }
+
+        // 후보 평면 업데이트: 원 중심과의 거리가 충분하고, facingWeight와 수직성이 만족되어야 함
         if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
           let newConfidence = prevPlaneMatrix.current
             ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1
-              ? planeConfidence + facingWeight
-              : facingWeight)
+                ? planeConfidence + facingWeight
+                : facingWeight)
             : facingWeight;
           setPlaneConfidence(newConfidence);
           prevPlaneMatrix.current = newMatrix.clone();
@@ -301,6 +304,11 @@ function CameraTracker({
           candidateQuat.slerp(tempQuat1, 0.1);
           candidateScale.lerp(tempScale1, 0.1);
           candidatePlaneMatrix.current.compose(candidatePos, candidateQuat, candidateScale);
+
+          // 좌표계 보정을 위해 applyPose와 유사한 방식 적용:
+          // 회전: x 성분 반전, 이동: y,z 성분 반전
+          candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
+          candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
 
           console.log("Updated candidatePlaneMatrix Position:", candidatePos);
 
@@ -325,11 +333,14 @@ function CameraTracker({
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-        // 회전 보정: Y축 기준 90도 회전 적용해서 평면의 노말을 카메라 쪽으로
+        // 보정 적용: 회전, 위치 모두 applyPose와 유사하게 보정
+        candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
+        candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
+
+        // 회전 보정 추가 (필요 시 Y축 기준 90도 회전 적용)
         localNormal.set(0, 0, 1);
         tempQuat1.copy(candidateQuat);
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
-        camDir.set(0, 0, 0);
         camDir.subVectors(camera.position, candidatePos).normalize();
         if (tempVec2.dot(camDir) < 0) {
           flipQuat.set(0, 0, 0, 1);
@@ -338,7 +349,11 @@ function CameraTracker({
         }
         planeRef.current.position.copy(candidatePos);
         planeRef.current.quaternion.copy(candidateQuat);
-        planeRef.current.scale.set(3, 3, 3);
+        // 오브젝트의 스케일 보정:
+        // 캔버스 내 빨간 원의 반지름(circleR)과 후보 평면의 스케일(candidateScale.x)을 비교하여 보정 계수를 적용.
+        const someReference = 50; // 기준값 (테스트 후 조정)
+        const canvasScaleFactor = circleR / someReference;
+        planeRef.current.scale.setScalar(3 * canvasScaleFactor);
       } else {
         // 기본 위치 설정: 카메라 앞쪽 일정 거리
         const defaultDistance = 2;
@@ -363,6 +378,8 @@ function CameraTracker({
     if (planeFound && !objectPlaced && objectRef.current) {
       if (!finalObjectPosition.current) {
         finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
+        // 보정 적용: 이동 보정 (y,z 부호 반전)
+        candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
         candidatePos.y -= objectFootOffset;
         finalObjectPosition.current = candidatePos.clone();
       }
@@ -377,13 +394,18 @@ function CameraTracker({
       }
       if (finalObjectPosition.current) {
         objectRef.current.position.copy(finalObjectPosition.current);
-        // 오브젝트 회전: AR 시스템이 반환한 평면 회전값에 Y축 기준 90도 회전 적용
+        // 오브젝트 회전: 평면의 회전값에 보정 적용
         finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
+        // 회전 보정: x 성분 반전, 그리고 Y축 기준 90도 회전 적용
+        tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
         flipQuat.set(0, 0, 0, 1);
         flipQuat.setFromAxisAngle(dummy, Math.PI / 2);
         tempQuat1.multiply(flipQuat);
         objectRef.current.quaternion.copy(tempQuat1);
-        objectRef.current.scale.setScalar(scale);
+        // 오브젝트 스케일 보정: 후보 평면 스케일과 빨간 원의 비교로 보정
+        const someReference = 50; // 기준값 (테스트 후 조정)
+        const canvasScaleFactor = circleR / someReference;
+        objectRef.current.scale.setScalar(scale * canvasScaleFactor);
         setObjectPosition(finalObjectPosition.current.clone());
         setObjectPlaced(true);
         console.log("✅ Object placed at final position:", finalObjectPosition.current);
