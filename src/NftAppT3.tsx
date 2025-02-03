@@ -56,7 +56,6 @@ interface CameraTrackerProps {
   onPlaneConfidenceChange?: (val: number) => void;
   setPlaneVisible: (v: boolean) => void;
   onDotValueChange?: (dot: number) => void;
-  onDebugUpdate?: (info: any) => void;
   videoWidth: number;
   videoHeight: number;
   domWidth: number;
@@ -77,14 +76,14 @@ function CameraTracker({
   onPlaneConfidenceChange,
   setPlaneVisible,
   onDotValueChange,
-  onDebugUpdate,
   videoWidth,
   videoHeight,
-  // domWidth, domHeight, circleX, circleY, circleR — 사용하지 않음
+  // domWidth, circleX, circleY, circleR는 사용하지 않음
 }: CameraTrackerProps) {
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
+  // const t = parseFloat(searchParams.get('t') || '0'); // 필요 시 사용
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -137,7 +136,7 @@ function CameraTracker({
       }
     }
 
-    // 평면 인식 및 후보 평면 업데이트: 평면이 감지되면 수직성만으로 안정 상태를 판단
+    // 평면 인식 및 후보 평면 업데이트
     if (!planeFound && alvaAR) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
@@ -147,11 +146,11 @@ function CameraTracker({
 
         // 평면 행렬 분해
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-        // 평면 노말 계산: 기본 (0,0,1)에 후보 회전 적용
+        // 평면 노말 계산 (기본 (0,0,1)에 후보 회전 적용)
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
         const candidatePosition = tempVec1.clone();
 
-        // 최대 거리 조건: 평면이 5미터 이내여야 함
+        // 최대 거리 조건: 5미터 이내
         if (candidatePosition.distanceTo(camera.position) > 5) {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -159,7 +158,7 @@ function CameraTracker({
           return;
         }
 
-        // 수직성 검사: 평면의 노말과 업 벡터(0,1,0) 내적의 절대값이 0.6 이상이면 수평(안정)으로 판단
+        // 수직성 검사: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 이상이면, 즉 평면이 수평(바닥)에 가까우면 안정으로 판단
         const verticality = Math.abs(tempVec2.dot(up));
         if (verticality >= 0.6) {
           setStablePlane(true);
@@ -175,19 +174,13 @@ function CameraTracker({
           // dot 값 계산: 카메라에서 후보 평면까지의 단위 벡터와 평면 노말 내적
           const camVec = new THREE.Vector3().subVectors(camera.position, candidatePosition).normalize();
           let dot = tempVec2.dot(camVec);
-          // 예외 처리: dot이 0이면 안정 조건을 만족하도록 처리
+          // 예외 처리: dot이 0이면 평면이 카메라와 직각 관계로 배치된 것으로 판단하여 안정 조건을 만족하도록 함
           if (dot === 0) {
             dot = 1;
           } else if (dot < 0) {
             dot = -dot;
           }
           onDotValueChange?.(dot);
-          // 디버그 정보 업데이트
-          onDebugUpdate?.({
-            verticality: verticality.toFixed(2),
-            dot: dot.toFixed(2),
-            candidatePosition: candidatePosition.toArray()
-          });
         } else {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -295,7 +288,6 @@ export default function NftAppT3() {
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const [dotValue, setDotValue] = useState(0);
-  const [debugInfo, setDebugInfo] = useState<any>({});
 
   useEffect(() => {
     requestCameraPermission();
@@ -357,11 +349,6 @@ export default function NftAppT3() {
         <p>
           <b>dot</b>: {dotValue.toFixed(2)}
         </p>
-        {debugInfo && Object.keys(debugInfo).length > 0 && (
-          <div style={{ marginTop: '10px', fontSize: '12px' }}>
-            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-          </div>
-        )}
       </div>
       {!planeFound && (
         <div
@@ -457,7 +444,6 @@ export default function NftAppT3() {
             setObjectPosition={(pos) => setObjectPosition(pos)}
             onPlaneConfidenceChange={(val) => setPlaneConfidence(val)}
             onDotValueChange={(val) => setDotValue(val)}
-            onDebugUpdate={(info) => setDebugInfo(info)}
             videoWidth={1280}
             videoHeight={720}
             domWidth={360}
