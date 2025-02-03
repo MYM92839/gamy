@@ -241,7 +241,7 @@ function CameraTracker({
         // UI에 보정된 effectiveDot 값을 전달 (안정적일 때 약 0.9 이상)
         onDotValueChange?.(effectiveDot);
         // FACING_THRESHOLD를 0.9로 변경 (effectiveDot이 0.9 이상이어야 안정적)
-        const FACING_THRESHOLD = 0.9;
+        const FACING_THRESHOLD = 0.4;
         let facingWeight = 0;
         if (effectiveDot > FACING_THRESHOLD) {
           facingWeight = (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD);
