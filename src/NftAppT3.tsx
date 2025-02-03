@@ -232,7 +232,7 @@ function CameraTracker({
         // 여기서는 centerDistance나 effectiveDot 등 다른 조건은 무시하고, 수직성(Verticality)만으로 판단
         // 평면의 수직성: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 미만이면 안정하다고 판단
         const verticality = Math.abs(tempVec2.dot(up));
-        if (verticality > 0.6 || verticality < - 0.6) {
+        if (verticality > 0.6) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
@@ -490,7 +490,7 @@ export default function NftAppT3() {
       <SlamCanvas id="three-canvas">
         <Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => { }}
+            setPlaneVisible={() => {}}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
