@@ -177,7 +177,7 @@ function CameraTracker({
 
         // 수직성 검사: 평면의 노말과 업 벡터(0,1,0) 내적의 절대값이 0.6 미만이면 안정 상태로 판단
         const verticality = Math.abs(tempVec2.dot(up));
-        if (verticality < 0.6) {
+        if (verticality < 0.6 && verticality > -0.6) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
@@ -448,7 +448,7 @@ export default function NftAppT3() {
       <SlamCanvas id="three-canvas">
         <Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => {}}
+            setPlaneVisible={() => { }}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
