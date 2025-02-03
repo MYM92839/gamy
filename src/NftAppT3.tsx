@@ -14,7 +14,6 @@ import Back from './assets/icons/Back';
 // --- 전역 임시 객체들 ---
 const tempVec1 = new THREE.Vector3();
 const tempVec2 = new THREE.Vector3();
-
 const tempQuat1 = new THREE.Quaternion();
 const tempScale1 = new THREE.Vector3();
 
@@ -32,6 +31,7 @@ const matt = new THREE.Matrix4();
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
+
 /**
  * 평면 행렬의 translation 부분에 scaleFactor를 곱해 단위 보정 (예: 센티미터 → 미터)
  */
@@ -45,7 +45,7 @@ function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THR
   return newMat;
 }
 
-/** ============= CameraTracker 컴포넌트 (두 번째 로직 – 수직성만 이용, 보정 및 dot값 업데이트) ============= */
+/** ============= CameraTracker 컴포넌트 (두 번째 로직 – 수직성만 이용, 보정 및 dot값 예외 처리) ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
   setPlaneFound: (b: boolean) => void;
@@ -93,22 +93,23 @@ function CameraTracker({
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 초기 후보 평면 위치와 회전 저장 (오프셋 보정에 사용)
+  // 초기 후보 평면 위치 및 회전 저장 (오프셋 보정에 사용)
   const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
   const initialCandidateQuat = useRef<THREE.Quaternion | null>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
+  // (테스트용 임계값 – 실제 서비스 환경에 맞게 미세 조정 필요)
   // const planeConfidenceThreshold = 5;
-  // const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
+
   const translationScale = 0.01;
   const objectFootOffset = 0.5;
-  const fixedDistance = 1.5; // 카메라와 오브젝트 사이 고정 거리
+  const fixedDistance = 1.5; // 카메라와 오브젝트 사이의 고정 거리
 
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
   if (!tmpCanvasRef.current) tmpCanvasRef.current = document.createElement('canvas');
@@ -142,8 +143,7 @@ function CameraTracker({
       }
     }
 
-    // 평면 인식 및 후보 평면 업데이트:
-    // 평면이 감지되면 수직성만으로 안정 상태를 판단합니다.
+    // 평면 인식 및 후보 평면 업데이트
     if (!planeFound && alvaAR) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
@@ -155,19 +155,18 @@ function CameraTracker({
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
         // 평면 노말 계산: 기본 (0,0,1)에 후보 회전 적용
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
-
-        // 평면이 카메라 앞쪽에 있는지 검사 (기본 조건)
         const candidatePosition = tempVec1.clone();
         const cameraForward = new THREE.Vector3();
         camera.getWorldDirection(cameraForward);
-        // const camToPlane = candidatePosition.clone().sub(camera.position);
-        // if (camToPlane.dot(cameraForward) < 0) {
-        //   setStablePlane(false);
-        //   setPlaneConfidence(0);
-        //   onDotValueChange?.(0);
-        //   return;
-        // }
-        // 최대 거리 조건 (5미터)
+        const camToPlane = candidatePosition.clone().sub(camera.position);
+        // 평면이 카메라 앞쪽에 있어야 함 (내적이 양수)
+        if (camToPlane.dot(cameraForward) <= 0) {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          onDotValueChange?.(0);
+          return;
+        }
+        // 최대 거리 조건 (5미터 이내)
         if (candidatePosition.distanceTo(camera.position) > 5) {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -175,25 +174,29 @@ function CameraTracker({
           return;
         }
 
-        // 수직성 검사: 평면의 노말과 업 벡터(0,1,0) 내적의 절대값이 0.6 미만이면 안정 상태로 판단
+        // 수직성 검사: 평면의 노말과 월드 up 벡터(0,1,0) 내적의 절대값이 0.6 미만이면 안정 상태로 판단
         const verticality = Math.abs(tempVec2.dot(up));
-        if (verticality < 0.6 && verticality > -0.6) {
+        if (verticality < 0.6) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
-          // 최초 안정 후보 평면 위치와 회전 저장 (한 번)
+          // 초기 안정 후보 평면 위치 및 회전 저장 (최초 한 번)
           if (!initialCandidatePos.current) {
             initialCandidatePos.current = candidatePosition.clone();
             initialCandidateQuat.current = tempQuat1.clone();
             console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
             console.log("Initial candidate rotation saved:", initialCandidateQuat.current.toArray());
           }
-          // dot 값 계산: 카메라 위치에서 후보 평면까지의 단위 벡터와 평면 노말 내적
+          // dot 값 계산: 카메라에서 후보 평면까지의 단위 벡터와 평면 노말 내적
           const camVec = new THREE.Vector3().subVectors(camera.position, candidatePosition).normalize();
-          const dot = tempVec2.dot(camVec);
-          // 보통 평면이 카메라를 향하면 dot는 음수이므로, effectiveDot은 -dot
-          const effectiveDot = dot < 0 ? -dot : dot;
-          onDotValueChange?.(effectiveDot);
+          let dot = tempVec2.dot(camVec);
+          // 예외 처리: dot이 0이면 평면이 수직으로 배치된 것으로 판단하여 안정 처리
+          if (dot === 0) {
+            dot = 1; // dot 0인 경우 안정 조건을 만족하도록 함
+          } else if (dot < 0) {
+            dot = -dot;
+          }
+          onDotValueChange?.(dot);
         } else {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -245,9 +248,9 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 오브젝트 배치: 평면 확정 후, 초기 후보와 현재 후보의 오프셋 보정을 적용하여 배치
+    // 오브젝트 배치: 평면 확정 후, 고정 거리 보정 및 초기 후보 오프셋 보정을 적용하여 배치
     if (planeFound && !objectPlaced && objectRef.current) {
-      // 고정 거리 보정: 카메라에서 fixedDistance만큼 떨어진 방향으로 배치
+      // 고정 거리 방식: 카메라에서 fixedDistance만큼 떨어진 방향으로 배치
       const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
       const computedObjectPos = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(fixedDistance));
       computedObjectPos.y -= objectFootOffset;
@@ -255,7 +258,7 @@ function CameraTracker({
 
       objectRef.current.position.copy(finalObjectPosition.current);
 
-      // 회전 보정: 최종 평면의 회전값을 가져온 후, 보정 및 초기 후보 회전 오프셋 적용
+      // 회전 보정: 최종 평면 회전값에 초기 후보 회전 오프셋 보정 적용
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
       tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
       flipQuat.set(0, 0, 0, 1);
@@ -448,7 +451,7 @@ export default function NftAppT3() {
       <SlamCanvas id="three-canvas">
         <Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => { }}
+            setPlaneVisible={() => {}}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
