@@ -161,7 +161,7 @@ function CameraTracker({
         const cameraForward = new THREE.Vector3();
         camera.getWorldDirection(cameraForward);
         const camToPlane = candidatePosition.clone().sub(camera.position);
-        if (camToPlane.dot(cameraForward) <= 0) {
+        if (camToPlane.dot(cameraForward) < 0) {
           setStablePlane(false);
           setPlaneConfidence(0);
           onDotValueChange?.(0);
