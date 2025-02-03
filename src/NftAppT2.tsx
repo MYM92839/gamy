@@ -3,19 +3,18 @@ import * as THREE from 'three';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useFrame } from '@react-three/fiber';
 
-// 실제 프로젝트 경로에 맞게 import 조정
 import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
 import { requestCameraPermission } from './libs/util';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
 import { useSlam } from './libs/SLAMProvider';
 
-// 예시 아이콘/모델
 import Back from './assets/icons/Back';
 import { Box, Tree } from './ArApp';
 
 // --- 전역 임시 객체들 ---
 const tempVec1 = new THREE.Vector3();
 const tempVec2 = new THREE.Vector3();
+
 const tempQuat1 = new THREE.Quaternion();
 const tempScale1 = new THREE.Vector3();
 
@@ -36,12 +35,6 @@ const sca = new THREE.Vector3();
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
-
-/**
- * getPlaneDOMCenter
- * SLAM에서 반환한 평면 행렬을 분해한 후, 카메라 투영을 적용하여
- * 평면 중심의 DOM 좌표(픽셀 단위)로 변환합니다.
- */
 function getPlaneDOMCenter(
   planeMatrix: THREE.Matrix4,
   camera: THREE.PerspectiveCamera,
@@ -64,11 +57,6 @@ function getPlaneDOMCenter(
   return { x: videoX * scaleX, y: videoY * scaleY };
 }
 
-/**
- * scaleMatrixTranslation
- * 평면 행렬의 translation 요소(인덱스 12, 13, 14)에 scaleFactor를 곱해
- * 단위 보정을 적용합니다.
- */
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
   elements[12] *= scaleFactor;
@@ -79,7 +67,7 @@ function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THR
   return newMat;
 }
 
-/** ============= CameraTracker 컴포넌트 (첫 번째 로직) ============= */
+/** ============= CameraTracker 컴포넌트 (2번 로직) ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
   setPlaneFound: (b: boolean) => void;
@@ -111,8 +99,8 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
   setPlaneVisible,
-  onDotValueChange,
-  onDebugUpdate,
+  // onDotValueChange,
+  // onDebugUpdate,
   videoWidth,
   videoHeight,
   domWidth,
@@ -124,12 +112,11 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // const t = parseFloat(searchParams.get('t') || '0'); // 추가로 사용가능
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 평면 안정 여부 및 후보 평면 정보 상태
+  // 후보 평면 및 안정 상태 관련
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -138,11 +125,10 @@ function CameraTracker({
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
-  // SLAM 결과 단위를 보정 (센티미터 → 미터: 0.01)
+  // SLAM 결과 단위 보정 (0.01: 센티미터 → 미터)
   const translationScale = 0.01;
   const objectFootOffset = 0.5;
 
-  // 임시 캔버스 생성 (비디오 프레임 캡쳐용)
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
   if (!tmpCanvasRef.current) {
     tmpCanvasRef.current = document.createElement('canvas');
@@ -207,25 +193,13 @@ function CameraTracker({
 
         // 카메라에서 후보 평면까지의 방향 벡터 계산
         const camToPlane = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
-        // 평면의 노말 벡터: 기본 (0,0,1)에 후보 회전 적용
+        // 평면의 노말 (기본 벡터 (0,0,1)에 후보 회전 적용)
         const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(candidateQuat);
         const dot = planeNormal.dot(camToPlane); // 평면이 카메라를 향하면 dot는 음수
         const effectiveDot = dot < 0 ? -dot : 0;
 
-        // 디버그 정보 업데이트 (onDebugUpdate, onDotValueChange 사용 가능)
-        if (onDebugUpdate) {
-          onDebugUpdate({
-            centerDistance: centerDistance.toFixed(2),
-            effectiveDot: effectiveDot.toFixed(2),
-          });
-        }
-        if (onDotValueChange) {
-          onDotValueChange(effectiveDot);
-        }
-
-        // 최종 안정 조건: 평면 투영 중심이 빨간 원 내부 (centerDistance < circleR * 0.8)
-        // AND 평면의 노말이 카메라를 향하는 정도 effectiveDot > 0.7
-        if (centerDistance < circleR * 0.8 && effectiveDot > 0.7) {
+        // 임계값 완화: centerDistance < circleR * 1.5, effectiveDot > 0.1
+        if (centerDistance < circleR * 1.5 && effectiveDot > 0.1) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
@@ -274,18 +248,20 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 평면 확정 요청: 버튼 클릭 시 후보 평면을 최종 평면으로 고정
+    // 평면 확정 요청
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
       console.log("🎉 planeFound => place object");
     }
 
-    // 오브젝트 배치: 평면 확정 후, 후보 평면의 중심(candidatePos)을 그대로 사용하여 오브젝트 배치
+    // 오브젝트 배치: 평면 확정 후, 카메라와 오브젝트 사이의 거리는 항상 고정 (1.5미터)
     if (planeFound && !objectPlaced && objectRef.current) {
-      finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-      candidatePos.y -= objectFootOffset;
-      finalObjectPosition.current = candidatePos.clone();
+      const fixedDistance = 1.5;
+      const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
+      const computedObjectPos = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(fixedDistance));
+      computedObjectPos.y -= objectFootOffset;
+      finalObjectPosition.current = computedObjectPos.clone();
 
       objectRef.current.position.copy(finalObjectPosition.current);
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
@@ -311,7 +287,6 @@ function CameraTracker({
   return (
     <>
       <mesh ref={planeRef} visible={false}>
-        {/* 메시의 기하학적 중심이 (0,0,0)인지 확인하려면 geometry.center() 호출 권장 */}
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial color="#00f" opacity={0.3} transparent side={THREE.DoubleSide} />
       </mesh>
@@ -342,7 +317,7 @@ export default function NftAppT() {
   const domHeight = 640;
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
-  const circleR = 100; // 빨간 원 반지름
+  const circleR = 100;
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
@@ -362,7 +337,6 @@ export default function NftAppT() {
       >
         <Back />
       </button>
-      {/* 디버그 패널 */}
       <div
         style={{
           position: 'fixed',
@@ -399,7 +373,6 @@ export default function NftAppT() {
           2
         )}</pre>
       </div>
-      {/* 평면 디버그용 SVG (빨간 원) */}
       {!planeFound && (
         <div
           style={{
