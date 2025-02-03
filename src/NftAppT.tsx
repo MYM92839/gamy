@@ -14,7 +14,7 @@ import Back from './assets/icons/Back';
 import { Box, Tree } from './ArApp';
 
 // --- 전역 임시 객체들 ---
-const cameraForward = new THREE.Vector3();
+// const cameraForward = new THREE.Vector3();
 const tempVec1 = new THREE.Vector3();
 const tempVec2 = new THREE.Vector3();
 const tempQuat1 = new THREE.Quaternion();
@@ -25,8 +25,8 @@ const candidateQuat = new THREE.Quaternion();
 const candidateScale = new THREE.Vector3();
 
 const localNormal = new THREE.Vector3(0, 0, 1);
-const camVec = new THREE.Vector3();
-const up = new THREE.Vector3(0, 1, 0);
+// const camVec = new THREE.Vector3();
+// const up = new THREE.Vector3(0, 1, 0);
 const camDir = new THREE.Vector3();
 const flipQuat = new THREE.Quaternion();
 const dummy = new THREE.Vector3(0, 1, 0);
@@ -68,20 +68,20 @@ function getPlaneDOMCenter(
 }
 
 /** 두 Matrix4의 차이를 계산 (위치와 회전 변화량) */
-function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
-  const pos1 = new THREE.Vector3();
-  const pos2 = new THREE.Vector3();
-  const quat1 = new THREE.Quaternion();
-  const quat2 = new THREE.Quaternion();
-  const scale1 = new THREE.Vector3();
-  const scale2 = new THREE.Vector3();
-  m1.decompose(pos1, quat1, scale1);
-  m2.decompose(pos2, quat2, scale2);
-  const posDiff = pos1.distanceTo(pos2);
-  const dot = Math.abs(quat1.dot(quat2));
-  const rotDiff = 1 - dot;
-  return posDiff + rotDiff;
-}
+// function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
+//   const pos1 = new THREE.Vector3();
+//   const pos2 = new THREE.Vector3();
+//   const quat1 = new THREE.Quaternion();
+//   const quat2 = new THREE.Quaternion();
+//   const scale1 = new THREE.Vector3();
+//   const scale2 = new THREE.Vector3();
+//   m1.decompose(pos1, quat1, scale1);
+//   m2.decompose(pos2, quat2, scale2);
+//   const posDiff = pos1.distanceTo(pos2);
+//   const dot = Math.abs(quat1.dot(quat2));
+//   const rotDiff = 1 - dot;
+//   return posDiff + rotDiff;
+// }
 
 /**
  * scaleMatrixTranslation
@@ -129,8 +129,8 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
   setPlaneVisible,
-  onDotValueChange,
-  onDebugUpdate,
+  // onDotValueChange,
+  // onDebugUpdate,
   videoWidth,
   videoHeight,
   domWidth,
@@ -143,15 +143,15 @@ function CameraTracker({
   const [searchParams] = useSearchParams();
   // URL query에서 scale, t 값을 읽어옴
   const scale = parseFloat(searchParams.get('scale') || '1');
-  const t = parseFloat(searchParams.get('t') || '0');
+  // const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
   // 안정도 임계값 (누적 조건을 약간 완화)
-  const planeConfidenceThreshold = 3;
+  // const planeConfidenceThreshold = 3;
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
+  // const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
