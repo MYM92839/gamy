@@ -64,20 +64,20 @@ function getPlaneDOMCenter(
 }
 
 /** 두 Matrix4의 차이를 계산 (위치와 회전 변화량) */
-function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
-  const pos1 = new THREE.Vector3();
-  const pos2 = new THREE.Vector3();
-  const quat1 = new THREE.Quaternion();
-  const quat2 = new THREE.Quaternion();
-  const scale1 = new THREE.Vector3();
-  const scale2 = new THREE.Vector3();
-  m1.decompose(pos1, quat1, scale1);
-  m2.decompose(pos2, quat2, scale2);
-  const posDiff = pos1.distanceTo(pos2);
-  const dot = Math.abs(quat1.dot(quat2));
-  const rotDiff = 1 - dot;
-  return posDiff + rotDiff;
-}
+// function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
+//   const pos1 = new THREE.Vector3();
+//   const pos2 = new THREE.Vector3();
+//   const quat1 = new THREE.Quaternion();
+//   const quat2 = new THREE.Quaternion();
+//   const scale1 = new THREE.Vector3();
+//   const scale2 = new THREE.Vector3();
+//   m1.decompose(pos1, quat1, scale1);
+//   m2.decompose(pos2, quat2, scale2);
+//   const posDiff = pos1.distanceTo(pos2);
+//   const dot = Math.abs(quat1.dot(quat2));
+//   const rotDiff = 1 - dot;
+//   return posDiff + rotDiff;
+// }
 
 /**
  * scaleMatrixTranslation
@@ -125,8 +125,8 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
   setPlaneVisible,
-  onDotValueChange,
-  onDebugUpdate,
+  // onDotValueChange,
+  // onDebugUpdate,
   videoWidth,
   videoHeight,
   domWidth,
