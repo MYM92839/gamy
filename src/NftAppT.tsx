@@ -445,7 +445,7 @@ export default function NftAppT() {
           position: 'fixed',
           bottom: '0',
           left: '0',
-          zIndex: 9998,
+          zIndex: 100000,
           background: 'rgba(0,0,0,0.7)',
           color: 'white',
           padding: '10px',
