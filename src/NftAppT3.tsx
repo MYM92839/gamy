@@ -28,9 +28,9 @@ const flipQuat = new THREE.Quaternion();
 const dummy = new THREE.Vector3(0, 1, 0);
 const matt = new THREE.Matrix4();
 
-const pos = new THREE.Vector3();
-const rot = new THREE.Quaternion();
-const sca = new THREE.Vector3();
+// const pos = new THREE.Vector3();
+// const rot = new THREE.Quaternion();
+// const sca = new THREE.Vector3();
 
 const newMat = new THREE.Matrix4();
 
@@ -38,27 +38,27 @@ const newMat = new THREE.Matrix4();
 /**
  * 평면 중심의 DOM 좌표를 계산 (빨간 원 중심과의 오프셋 측정을 위해)
  */
-function getPlaneDOMCenter(
-  planeMatrix: THREE.Matrix4,
-  camera: THREE.PerspectiveCamera,
-  videoWidth: number,
-  videoHeight: number,
-  domWidth: number,
-  domHeight: number
-): { x: number; y: number } {
-  pos.set(0, 0, 0);
-  rot.set(0, 0, 0, 1);
-  sca.set(0, 0, 0);
-  planeMatrix.decompose(pos, rot, sca);
-  pos.project(camera);
-  const halfVw = videoWidth / 2;
-  const halfVh = videoHeight / 2;
-  const videoX = (pos.x * halfVw) + halfVw;
-  const videoY = (-pos.y * halfVh) + halfVh;
-  const scaleX = domWidth / videoWidth;
-  const scaleY = domHeight / videoHeight;
-  return { x: videoX * scaleX, y: videoY * scaleY };
-}
+// function getPlaneDOMCenter(
+//   planeMatrix: THREE.Matrix4,
+//   camera: THREE.PerspectiveCamera,
+//   videoWidth: number,
+//   videoHeight: number,
+//   domWidth: number,
+//   domHeight: number
+// ): { x: number; y: number } {
+//   pos.set(0, 0, 0);
+//   rot.set(0, 0, 0, 1);
+//   sca.set(0, 0, 0);
+//   planeMatrix.decompose(pos, rot, sca);
+//   pos.project(camera);
+//   const halfVw = videoWidth / 2;
+//   const halfVh = videoHeight / 2;
+//   const videoX = (pos.x * halfVw) + halfVw;
+//   const videoY = (-pos.y * halfVh) + halfVh;
+//   const scaleX = domWidth / videoWidth;
+//   const scaleY = domHeight / videoHeight;
+//   return { x: videoX * scaleX, y: videoY * scaleY };
+// }
 
 // /** 두 Matrix4의 차이를 계산 (간단 비교용) */
 // function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
@@ -123,11 +123,11 @@ function CameraTracker({
   // onDotValueChange,
   videoWidth,
   videoHeight,
-  domWidth,
-  domHeight,
-  circleX,
-  circleY,
-  circleR,
+  // domWidth,
+  // domHeight,
+  // circleX,
+  // circleY,
+  // circleR,
 }: CameraTrackerProps) {
   const { char } = useParams();
   const [searchParams] = useSearchParams();
@@ -193,16 +193,16 @@ function CameraTracker({
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
         // 평면 중심의 DOM 좌표 계산 (빨간 원과 비교)
-        const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
-          newMatrix,
-          camera as THREE.PerspectiveCamera,
-          video?.videoWidth || videoWidth,
-          video?.videoHeight || videoHeight,
-          domWidth,
-          domHeight
-        );
-        const dx = domCenterX - circleX;
-        const dy = domCenterY - circleY;
+        // const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
+        //   newMatrix,
+        //   camera as THREE.PerspectiveCamera,
+        //   video?.videoWidth || videoWidth,
+        //   video?.videoHeight || videoHeight,
+        //   domWidth,
+        //   domHeight
+        // );
+        // const dx = domCenterX - circleX;
+        // const dy = domCenterY - circleY;
         // const centerDistance = Math.sqrt(dx * dx + dy * dy);
         // const centerDistanceThreshold = circleR * 2; // 조건 완화
 

@@ -22,45 +22,48 @@ const candidateQuat = new THREE.Quaternion();
 const candidateScale = new THREE.Vector3();
 
 const localNormal = new THREE.Vector3(0, 0, 1);
+const up = new THREE.Vector3(0, 1, 0);
 const camDir = new THREE.Vector3();
 const flipQuat = new THREE.Quaternion();
 const dummy = new THREE.Vector3(0, 1, 0);
 const matt = new THREE.Matrix4();
 
-const pos = new THREE.Vector3();
-const rot = new THREE.Quaternion();
-const sca = new THREE.Vector3();
+// const pos = new THREE.Vector3();
+// const rot = new THREE.Quaternion();
+// const sca = new THREE.Vector3();
 
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
 /**
- * 평면 중심의 DOM 좌표를 계산 (빨간 원 중심과의 오프셋 측정을 위해)
+ * 평면 중심의 DOM 좌표를 계산
+ * (빨간 원 중심과의 오프셋 측정을 위해 영상 좌표 → DOM 좌표 변환)
  */
-function getPlaneDOMCenter(
-  planeMatrix: THREE.Matrix4,
-  camera: THREE.PerspectiveCamera,
-  videoWidth: number,
-  videoHeight: number,
-  domWidth: number,
-  domHeight: number
-): { x: number; y: number } {
-  pos.set(0, 0, 0);
-  rot.set(0, 0, 0, 1);
-  sca.set(0, 0, 0);
-  planeMatrix.decompose(pos, rot, sca);
-  pos.project(camera);
-  const halfVw = videoWidth / 2;
-  const halfVh = videoHeight / 2;
-  const videoX = (pos.x * halfVw) + halfVw;
-  const videoY = (-pos.y * halfVh) + halfVh;
-  const scaleX = domWidth / videoWidth;
-  const scaleY = domHeight / videoHeight;
-  return { x: videoX * scaleX, y: videoY * scaleY };
-}
+// function getPlaneDOMCenter(
+//   planeMatrix: THREE.Matrix4,
+//   camera: THREE.PerspectiveCamera,
+//   videoWidth: number,
+//   videoHeight: number,
+//   domWidth: number,
+//   domHeight: number
+// ): { x: number; y: number } {
+//   pos.set(0, 0, 0);
+//   rot.set(0, 0, 0, 1);
+//   sca.set(0, 0, 0);
+//   planeMatrix.decompose(pos, rot, sca);
+//   pos.project(camera);
+//   const halfVw = videoWidth / 2;
+//   const halfVh = videoHeight / 2;
+//   const videoX = (pos.x * halfVw) + halfVw;
+//   const videoY = (-pos.y * halfVh) + halfVh;
+//   const scaleX = domWidth / videoWidth;
+//   const scaleY = domHeight / videoHeight;
+//   return { x: videoX * scaleX, y: videoY * scaleY };
+// }
 
 /**
- * 평면 행렬의 translation 부분에 scaleFactor를 곱해 단위 보정 (예: 센티미터 → 미터)
+ * 평면 행렬의 translation 부분에 scaleFactor를 곱해 단위 보정
+ * (예: 센티미터 → 미터 단위 보정)
  */
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
@@ -72,7 +75,7 @@ function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THR
   return newMat;
 }
 
-/** ============= CameraTracker 컴포넌트 (두 번째 로직 - 보정 로직 포함) ============= */
+/** ============= CameraTracker 컴포넌트 (두 번째 로직 – 고정 거리 보정 + 오프셋 보정 + 회전 보정) ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
   setPlaneFound: (b: boolean) => void;
@@ -84,7 +87,6 @@ interface CameraTrackerProps {
   onPlaneConfidenceChange?: (val: number) => void;
   setPlaneVisible: (v: boolean) => void;
   onDotValueChange?: (dot: number) => void;
-  onDebugUpdate?: (info: any) => void;
   videoWidth: number;
   videoHeight: number;
   domWidth: number;
@@ -104,41 +106,40 @@ function CameraTracker({
   setObjectPosition,
   onPlaneConfidenceChange,
   setPlaneVisible,
-  onDotValueChange,
-  // onDebugUpdate,
+  // onDotValueChange,
   videoWidth,
   videoHeight,
-  domWidth,
-  domHeight,
-  circleX,
-  circleY,
-  circleR,
+  // domWidth,
+  // domHeight,
+  // circleX,
+  // circleY,
+  // circleR,
 }: CameraTrackerProps) {
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
+  // const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 후보 평면 및 안정 상태 관련
+  // 초기 후보 평면 위치 및 회전 저장 (오프셋 보정에 사용)
+  const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
+  const initialCandidateQuat = useRef<THREE.Quaternion | null>(null);
+
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  // 안정 상태 임계값 (테스트용 완화)
+  // 안정 상태 임계값 (테스트용)
   // const planeConfidenceThreshold = 5;
   // const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
-  // 초기 후보 평면 위치 저장 (오프셋 계산용)
-  const initialCandidatePos = useRef<THREE.Vector3 | null>(null);
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
   const translationScale = 0.01;
   const objectFootOffset = 0.5;
-
-  // 고정 거리 (예: 카메라와 오브젝트 사이 1.5미터)
-  const fixedDistance = 1.5;
+  const fixedDistance = 1.5; // 카메라와 오브젝트 사이의 고정 거리
 
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
   if (!tmpCanvasRef.current) tmpCanvasRef.current = document.createElement('canvas');
@@ -163,7 +164,7 @@ function CameraTracker({
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
 
-    // 카메라 포즈 업데이트
+    // 카메라 포즈 업데이트 (SLAM 적용)
     if (frame && alvaAR) {
       const camPose = alvaAR.findCameraPose(frame);
       if (camPose) {
@@ -181,29 +182,56 @@ function CameraTracker({
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
         // 평면 중심의 DOM 좌표 계산 (빨간 원과 비교)
-        const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
-          newMatrix,
-          camera as THREE.PerspectiveCamera,
-          video?.videoWidth || videoWidth,
-          video?.videoHeight || videoHeight,
-          domWidth,
-          domHeight
-        );
-        const dx = domCenterX - circleX;
-        const dy = domCenterY - circleY;
-        const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        // 조건 완화: 평면 투영 중심이 빨간 원의 2배 이내이면 조건 만족
-        const centerDistanceThreshold = circleR * 2;
+        // const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
+        //   newMatrix,
+        //   camera as THREE.PerspectiveCamera,
+        //   video?.videoWidth || videoWidth,
+        //   video?.videoHeight || videoHeight,
+        //   domWidth,
+        //   domHeight
+        // );
+        // const dx = domCenterX - circleX;
+        // const dy = domCenterY - circleY;
+        // const centerDistance = Math.sqrt(dx * dx + dy * dy);
+        // const centerDistanceThreshold = circleR * 2; // 조건 완화
 
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
+
         // 평면 노말 계산 (기본 (0,0,1)에 후보 회전 적용)
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
 
-        // 조건: 여기서는 평면이 잡히면 바로 안정한 것으로 처리 (조건 완화)
-        if (centerDistance < centerDistanceThreshold) {
+        // 평면이 카메라 앞쪽에 있는지 검사
+        const candidatePosition = tempVec1.clone();
+        const cameraForward = new THREE.Vector3();
+        camera.getWorldDirection(cameraForward);
+        const camToPlane = candidatePosition.clone().sub(camera.position);
+        if (camToPlane.dot(cameraForward) <= 0) {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          return;
+        }
+
+        // 최대 거리 조건 (예: 5미터)
+        if (candidatePosition.distanceTo(camera.position) > 5) {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          return;
+        }
+
+        // 수직성 검사: 평면 노말과 월드 up 벡터(0,1,0) 내적 절대값이 0.6 미만이면 안정
+        const verticality = Math.abs(tempVec2.dot(up));
+        if (verticality < 0.6) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
+          // 최초 안정 후보 평면 위치와 회전 저장 (한 번만)
+          if (!initialCandidatePos.current) {
+            initialCandidatePos.current = candidatePosition.clone();
+            // 또한 초기 후보 회전도 저장
+            initialCandidateQuat.current = tempQuat1.clone();
+            console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
+            console.log("Initial candidate rotation saved:", initialCandidateQuat.current.toArray());
+          }
         } else {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -215,7 +243,6 @@ function CameraTracker({
     }
 
     onPlaneConfidenceChange?.(planeConfidence);
-    onDotValueChange?.(0); // 여기서는 효과 내적은 별도로 계산하지 않음
 
     // 평면 메시 업데이트 (후보 평면 표시)
     if (!planeFound && planeRef.current) {
@@ -255,34 +282,35 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // 오브젝트 배치: 평면 확정 후, 고정 거리 보정 + 초기 후보와 현재 후보의 오프셋 적용
+    // 오브젝트 배치: 평면 확정 후, 고정 거리 보정 및 초기 후보 오프셋 보정 적용
     if (planeFound && !objectPlaced && objectRef.current) {
-      // 먼저, 고정 거리로 오브젝트 배치 (카메라에서 고정 거리만큼 떨어진 방향)
+      // 고정 거리 방식: 카메라에서 fixedDistance만큼 떨어진 방향으로 배치
       const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
-      const baseObjectPos = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(fixedDistance));
-
-      // 그리고 초기 후보 평면과 현재 후보 평면의 차이(오프셋)를 계산하여 추가 보정
-      if (initialCandidatePos.current === null) {
-        initialCandidatePos.current = candidatePos.clone();
-        console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
-      }
-      const offset = new THREE.Vector3().subVectors(candidatePos, initialCandidatePos.current);
-      baseObjectPos.add(offset);
-      // 모델의 발이 평면에 닿도록 Y 오프셋 적용
-      baseObjectPos.y -= objectFootOffset;
-
-      finalObjectPosition.current = baseObjectPos.clone();
+      const computedObjectPos = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(fixedDistance));
+      computedObjectPos.y -= objectFootOffset;
+      finalObjectPosition.current = computedObjectPos.clone();
 
       objectRef.current.position.copy(finalObjectPosition.current);
-      // 오브젝트 회전 보정: 최종 평면의 회전값을 가져와 Y축 기준 90도 회전 적용
+
+      // 회전 보정: 최종 평면 회전값에 초기 후보 회전과의 오프셋을 반영
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
+      // 기존 보정: SLAM과 Three.js 좌표계 차이를 보정 (회전의 x 성분 반전 후 Y축 기준 90도 회전)
       tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
       flipQuat.set(0, 0, 0, 1);
       flipQuat.setFromAxisAngle(dummy, Math.PI / 2);
       tempQuat1.multiply(flipQuat);
+
+      // 추가: 초기 후보 회전과 현재 후보 회전의 차이를 오프셋으로 반영
+      // (초기 후보 회전은 initialCandidateQuat.current에 저장되어 있음)
+      if (initialCandidateQuat.current) {
+        // 계산한 회전 오프셋: 현재 보정된 tempQuat1와 초기 후보의 역(quaternion inverse) 곱
+        const rotationOffset = tempQuat1.clone().multiply(initialCandidateQuat.current.clone().invert());
+        // 최종 회전 = 현재 보정 회전에 회전 오프셋를 적용 (예시로 곱셈 순서를 조정)
+        tempQuat1.multiply(rotationOffset);
+      }
+
       objectRef.current.quaternion.copy(tempQuat1);
       objectRef.current.scale.setScalar(scale);
-
       setObjectPosition(finalObjectPosition.current.clone());
       setObjectPlaced(true);
       console.log("✅ Object placed at final position:", finalObjectPosition.current.toArray());
@@ -309,7 +337,7 @@ function CameraTracker({
   );
 }
 
-export default function NftAppT() {
+export default function NftAppT3() {
   const [cameraPosition, setCameraPosition] = useState(new THREE.Vector3());
   const [objectPosition, setObjectPosition] = useState(new THREE.Vector3());
   const [planeFound, setPlaneFound] = useState(false);
@@ -327,6 +355,7 @@ export default function NftAppT() {
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
   const circleR = 100;
+  // 평면이 잡히거나 안정 상태이면 파란색으로 표시
   const circleColor = planeFound || stablePlane ? 'blue' : 'red';
   const showButton = !planeFound && stablePlane;
 
