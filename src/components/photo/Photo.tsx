@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 export default function Photo() {
-  return (<div className="w-full h-full overflow-y-scroll relative"
+  return (<div className="w-full h-full min-h-[874px] overflow-y-scroll relative"
     style={{ WebkitOverflowScrolling: "touch" }}
   >
       <img className="absolute bottom-0 w-full" src={import.meta.env.VITE_PUBLIC_URL + "/background_image.png"} />
