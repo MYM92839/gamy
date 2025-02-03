@@ -13,7 +13,8 @@ import { Box, Tree } from './ArApp';
 
 // --- 전역 임시 객체들 ---
 const tempVec1 = new THREE.Vector3();
-const tempVec2 = new THREE.Vector3();
+const tempVec2= new THREE.Vector3();
+
 const tempQuat1 = new THREE.Quaternion();
 const tempScale1 = new THREE.Vector3();
 
@@ -34,6 +35,11 @@ const sca = new THREE.Vector3();
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
+
+/**
+ * getPlaneDOMCenter
+ * SLAM에서 반환한 평면 행렬을 분해한 후, 카메라 투영을 적용하여 평면 중심의 DOM 좌표(픽셀 단위)로 변환합니다.
+ */
 function getPlaneDOMCenter(
   planeMatrix: THREE.Matrix4,
   camera: THREE.PerspectiveCamera,
@@ -56,6 +62,10 @@ function getPlaneDOMCenter(
   return { x: videoX * scaleX, y: videoY * scaleY };
 }
 
+/**
+ * scaleMatrixTranslation
+ * 평면 행렬의 translation 요소(인덱스 12, 13, 14)에 scaleFactor를 곱해 단위 보정을 적용합니다.
+ */
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
   elements[12] *= scaleFactor;
@@ -111,11 +121,11 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // t는 사용하지 않음
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
+  // 평면 안정 여부 및 후보 평면 정보 저장
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
@@ -123,7 +133,7 @@ function CameraTracker({
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
-  const translationScale = 0.01;
+  const translationScale = 0.01; // SLAM 단위 보정 (센티미터 → 미터)
   const objectFootOffset = 0.5;
 
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -153,6 +163,7 @@ function CameraTracker({
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
 
+    // 카메라 포즈 업데이트 (applyPose를 사용하여 보정)
     if (frame && alvaAR) {
       const camPose = alvaAR.findCameraPose(frame);
       if (camPose) {
@@ -161,7 +172,7 @@ function CameraTracker({
       }
     }
 
-    // 평면 인식: SLAM에서 평면 행렬을 받아 후보 평면 정보 업데이트
+    // 평면 인식 및 후보 평면 업데이트
     if (!planeFound && alvaAR) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
@@ -178,12 +189,12 @@ function CameraTracker({
           domWidth,
           domHeight
         );
-        // centerDistance 계산 (픽셀 단위)
+        // 평면 투영 중심과 빨간 원 중심 사이의 거리 (픽셀 단위)
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
 
-        // 여기서는 안정 조건을 단순히 centerDistance < circleR로 판단
+        // 안정 조건: 평면 투영 중심이 빨간 원 내부에 있어야 함.
         if (centerDistance < circleR) {
           setStablePlane(true);
           setPlaneConfidence(1);
@@ -192,6 +203,17 @@ function CameraTracker({
           candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
           candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
           candidatePlaneMatrix.current.copy(newMatrix);
+
+          // 평면의 방향 보정: 평면 노말이 카메라를 향하도록 보정
+          const camToPlane = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
+          const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(candidateQuat);
+          const dot = planeNormal.dot(camToPlane); // 평면이 카메라를 향하면 dot는 음수
+          const effectiveDot = dot < 0 ? -dot : 0;
+          // 여기서 effectiveDot 값이 충분히 크면(예: >0.7) 안정한 평면으로 판단
+          if (effectiveDot < 0.7) {
+            setStablePlane(false);
+            setPlaneConfidence(0);
+          }
         } else {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -210,7 +232,7 @@ function CameraTracker({
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
         candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
         candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
-        // Y축 기준 90도 회전 보정
+
         localNormal.set(0, 0, 1);
         tempQuat1.copy(candidateQuat);
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
@@ -244,8 +266,7 @@ function CameraTracker({
       console.log("🎉 planeFound => place object");
     }
 
-    // **고정 거리 보정: 오브젝트 배치**
-    // 가정: 카메라와 오브젝트 사이의 거리는 항상 fixedDistance (예: 1.5미터)
+    // 오브젝트 배치: 평면 확정 후, 카메라와 오브젝트 사이의 거리가 항상 고정 (예: 1.5미터)
     if (planeFound && !objectPlaced && objectRef.current) {
       const fixedDistance = 1.5;
       const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
