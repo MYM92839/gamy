@@ -31,7 +31,6 @@ const matt = new THREE.Matrix4();
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
-
 /**
  * 평면 행렬의 translation 부분에 scaleFactor를 곱해 단위 보정 (예: 센티미터 → 미터)
  */
@@ -88,7 +87,7 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // const t = parseFloat(searchParams.get('t') || '0');
+  // const t = parseFloat(searchParams.get('t') || '0'); // 필요 시 사용
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -98,8 +97,6 @@ function CameraTracker({
   const initialCandidateQuat = useRef<THREE.Quaternion | null>(null);
 
   const [planeConfidence, setPlaneConfidence] = useState(0);
-  // (테스트용 임계값 – 실제 서비스 환경에 맞게 미세 조정 필요)
-  // const planeConfidenceThreshold = 5;
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
   const finalObjectPosition = useRef<THREE.Vector3 | null>(null);
@@ -153,20 +150,11 @@ function CameraTracker({
 
         // 평면 행렬 분해
         newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-        // 평면 노말 계산: 기본 (0,0,1)에 후보 회전 적용
+        // 평면 노말 계산 (기본 (0,0,1)에 후보 회전 적용)
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
         const candidatePosition = tempVec1.clone();
-        const cameraForward = new THREE.Vector3();
-        camera.getWorldDirection(cameraForward);
-        const camToPlane = candidatePosition.clone().sub(camera.position);
-        // 평면이 카메라 앞쪽에 있어야 함 (내적이 양수)
-        if (camToPlane.dot(cameraForward) <= 0) {
-          setStablePlane(false);
-          setPlaneConfidence(0);
-          onDotValueChange?.(0);
-          return;
-        }
-        // 최대 거리 조건 (5미터 이내)
+
+        // (카메라와 평면 사이 최대 거리 조건: 5미터 이내)
         if (candidatePosition.distanceTo(camera.position) > 5) {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -174,9 +162,9 @@ function CameraTracker({
           return;
         }
 
-        // 수직성 검사: 평면의 노말과 월드 up 벡터(0,1,0) 내적의 절대값이 0.6 미만이면 안정 상태로 판단
+        // 수직성 검사: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 이상이면 (즉, 수평에 가까우면) 안정으로 판단
         const verticality = Math.abs(tempVec2.dot(up));
-        if (verticality < 0.6) {
+        if (verticality >= 0.6) {
           setStablePlane(true);
           setPlaneConfidence(1);
           candidatePlaneMatrix.current.copy(newMatrix);
@@ -190,9 +178,9 @@ function CameraTracker({
           // dot 값 계산: 카메라에서 후보 평면까지의 단위 벡터와 평면 노말 내적
           const camVec = new THREE.Vector3().subVectors(camera.position, candidatePosition).normalize();
           let dot = tempVec2.dot(camVec);
-          // 예외 처리: dot이 0이면 평면이 수직으로 배치된 것으로 판단하여 안정 처리
+          // 예외 처리: dot이 0이면 평면이 수직으로 배치된 것으로 판단하여 안정 조건을 만족하도록 함
           if (dot === 0) {
-            dot = 1; // dot 0인 경우 안정 조건을 만족하도록 함
+            dot = 1;
           } else if (dot < 0) {
             dot = -dot;
           }
