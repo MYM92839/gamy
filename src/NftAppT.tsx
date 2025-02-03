@@ -42,7 +42,8 @@ const newMat = new THREE.Matrix4();
 
 /**
  * getPlaneDOMCenter
- * SLAM에서 반환한 평면 행렬을 분해하고, 카메라 투영 변환 후 DOM 좌표로 변환
+ * SLAM에서 반환한 평면 행렬(4x4)을 분해하여, 평면 중심을 카메라 투영 좌표로 변환한 후
+ * DOM 좌표(픽셀 단위)로 변환합니다.
  */
 function getPlaneDOMCenter(
   planeMatrix: THREE.Matrix4,
@@ -56,6 +57,7 @@ function getPlaneDOMCenter(
   rot.set(0, 0, 0, 1);
   sca.set(0, 0, 0);
   planeMatrix.decompose(pos, rot, sca);
+  // 투영 변환 (NDC)
   pos.project(camera);
   const halfVw = videoWidth / 2;
   const halfVh = videoHeight / 2;
@@ -66,7 +68,7 @@ function getPlaneDOMCenter(
   return { x: videoX * scaleX, y: videoY * scaleY };
 }
 
-/** 두 Matrix4의 차이를 계산 */
+/** 두 Matrix4의 차이를 계산 (위치와 회전 변화량) */
 function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
   const pos1 = new THREE.Vector3();
   const pos2 = new THREE.Vector3();
@@ -84,7 +86,7 @@ function matrixDiff(m1: THREE.Matrix4, m2: THREE.Matrix4) {
 
 /**
  * scaleMatrixTranslation
- * 평면 행렬의 translation 요소에 scaleFactor를 곱해 단위 보정
+ * 평면 행렬의 translation 요소(인덱스 12, 13, 14)에 scaleFactor를 곱해 단위 보정.
  */
 function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THREE.Matrix4 {
   const elements = matrix.elements.slice();
@@ -141,15 +143,15 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // const x = parseFloat(searchParams.get('x') || '0');
-  // const y = parseFloat(searchParams.get('y') || '0');
-  // const z = parseFloat(searchParams.get('z') || '0');
+  const x = parseFloat(searchParams.get('x') || '0');
+  const y = parseFloat(searchParams.get('y') || '0');
+  const z = parseFloat(searchParams.get('z') || '0');
   const t = parseFloat(searchParams.get('t') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
 
-  // 안정도 임계값 (누적 조건 완화)
+  // 안정도 임계값 (누적 조건을 완화)
   const planeConfidenceThreshold = 3;
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
@@ -159,9 +161,11 @@ function CameraTracker({
   const planeRef = useRef<THREE.Mesh>(null);
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
+  // SLAM 결과가 센티미터 단위로 반환한다고 가정 → 0.01을 곱해 미터 단위로 보정
   const translationScale = 0.01;
   const objectFootOffset = 0.5;
 
+  // 임시 캔버스 생성 (비디오 프레임 캡쳐용)
   const tmpCanvasRef = useRef<HTMLCanvasElement | null>(null);
   if (!tmpCanvasRef.current) {
     tmpCanvasRef.current = document.createElement('canvas');
@@ -170,6 +174,7 @@ function CameraTracker({
 
   useEffect(() => {
     if (alvaAR) {
+      // applyPose: SLAM과 Three.js 좌표계 차이를 보정하는 함수
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
       console.log("✅ AlvaAR SLAM Initialized");
     }
@@ -189,7 +194,7 @@ function CameraTracker({
       frame = tmpCtx.current?.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
     }
 
-    // 카메라 포즈 업데이트
+    // 카메라 포즈 업데이트 (applyPose로 보정)
     if (frame && alvaAR) {
       const camPose = alvaAR.findCameraPose(frame);
       if (camPose) {
@@ -198,7 +203,7 @@ function CameraTracker({
       }
     }
 
-    // 평면 인식 (SLAM으로 평면과 후보 정보 수신)
+    // 평면 인식: SLAM으로부터 평면 행렬을 수신
     if (!planeFound && alvaAR) {
       const planePose = alvaAR.findPlane(frame);
       if (planePose) {
@@ -206,7 +211,7 @@ function CameraTracker({
         let newMatrix = matt.fromArray(planePose);
         newMatrix = scaleMatrixTranslation(newMatrix, translationScale);
 
-        // DOM 상 평면 중심 좌표 계산
+        // 평면 중심의 DOM 좌표 계산
         const { x: domCenterX, y: domCenterY } = getPlaneDOMCenter(
           newMatrix,
           camera as THREE.PerspectiveCamera,
@@ -215,82 +220,22 @@ function CameraTracker({
           domWidth,
           domHeight
         );
-        // centerDistance: 화면상 빨간 원(중심)과 평면 중심 간 거리 (픽셀 단위)
+        // 화면상의 빨간 원 중심과 평면 중심 사이의 거리 (픽셀 단위)
         const dx = domCenterX - circleX;
         const dy = domCenterY - circleY;
         const centerDistance = Math.sqrt(dx * dx + dy * dy);
-        // 기존 threshold가 너무 작았으므로 환경에 맞게 재조정 (예: circleR * 3)
-        const centerDistanceThreshold = circleR * 3;
-
-        // 평면 행렬 분해: 평면 중심, 회전, 스케일 구하기
-        newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-        // 평면 노말 계산 (SLAM의 평면 노말 사용)
-        tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
-
-        // 후보 평면이 카메라 앞쪽에 있는지 확인
-        const candidatePosition = tempVec1.clone();
-        camera.getWorldDirection(cameraForward);
-        camVec.copy(camera.position).sub(candidatePosition);
-        if (camVec.lengthSq() === 0 || tempVec2.lengthSq() === 0) return;
-        camVec.normalize();
-        let dot = tempVec2.dot(camVec);
-        if (isNaN(dot)) {
-          console.warn("dot is NaN", { camVec, tempVec2 });
-          return;
-        }
-        // effectiveDot: 평면이 카메라를 향하는 정도 (절대값 사용)
-        const effectiveDot = Math.abs(dot);
-        onDotValueChange?.(effectiveDot);
-
-        // facingWeight: 카메라가 평면을 정면으로 바라보는 정도
-        const FACING_THRESHOLD = (t !== undefined && t > 0) ? t : 0.4;
-        let facingWeight = effectiveDot > FACING_THRESHOLD
-          ? (effectiveDot - FACING_THRESHOLD) / (1 - FACING_THRESHOLD)
-          : 0;
-
-        // 평면 수직성 검사 (카메라 높이에 따른 동적 임계값)
-        const dynamicVerticalThreshold = camera.position.y < 1.5 ? 0.35 : 0.3;
-        const verticality = Math.abs(tempVec2.dot(up));
-        const isVertical = verticality < dynamicVerticalThreshold;
-
-        if (onDebugUpdate) {
-          onDebugUpdate({
-            centerDistance: centerDistance.toFixed(2),
-            dot: dot.toFixed(2),
-            effectiveDot: effectiveDot.toFixed(2),
-            facingWeight: facingWeight.toFixed(2),
-            verticality: verticality.toFixed(2),
-            dynamicVerticalThreshold: dynamicVerticalThreshold.toFixed(2)
-          });
-        }
-
-        // 후보 평면 조건: 중심 거리, facingWeight, 수직성이 모두 만족해야 함
-        if (centerDistance < centerDistanceThreshold && facingWeight > 0 && isVertical) {
-          let newConfidence = prevPlaneMatrix.current
-            ? (matrixDiff(prevPlaneMatrix.current, newMatrix) < 0.1
-                ? planeConfidence + facingWeight
-                : facingWeight)
-            : facingWeight;
-          setPlaneConfidence(newConfidence);
-          prevPlaneMatrix.current = newMatrix.clone();
-
-          // 선형 보간으로 후보 평면 업데이트
-          candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-          newMatrix.decompose(tempVec1, tempQuat1, tempScale1);
-          candidatePos.lerp(tempVec1, 0.1);
-          candidateQuat.slerp(tempQuat1, 0.1);
-          candidateScale.lerp(tempScale1, 0.1);
-          candidatePlaneMatrix.current.compose(candidatePos, candidateQuat, candidateScale);
-
-          // 좌표계 보정 (예: SLAM과 Three.js 좌표계 차이 보정)
+        // **새 조건:** 평면의 투영이 빨간 원을 "완전히 덮는다"는 조건으로,
+        // 평면 중심이 빨간 원 내부에 거의 위치하면 안정한 평면으로 판단.
+        // 여기서는 centerDistance가 빨간 원 반지름의 30% 미만이면 조건 만족.
+        if (centerDistance < circleR * 0.3) {
+          setStablePlane(true);
+          setPlaneConfidence(1);
+          // 평면 정보 업데이트 (후보 평면으로 저장)
+          newMatrix.decompose(candidatePos, candidateQuat, candidateScale);
+          // 좌표계 보정: SLAM 결과와 Three.js 좌표계 차이를 보정 (예: 회전의 x, 위치의 y,z 반전)
           candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
           candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
-
-          if (newConfidence >= planeConfidenceThreshold) {
-            setStablePlane(true);
-          } else {
-            setStablePlane(false);
-          }
+          candidatePlaneMatrix.current.copy(newMatrix);
         } else {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -303,14 +248,13 @@ function CameraTracker({
 
     onPlaneConfidenceChange?.(planeConfidence);
 
-    // 평면 디스플레이 업데이트
+    // 평면 메시(planeRef) 업데이트: 화면에 평면을 표시
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
         candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
         candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
-
-        // Y축 기준 90도 회전 보정 (필요시)
+        // 추가 보정: Y축 기준 90도 회전 보정 (필요 시)
         localNormal.set(0, 0, 1);
         tempQuat1.copy(candidateQuat);
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
@@ -322,12 +266,12 @@ function CameraTracker({
         }
         planeRef.current.position.copy(candidatePos);
         planeRef.current.quaternion.copy(candidateQuat);
-        // 스케일 보정: 빨간 원 반지름과 기준값으로 계산
+        // 스케일 보정: 빨간 원 반지름(circleR)과 기준값(someReference)을 사용
         const someReference = 50;
         const canvasScaleFactor = circleR / someReference;
         planeRef.current.scale.setScalar(3 * canvasScaleFactor);
       } else {
-        // 안정된 평면이 없으면 기본 위치 (카메라 앞쪽 고정 거리)
+        // 안정된 평면이 없으면 기본적으로 카메라 앞쪽 고정 거리 사용
         const defaultDistance = 2;
         camDir.set(0, 0, 0);
         camera.getWorldDirection(camDir);
@@ -339,38 +283,36 @@ function CameraTracker({
       planeRef.current.visible = true;
     }
 
-    // 평면 확정 요청: 버튼 클릭 시 현재 후보 평면을 고정
+    // 평면 확정 요청: 사용자가 버튼을 누르면 후보 평면을 최종 평면으로 고정
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
       console.log("🎉 planeFound => place object");
     }
 
-    // **새로운 제안: 고정 거리 보정 방식 적용**
-    // 여기서 "나와 오브젝트의 거리가 항상 같다"는 가정하에,
-    // 안정된 평면 정보와 카메라 포즈를 이용해 오브젝트의 최종 위치를 계산합니다.
-    // 예를 들어, 고정 거리(fixedDistance)를 1.5미터로 가정.
-    const fixedDistance = 1.5;
+    // **오브젝트 배치 (새로운 제안 적용)**
+    // "카메라와 오브젝트 사이의 거리는 항상 고정"되어 있다고 가정하고,
+    // 카메라 위치와 후보 평면 중심(candidatePos)을 이용해 오브젝트의 최종 위치를 계산.
     if (planeFound && !objectPlaced && objectRef.current) {
-      // 안정된 평면에서 candidatePos를 앵커로 사용하고,
-      // 카메라와의 방향 벡터를 구한 뒤, 그 방향으로 고정 거리를 유지하도록 함.
+      // 고정 거리 (예: 1.5미터)
+      const fixedDistance = 1.5;
+      // 카메라에서 후보 평면 중심까지의 방향 벡터
       const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
-      // 최종 오브젝트 위치 = 카메라 위치 + (direction * fixedDistance)
+      // 오브젝트 최종 위치: 카메라 위치 + (direction * fixedDistance)
       const computedObjectPos = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(fixedDistance));
-      // 만약 오브젝트 모델의 발 위치가 평면에 닿아야 한다면 Y축 오프셋을 적용
+      // 필요 시 Y축 오프셋 적용 (모델에 따라)
       computedObjectPos.y -= objectFootOffset;
       finalObjectPosition.current = computedObjectPos.clone();
 
-      // 최종 오브젝트 위치 적용
       objectRef.current.position.copy(finalObjectPosition.current);
-      // 평면의 회전 값을 보정하여 오브젝트 회전 결정 (applyPose와 유사)
+      // 평면의 회전 정보를 이용하여 오브젝트 회전 보정 (applyPose와 유사)
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
       tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
       flipQuat.set(0, 0, 0, 1);
       flipQuat.setFromAxisAngle(dummy, Math.PI / 2);
       tempQuat1.multiply(flipQuat);
       objectRef.current.quaternion.copy(tempQuat1);
-      // 오브젝트 스케일 보정: 고정된 scale과 빨간 원 반지름 기준 보정
+      // 오브젝트 스케일 보정: URL scale과 빨간 원 반지름 기준 보정
       const someReference = 50;
       const canvasScaleFactor = circleR / someReference;
       objectRef.current.scale.setScalar(scale * canvasScaleFactor);
@@ -388,6 +330,7 @@ function CameraTracker({
   return (
     <>
       <mesh ref={planeRef} visible={false}>
+        {/* 메시의 기하학적 중심이 (0,0,0)인지 확인하기 위해 geometry.center() 호출 권장 */}
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial color="#00f" opacity={0.3} transparent side={THREE.DoubleSide} />
       </mesh>
