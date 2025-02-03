@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
-import * as THREE from 'three';
-import { useParams, useSearchParams } from 'react-router-dom';
 import { useFrame } from '@react-three/fiber';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import * as THREE from 'three';
 
-import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
-import { requestCameraPermission } from './libs/util';
 import { AlvaARConnectorTHREE } from './libs/alvaConnector';
+import SlamCanvas from './libs/arnft/arnft/components/SlamCanvas';
 import { useSlam } from './libs/SLAMProvider';
+import { requestCameraPermission } from './libs/util';
 
-import Back from './assets/icons/Back';
 import { Box, Tree } from './ArApp';
+import Back from './assets/icons/Back';
 
 // --- 전역 임시 객체들 ---
 const tempVec1 = new THREE.Vector3();
@@ -105,7 +105,7 @@ function CameraTracker({
   onPlaneConfidenceChange,
   setPlaneVisible,
   onDotValueChange,
-  onDebugUpdate,
+  // onDebugUpdate,
   videoWidth,
   videoHeight,
   domWidth,
@@ -124,8 +124,8 @@ function CameraTracker({
   // 후보 평면 및 안정 상태 관련
   const [planeConfidence, setPlaneConfidence] = useState(0);
   // 안정 상태 임계값 (테스트용 완화)
-  const planeConfidenceThreshold = 5;
-  const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
+  // const planeConfidenceThreshold = 5;
+  // const prevPlaneMatrix = useRef<THREE.Matrix4 | null>(null);
   const candidatePlaneMatrix = useRef(new THREE.Matrix4());
   const finalPlaneMatrix = useRef(new THREE.Matrix4());
   // 초기 후보 평면 위치 저장 (오프셋 계산용)
