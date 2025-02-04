@@ -38,7 +38,8 @@ function Scene({ visible }: { visible: boolean }) {
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
         <group
-          position={[0, 1.16, -3]}
+          position={[0, 0, -10]}
+          rotation={[0, Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
@@ -209,7 +210,7 @@ export default function BasicApp() {
     if (init) {
       id = setTimeout(() => {
         func()
-      }, 3000)
+      }, 0)
     }
     return () => {
       clearTimeout(id)
