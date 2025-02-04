@@ -219,13 +219,14 @@ function CameraTracker({
 
       objectRef.current.position.copy(finalObjectPosition.current);
 
-
       if (X) {
-        objectRef.current.position.x = X
-      } if (Y) {
-        objectRef.current.position.y = Y
-      } if (Z) {
-        objectRef.current.position.z = Z
+        objectRef.current.position.x = X;
+      }
+      if (Y) {
+        objectRef.current.position.y = Y;
+      }
+      if (Z) {
+        objectRef.current.position.z = Z;
       }
 
       // 회전 보정: 최종 평면 회전값에 초기 후보 회전 오프셋 보정 적용
@@ -237,10 +238,19 @@ function CameraTracker({
       }
       // 추가: 오브젝트가 항상 땅에 붙은(수평) 상태가 되도록 피치와 롤을 0으로 고정 (y축 회전만 남김)
       const euler = new THREE.Euler().setFromQuaternion(tempQuat1, 'YXZ');
-      // YXZ 순서에서 Y: yaw, X: pitch, Z: roll
       euler.x = 0; // pitch 0
       euler.z = 0; // roll 0
       tempQuat1.setFromEuler(euler);
+
+      // 추가 보정: 오브젝트가 카메라를 바라보도록
+      // 오브젝트의 전방 (local Z축)을 구한 후, 카메라 방향과 비교
+      const objectForward = new THREE.Vector3(0, 0, 1).applyQuaternion(tempQuat1);
+      const toCamera = new THREE.Vector3().subVectors(camera.position, objectRef.current.position).normalize();
+      // 내적이 음수이면 오브젝트의 앞이 카메라 반대 방향임 => Y축 기준 180도 회전
+      if (objectForward.dot(toCamera) < 0) {
+        const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+        tempQuat1.multiply(correctionQuat);
+      }
 
       objectRef.current.quaternion.copy(tempQuat1);
       objectRef.current.scale.setScalar(scale);
