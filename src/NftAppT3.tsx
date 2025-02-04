@@ -110,7 +110,7 @@ function CameraTracker({
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
-  const translationScale = 0.01;
+  const translationScale = 0.1;
   const objectFootOffset = 0.5;
   const fixedDistance = 1.5; // 카메라와 오브젝트 사이의 고정 거리
 
@@ -161,7 +161,7 @@ function CameraTracker({
         const candidatePosition = tempVec1.clone();
 
         // 최대 거리 조건: 5미터 이내
-        if (candidatePosition.distanceTo(camera.position) > 15) {
+        if (candidatePosition.distanceTo(camera.position) > 5) {
           setStablePlane(false);
           setPlaneConfidence(0);
           onDotValueChange?.(0);
