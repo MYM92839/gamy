@@ -19,11 +19,8 @@ if (isIOS) {
     const WebXRPolyfill = module.default;
     new WebXRPolyfill({
       webvr: true,
-      cardboard: true,
-      allowCardboardOnDesktop: true,
-      cardboardConfig: {
-        DIRTY_SUBMIT_FRAME_BINDINGS: true,
-      },
+      cardboard: false,
+
     });
     console.log('WebXRPolyfill loaded for iOS');
   });
