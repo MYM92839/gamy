@@ -24,8 +24,8 @@ const candidateScale = new THREE.Vector3();
 const localNormal = new THREE.Vector3(0, 0, 1);
 // const up = new THREE.Vector3(0, 1, 0);
 const camDir = new THREE.Vector3();
-const flipQuat = new THREE.Quaternion();
-const dummy = new THREE.Vector3(0, 1, 0);
+// flipQuat와 dummy는 더 이상 사용하지 않아도 되지만, 혹시 다른 곳에서 필요하다면 남겨둡니다.
+//
 const matt = new THREE.Matrix4();
 
 const newMat = new THREE.Matrix4();
@@ -44,7 +44,7 @@ function scaleMatrixTranslation(matrix: THREE.Matrix4, scaleFactor: number): THR
   return newMat;
 }
 
-/** ============= CameraTracker 컴포넌트 (두 번째 로직 – 수직성만 이용, 보정 및 dot값 예외 처리) ============= */
+/** ============= CameraTracker 컴포넌트 (수직성만 이용, 보정 및 dot값 예외 처리) ============= */
 interface CameraTrackerProps {
   planeFound: boolean;
   setPlaneFound: (b: boolean) => void;
@@ -110,7 +110,7 @@ function CameraTracker({
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
-  const translationScale = 0.1;
+  const translationScale = 0.01;
   const objectFootOffset = 0.5;
   const fixedDistance = 1.5; // 카메라와 오브젝트 사이의 고정 거리
 
@@ -160,17 +160,16 @@ function CameraTracker({
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
         const candidatePosition = tempVec1.clone();
 
-        // // 최대 거리 조건: 5미터 이내
-        if (candidatePosition.distanceTo(camera.position) > 5) {
+        // 최대 거리 조건: 5미터 이내
+        if (candidatePosition.distanceTo(camera.position) > 25) {
           setStablePlane(false);
           setPlaneConfidence(0);
           onDotValueChange?.(0);
           return;
         }
 
-        // 수직성 검사: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 이상이면, 즉 평면이 수평(바닥)에 가까우면 안정으로 판단
-        // const verticality = Math.abs(tempVec2.dot(up));
-        // if (verticality >= 0.6) {
+        // 원래 수직성 검사 및 dot 계산 로직이 있었다면 여기서 처리하지만,
+        // 지금은 별도 회전 플립 없이 안정 상태로 처리합니다.
         setStablePlane(true);
         setPlaneConfidence(1);
         candidatePlaneMatrix.current.copy(newMatrix);
@@ -191,13 +190,8 @@ function CameraTracker({
           dot = -dot;
         }
         onDotValueChange?.(dot);
-        // } else {
-        //   setStablePlane(false);
-        //   setPlaneConfidence(0);
-        //   onDotValueChange?.(0);
-        // }
       } else {
-        // console.log("LOSTSTABLE")
+        console.log("LOSTSTABLE");
         setStablePlane(false);
         setPlaneConfidence(0);
         onDotValueChange?.(0);
@@ -210,17 +204,10 @@ function CameraTracker({
     if (!planeFound && planeRef.current) {
       if (stablePlane) {
         candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
+        // 후보 회전값 X축만 반전 (원래 로직)
         candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
         candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
-        localNormal.set(0, 0, 1);
-        tempQuat1.copy(candidateQuat);
-        tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
-        camDir.subVectors(camera.position, candidatePos).normalize();
-        if (tempVec2.dot(camDir) < 0) {
-          flipQuat.set(0, 0, 0, 1);
-          flipQuat.setFromAxisAngle(dummy, Math.PI / 2);
-          candidateQuat.multiply(flipQuat);
-        }
+        // 90도 플립 보정 로직 제거 → 그대로 candidateQuat 사용
         planeRef.current.position.copy(candidatePos);
         planeRef.current.quaternion.copy(candidateQuat);
         planeRef.current.scale.set(3, 3, 3);
@@ -256,9 +243,7 @@ function CameraTracker({
       // 회전 보정: 최종 평면 회전값에 초기 후보 회전 오프셋 보정 적용
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
       tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
-      flipQuat.set(0, 0, 0, 1);
-      flipQuat.setFromAxisAngle(dummy, Math.PI / 2);
-      tempQuat1.multiply(flipQuat);
+      // 여기서도 별도의 90도 플립 없이 기존 회전 보정만 수행
       if (initialCandidateQuat.current) {
         const rotationOffset = tempQuat1.clone().multiply(initialCandidateQuat.current.clone().invert());
         tempQuat1.multiply(rotationOffset);
@@ -280,7 +265,7 @@ function CameraTracker({
       candidateQuat: candidateQuat.toArray(),
       cameraPosition: camera.position.toArray(),
       planeConfidence,
-      dotValue: onDotValueChange ? onDotValueChange.length : 0, // 만약 dot 값 업데이트 함수에서 직접 dot 값을 저장하지 않는다면, 여기서 별도로 관리하세요.
+      dotValue: onDotValueChange ? onDotValueChange.length : 0, // dot 값을 직접 관리하지 않는다면 별도로 관리하세요.
     });
   });
 
