@@ -1,31 +1,31 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, createXRStore, } from '@react-three/xr';
+import { XR, createXRStore } from '@react-three/xr';
 import { Suspense, useRef, useState } from 'react';
 
 // ------------------------
-// OS 감지: iOS 여부 (iOS에서는 WebXR 공식 지원이 없으므로 polyfill 사용)
+// OS detection: Check for iOS (since iOS doesn’t officially support WebXR)
 // ------------------------
 const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) &&
   !(window as any).MSStream;
 
-// iOS인 경우 polyfill 로드 (polyfill은 전역에서 navigator.xr을 채워줍니다)
+// If iOS, load the polyfill and log to confirm
 if (isIOS) {
-  // 웹팩/tsc 환경에서 dynamic require를 사용하여 로드합니다.
-  require('webxr-polyfill');
+  const WebXRPolyfill = require('webxr-polyfill');
+  console.log('WebXRPolyfill loaded:', WebXRPolyfill);
+  // Optionally, request device orientation permission here if needed
 }
 
 // ------------------------
-// XR 스토어 (iOS가 아닌 경우에만 사용)
+// XR store (only used for non-iOS)
 // ------------------------
 const xrStore = createXRStore();
 
 // ------------------------
-// 사용자 위치에서 3미터 앞에 빨간 박스를 배치하는 컴포넌트
+// Component to place a red box 3m in front of the user
 // ------------------------
 function RedBox() {
-  // 여기서는 카메라(사용자) 위치에서 [0, 1.6, -3] 위치에 오브젝트를 배치합니다.
   return (
     <mesh position={[0, 1.6, -3]}>
       <boxGeometry args={[1, 1, 1]} />
@@ -35,7 +35,7 @@ function RedBox() {
 }
 
 // ------------------------
-// 기본 씬 구성: 조명과 빨간 박스를 포함
+// Scene composition: lights and the red box
 // ------------------------
 function Scene() {
   return (
@@ -50,21 +50,22 @@ function Scene() {
 }
 
 // ------------------------
-// 메인 App 컴포넌트
+// Main App component
 // ------------------------
 export default function BasicApp() {
   const [, setSessionStarted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // XR 진입 버튼 핸들러:
-  // - iOS가 아닌 경우 react-three/xr의 xrStore.enterXR()을 호출
-  // - iOS인 경우 polyfill이 제공하는 navigator.xr.requestSession()을 직접 호출
+  // XR enter button handler:
+  // - Non-iOS: use xrStore.enterXR('immersive-ar') (or 'immersive-vr' if that works better)
+  // - iOS: use polyfill to request an XR session
   const handleEnterXR = async () => {
     if (!isIOS) {
+      console.log('Requesting XR session for non-iOS');
       xrStore.enterXR('immersive-ar');
       return;
     }
-    // iOS: polyfill을 통해 XR 세션 요청 (정확한 동작은 디바이스와 polyfill 구현에 따라 다를 수 있습니다)
+    // iOS: try to request an XR session using polyfill
     if (navigator.xr) {
       try {
         const session = await navigator.xr.requestSession('immersive-ar', {
@@ -72,8 +73,6 @@ export default function BasicApp() {
         });
         console.log('XR session started on iOS (via polyfill):', session);
         setSessionStarted(true);
-        // 주의: polyfill 환경에서는 Three.js와의 통합이 완벽하지 않을 수 있으므로,
-        // 여기서는 별도의 XR 세션 제어 없이 일반 Canvas 내에서 씬을 렌더링합니다.
       } catch (err) {
         console.error('Failed to start XR session on iOS', err);
       }
@@ -87,22 +86,23 @@ export default function BasicApp() {
       <button
         style={{
           position: 'absolute',
-          zIndex: 1,
+          zIndex: 10000,
           top: 20,
           left: 20,
           padding: '10px 20px',
           fontSize: '16px',
+
         }}
         onClick={handleEnterXR}
       >
         Enter XR
       </button>
-      <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
+      <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', position: 'fixed', zIndex: 9999 }}>
         {isIOS ? (
-          // iOS 환경: polyfill을 로드했으므로 XR 전용 컨트롤러 없이 일반 Canvas에 씬 렌더링
+          // iOS: render the scene directly (polyfill may not fully support XR UI)
           <Scene />
         ) : (
-          // iOS가 아닐 때: react-three/xr를 사용해 정식 WebXR 세션을 관리합니다.
+          // Non-iOS: wrap the scene with <XR>
           <XR store={xrStore}>
             <Scene />
           </XR>
