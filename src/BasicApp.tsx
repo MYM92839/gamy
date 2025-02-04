@@ -39,7 +39,7 @@ function Scene({ visible }: { visible: boolean }) {
       <Suspense fallback={null}>
         <group
           position={[0, 0, -10]}
-          rotation={[0, Math.PI / 4, 0]}
+          rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
