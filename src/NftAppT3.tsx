@@ -202,24 +202,24 @@ function CameraTracker({
 
     // 평면 메시 업데이트 (후보 평면 표시)
     if (!planeFound && planeRef.current) {
-      if (stablePlane) {
-        candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-        // 후보 회전값 X축만 반전 (원래 로직)
-        candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
-        candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
-        // 90도 플립 보정 로직 제거 → 그대로 candidateQuat 사용
-        planeRef.current.position.copy(candidatePos);
-        planeRef.current.quaternion.copy(candidateQuat);
-        planeRef.current.scale.set(3, 3, 3);
-      } else {
-        const defaultDistance = 2;
-        camDir.set(0, 0, 0);
-        camera.getWorldDirection(camDir);
-        const defaultPos = camera.position.clone().add(camDir.multiplyScalar(defaultDistance));
-        planeRef.current.position.copy(defaultPos);
-        planeRef.current.quaternion.copy(camera.quaternion);
-        planeRef.current.scale.set(3, 3, 3);
-      }
+      // if (stablePlane) {
+      //   candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
+      //   // 후보 회전값 X축만 반전 (원래 로직)
+      //   candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
+      //   candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
+      //   // 90도 플립 보정 로직 제거 → 그대로 candidateQuat 사용
+      //   planeRef.current.position.copy(candidatePos);
+      //   planeRef.current.quaternion.copy(candidateQuat);
+      //   planeRef.current.scale.set(3, 3, 3);
+      // } else {
+      //   const defaultDistance = 2;
+      //   camDir.set(0, 0, 0);
+      //   camera.getWorldDirection(camDir);
+      //   const defaultPos = camera.position.clone().add(camDir.multiplyScalar(defaultDistance));
+      //   planeRef.current.position.copy(defaultPos);
+      //   planeRef.current.quaternion.copy(camera.quaternion);
+      //   planeRef.current.scale.set(3, 3, 3);
+      // }
       planeRef.current.visible = true;
     }
 
