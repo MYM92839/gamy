@@ -11,19 +11,6 @@ const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) &&
   !(window as any).MSStream;
 
-if (isIOS) {
-  import('webxr-polyfill').then((module) => {
-    const WebXRPolyfill = module.default;
-    new WebXRPolyfill({
-      webvr: true,
-      cardboard: false,
-    });
-    console.log('WebXRPolyfill loaded for iOS');
-  });
-} else {
-  console.log('Non-iOS environment, polyfill not loaded');
-}
-
 // ------------------------
 // XR 스토어 (iOS가 아닌 경우에만 사용)
 const xrStore = createXRStore();
@@ -37,7 +24,7 @@ function Scene({ visible }: { visible: boolean }) {
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
         <group position={[0, 1.16, -3]} scale={[0.5, 0.5, 0.5]} visible={visible}>
-          <Box on onRenderEnd={() => {}} />
+          <Box on onRenderEnd={() => { }} />
         </group>
       </Suspense>
     </>
@@ -47,64 +34,64 @@ function Scene({ visible }: { visible: boolean }) {
 // ------------------------
 // 카메라 미리보기용 Video 컴포넌트 (비-iOS용)
 // 이 컴포넌트는 AR 모드 진입 전에만 사용됩니다.
-function CameraPreview() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+// function CameraPreview() {
+//   const videoRef = useRef<HTMLVideoElement>(null);
+//   const [stream, setStream] = useState<MediaStream | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function startCamera() {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false,
-        });
-        if (!isMounted) return;
-        setStream(mediaStream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      } catch (error) {
-        console.error('카메라 스트림을 가져오는데 실패했습니다:', error);
-      }
-    }
-    startCamera();
+//   useEffect(() => {
+//     let isMounted = true;
+//     async function startCamera() {
+//       try {
+//         const mediaStream = await navigator.mediaDevices.getUserMedia({
+//           video: { facingMode: 'environment' },
+//           audio: false,
+//         });
+//         if (!isMounted) return;
+//         setStream(mediaStream);
+//         if (videoRef.current) {
+//           videoRef.current.srcObject = mediaStream;
+//         }
+//       } catch (error) {
+//         console.error('카메라 스트림을 가져오는데 실패했습니다:', error);
+//       }
+//     }
+//     startCamera();
 
-    return () => {
-      // 언마운트 시 모든 트랙을 종료
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        setStream(null);
-      }
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+//     return () => {
+//       // 언마운트 시 모든 트랙을 종료
+//       if (stream) {
+//         stream.getTracks().forEach((track) => track.stop());
+//         setStream(null);
+//       }
+//       isMounted = false;
+//     };
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
 
-  return (
-    <video
-      ref={videoRef}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        objectFit: 'cover',
-        zIndex: 0,
-      }}
-      autoPlay
-      playsInline
-      muted
-    />
-  );
-}
+//   return (
+//     <video
+//       ref={videoRef}
+//       style={{
+//         position: 'absolute',
+//         top: 0,
+//         left: 0,
+//         width: '100vw',
+//         height: '100vh',
+//         objectFit: 'cover',
+//         zIndex: 0,
+//       }}
+//       autoPlay
+//       playsInline
+//       muted
+//     />
+//   );
+// }
 
 // ------------------------
 // 메인 App 컴포넌트
 export default function BasicApp() {
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [cameraActive, setCameraActive] = useState(true);
+  const [, setCameraActive] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // XR 진입 버튼 핸들러:
@@ -128,20 +115,6 @@ export default function BasicApp() {
       }
       return;
     }
-    // iOS의 경우 polyfill을 통해 AR 세션 요청
-    if (navigator.xr) {
-      try {
-        const session = await navigator.xr.requestSession('immersive-ar', {
-          requiredFeatures: ['local-floor'],
-        });
-        console.log('XR session started on iOS (via polyfill):', session);
-        setSessionStarted(true);
-      } catch (err) {
-        console.error('Failed to start XR session on iOS', err);
-      }
-    } else {
-      console.warn('navigator.xr not available on this device.');
-    }
   };
 
   return (
@@ -152,7 +125,7 @@ export default function BasicApp() {
       ) : (
         <>
           {/* 미리보기 video는 AR 모드 진입 전(cameraActive true)일 때만 렌더링 */}
-          {cameraActive && !sessionStarted && <CameraPreview />}
+          {/* {cameraActive && !sessionStarted && <CameraPreview />} */}
 
           {/* XR 진입 버튼: XR 세션 시작 전만 표시 */}
           {!sessionStarted && (
