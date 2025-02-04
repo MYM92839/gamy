@@ -45,15 +45,15 @@ function Scene({ visible }: { visible: boolean }) {
 }
 
 
-// ------------------------
-// 카메라 미리보기용 Video 컴포넌트 (비-iOS용)
 function CameraPreview() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    let stream: MediaStream | null = null;
+
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' },
           audio: false,
         });
@@ -65,6 +65,13 @@ function CameraPreview() {
       }
     }
     startCamera();
+
+    return () => {
+      if (stream) {
+        // 스트림의 모든 트랙을 중지합니다.
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
   }, []);
 
   return (
