@@ -17,7 +17,10 @@ if (isIOS) {
     // 모듈의 기본 내보내기를 사용합니다.
     // 필요한 경우 옵션을 전달할 수 있습니다.
     const WebXRPolyfill = module.default;
-    new WebXRPolyfill();
+    new WebXRPolyfill({
+      webvr: true,
+      cardboard: false,
+    });
     console.log('WebXRPolyfill loaded for iOS');
   });
 } else {
