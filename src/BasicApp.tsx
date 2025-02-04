@@ -136,6 +136,7 @@ function Scene({ visible }: { visible: boolean }) {
 // ------------------------
 // 메인 App 컴포넌트
 export default function BasicApp() {
+  const [init, setInit] = useState(false)
   const [sessionStarted, setSessionStarted] = useState(false);
   // cameraActive는 미리보기 컴포넌트가 렌더링되는지 여부를 결정합니다.
   // const [cameraActive, setCameraActive] = useState(true);
@@ -204,8 +205,8 @@ export default function BasicApp() {
 
       setSessionStarted(true)
     }
-    func()
-  }, [])
+    if (init) func()
+  }, [init])
   return (
     <>
       {isIOS ? (
@@ -249,6 +250,9 @@ export default function BasicApp() {
               left: 0,
             }}
             gl={{ alpha: true }}
+            onCreated={() => {
+              setInit(true)
+            }}
           >
             <XR store={xrStore}>
               <Scene visible={sessionStarted} />
