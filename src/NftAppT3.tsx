@@ -191,11 +191,11 @@ function CameraTracker({
           } else if (dot < 0) {
             dot = -dot;
           }
-          //   onDotValueChange?.(dot);
-          // } else {
-          //   setStablePlane(false);
-          //   setPlaneConfidence(0);
-          //   onDotValueChange?.(0);
+          onDotValueChange?.(dot);
+        } else {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          onDotValueChange?.(0);
         }
       } else {
         setStablePlane(false);
