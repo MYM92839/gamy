@@ -1,7 +1,7 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
 
@@ -37,89 +37,104 @@ function Scene({ visible }: { visible: boolean }) {
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
         <group position={[0, 1.16, -3]} scale={[0.5, 0.5, 0.5]} visible={visible}>
-          <Box on onRenderEnd={() => { }} />
+          <Box on onRenderEnd={() => {}} />
         </group>
       </Suspense>
     </>
   );
 }
 
+// ------------------------
+// 카메라 미리보기용 Video 컴포넌트 (비-iOS용)
+function CameraPreview() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
-// function CameraPreview() {
-//   const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    async function startCamera() {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false,
+        });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (error) {
+        console.error('카메라 스트림을 가져오는데 실패했습니다:', error);
+      }
+    }
+    startCamera();
 
-//   useEffect(() => {
-//     let stream: MediaStream | null = null;
+    // 언마운트 시에 스트림 정리
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+    // stream이 변경될 때마다 클린업 처리하지 않도록 빈 배열 사용
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-//     async function startCamera() {
-//       try {
-//         stream = await navigator.mediaDevices.getUserMedia({
-//           video: { facingMode: 'environment' },
-//           audio: false,
-//         });
-//         if (videoRef.current) {
-//           videoRef.current.srcObject = stream;
-//         }
-//       } catch (error) {
-//         console.error('카메라 스트림을 가져오는데 실패했습니다:', error);
-//       }
-//     }
-//     startCamera();
-
-//     return () => {
-//       if (stream) {
-//         // 스트림의 모든 트랙을 중지합니다.
-//         stream.getTracks().forEach((track) => track.stop());
-//       }
-//     };
-//   }, []);
-
-//   return (
-//     <video
-//       ref={videoRef}
-//       style={{
-//         position: 'absolute',
-//         top: 0,
-//         left: 0,
-//         width: '100vw',
-//         height: '100vh',
-//         objectFit: 'cover',
-//         zIndex: 0, // 배경으로 보이게 z-index 설정
-//       }}
-//       autoPlay
-//       playsInline
-//       muted
-//     />
-//   );
-// }
+  return (
+    <video
+      ref={videoRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        objectFit: 'cover',
+        zIndex: 0, // 배경으로 보이게 z-index 설정
+      }}
+      autoPlay
+      playsInline
+      muted
+    />
+  );
+}
 
 // ------------------------
 // 메인 App 컴포넌트
 export default function BasicApp() {
   const [sessionStarted, setSessionStarted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [cameraActive, setCameraActive] = useState(true);
 
   // XR 진입 버튼 핸들러:
   const handleEnterXR = async () => {
-    if (!isIOS) {
-      console.log('Requesting XR session for non-iOS');
-      xrStore.enterAR()
-      setSessionStarted(true);
-      return;
-    }
-    if (navigator.xr) {
-      try {
-        const session = await navigator.xr.requestSession('immersive-ar', {
-          requiredFeatures: ['local-floor'],
-        });
-        console.log('XR session started on iOS (via polyfill):', session);
-        setSessionStarted(true);
-      } catch (err) {
-        console.error('Failed to start XR session on iOS', err);
+    console.log('XR 세션 진입 버튼 클릭');
+    // XR 진입 전에 카메라 스트림을 중지하여 리소스를 정리합니다.
+    setCameraActive(false); // CameraPreview 컴포넌트를 언마운트 시킵니다.
+
+    // 약간의 딜레이를 주어 스트림 정리가 완료되도록 합니다.
+    setTimeout(async () => {
+      if (!isIOS) {
+        try {
+          console.log('Requesting XR session for non-iOS');
+          await xrStore.enterAR();
+          setSessionStarted(true);
+        } catch (error) {
+          console.error('XR session 시작 실패:', error);
+        }
+        return;
       }
-    } else {
-      console.warn('navigator.xr not available on this device.');
-    }
+      if (navigator.xr) {
+        try {
+          const session = await navigator.xr.requestSession('immersive-ar', {
+            requiredFeatures: ['local-floor'],
+          });
+          console.log('XR session started on iOS (via polyfill):', session);
+          setSessionStarted(true);
+        } catch (err) {
+          console.error('Failed to start XR session on iOS', err);
+        }
+      } else {
+        console.warn('navigator.xr not available on this device.');
+      }
+    }, 300); // 300ms 정도 딜레이를 줍니다.
   };
 
   return (
@@ -129,8 +144,8 @@ export default function BasicApp() {
         <NftAppT3 />
       ) : (
         <>
-          {/* 카메라 미리보기 배경 */}
-          {/* {!sessionStarted && <CameraPreview />} */}
+          {/* 카메라 미리보기 배경: cameraActive가 true일 때만 렌더링 */}
+          {cameraActive && !sessionStarted && <CameraPreview />}
 
           {/* XR 진입 버튼: XR 세션 시작 전만 표시 */}
           {!sessionStarted && (
@@ -150,16 +165,17 @@ export default function BasicApp() {
           )}
 
           {/* XR 세션이 시작된 후 XR 씬 렌더링 */}
-
-          <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
+          <Canvas
+            ref={canvasRef}
+            style={{ width: '100vw', height: '100vh' }}
+            gl={{ alpha: true }}
+          >
             <XR store={xrStore}>
               <Scene visible={sessionStarted} />
             </XR>
           </Canvas>
-
         </>
-      )
-      }
+      )}
     </>
   );
 }
