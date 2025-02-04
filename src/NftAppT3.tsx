@@ -63,6 +63,16 @@ interface CameraTrackerProps {
   circleX: number;
   circleY: number;
   circleR: number;
+  // 디버그 데이터를 외부에 전달하기 위한 콜백 (추가)
+  onDebugUpdate?: (debug: DebugData) => void;
+}
+
+export interface DebugData {
+  candidatePos: number[];
+  candidateQuat: number[];
+  cameraPosition: number[];
+  planeConfidence: number;
+  dotValue: number;
 }
 
 function CameraTracker({
@@ -79,11 +89,11 @@ function CameraTracker({
   videoWidth,
   videoHeight,
   // domWidth, circleX, circleY, circleR는 사용하지 않음
+  onDebugUpdate,
 }: CameraTrackerProps) {
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
-  // const t = parseFloat(searchParams.get('t') || '0'); // 필요 시 사용
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -262,6 +272,15 @@ function CameraTracker({
     if (planeRef.current) {
       setPlaneVisible(planeRef.current.visible);
     }
+
+    // 디버그 정보 업데이트 (필요한 값들을 외부 콜백으로 전달)
+    onDebugUpdate?.({
+      candidatePos: candidatePos.toArray(),
+      candidateQuat: candidateQuat.toArray(),
+      cameraPosition: camera.position.toArray(),
+      planeConfidence,
+      dotValue: onDotValueChange ? onDotValueChange.length : 0, // 만약 dot 값 업데이트 함수에서 직접 dot 값을 저장하지 않는다면, 여기서 별도로 관리하세요.
+    });
   });
 
   const isMoons = (char === 'moons');
@@ -288,6 +307,11 @@ export default function NftAppT3() {
   const [requestFinalizePlane, setRequestFinalizePlane] = useState(false);
   const [planeConfidence, setPlaneConfidence] = useState(0);
   const [dotValue, setDotValue] = useState(0);
+
+  // 디버그 패널 토글 상태
+  const [showDebug, setShowDebug] = useState(false);
+  // 디버그 정보 상태
+  const [debugData, setDebugData] = useState<DebugData | null>(null);
 
   useEffect(() => {
     requestCameraPermission();
@@ -318,6 +342,26 @@ export default function NftAppT3() {
       >
         <Back />
       </button>
+
+      {/* 디버그 패널 토글 버튼 */}
+      <button
+        style={{
+          position: 'fixed',
+          top: '5rem',
+          left: '1rem',
+          zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)',
+          color: 'white',
+          border: 'none',
+          padding: '0.5rem',
+          borderRadius: '4px'
+        }}
+        onClick={() => setShowDebug((prev) => !prev)}
+      >
+        {showDebug ? '디버그 숨기기' : '디버그 보기'}
+      </button>
+
+      {/* 기존 정보 패널 */}
       <div
         style={{
           position: 'fixed',
@@ -350,6 +394,34 @@ export default function NftAppT3() {
           <b>dot</b>: {dotValue.toFixed(2)}
         </p>
       </div>
+
+      {/* 디버그 정보 패널 */}
+      {showDebug && debugData && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '1rem',
+            left: '1rem',
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.8)',
+            padding: '10px',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '12px',
+            maxWidth: '90%',
+            maxHeight: '50%',
+            overflowY: 'auto'
+          }}
+        >
+          <p><b>Debug Data</b></p>
+          <p>Candidate Position: {debugData.candidatePos.map((v) => v.toFixed(2)).join(', ')}</p>
+          <p>Candidate Quaternion: {debugData.candidateQuat.map((v) => v.toFixed(2)).join(', ')}</p>
+          <p>Camera Position: {debugData.cameraPosition.map((v) => v.toFixed(2)).join(', ')}</p>
+          <p>Plane Confidence: {debugData.planeConfidence}</p>
+          <p>Dot Value: {debugData.dotValue.toFixed(2)}</p>
+        </div>
+      )}
+
       {!planeFound && (
         <div
           style={{
@@ -451,6 +523,7 @@ export default function NftAppT3() {
             circleX={180}
             circleY={320}
             circleR={100}
+            onDebugUpdate={(debug) => setDebugData(debug)}
           />
           <ambientLight />
           <directionalLight position={[100, 100, 0]} />
