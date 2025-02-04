@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
 import { Suspense, useRef, useState } from 'react';
 import { Box } from './ArApp';
+import NftAppT3 from './NftAppT3';
 
 // ------------------------
 // 먼저 polyfill을 앱 진입 전에 실행합니다.
@@ -97,30 +98,33 @@ export default function BasicApp() {
 
   return (
     <>
-      <button
-        style={{
-          position: 'absolute',
-          zIndex: 1,
-          top: 20,
-          left: 20,
-          padding: '10px 20px',
-          fontSize: '16px',
-        }}
-        onClick={handleEnterXR}
-      >
-        Enter XR
-      </button>
-      <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
-        {isIOS ? (
-          // iOS 환경: polyfill 적용 후, XR 컨트롤러 없이 일반 Canvas에서 씬 렌더링
-          <Scene />
-        ) : (
+      {isIOS ? (
+        <>
+          <button
+            style={{
+              position: 'absolute',
+              zIndex: 1,
+              top: 20,
+              left: 20,
+              padding: '10px 20px',
+              fontSize: '16px',
+            }}
+            onClick={handleEnterXR}
+          >
+            Enter XR
+          </button>
+          <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
+
           // Non-iOS: react-three/xr의 XR 컴포넌트로 XR 세션 관리
-          <XR store={xrStore}>
-            <Scene />
-          </XR>
-        )}
-      </Canvas>
+            <XR store={xrStore}>
+              <Scene />
+            </XR>
+          </Canvas>
+        </>
+      ) : (
+        // iOS 환경: polyfill 적용 후, XR 컨트롤러 없이 일반 Canvas에서 씬 렌더링
+        <NftAppT3 />
+      )}
     </>
   );
 }
