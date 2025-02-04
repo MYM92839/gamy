@@ -84,7 +84,7 @@ export default function BasicApp() {
     if (navigator.xr) {
       try {
         // immersive-ar 대신 immersive-vr도 테스트해볼 수 있습니다.
-        const session = await navigator.xr.requestSession('immersive-ar', {
+        const session = await navigator.xr.requestSession('immersive-vr', {
           requiredFeatures: ['local-floor'],
         });
         console.log('XR session started on iOS (via polyfill):', session);
