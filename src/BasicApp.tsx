@@ -39,15 +39,15 @@ const xrStore = createXRStore();
 // ------------------------
 // 사용자 위치에서 3미터 앞에 빨간 박스를 배치하는 컴포넌트
 // ------------------------
-function RedBox() {
-  // 카메라(사용자) 위치에서 [0, 1.6, -3] 위치에 배치
-  return (
-    <mesh position={[0, 1.6, -3]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial color="red" />
-    </mesh>
-  );
-}
+// function RedBox() {
+//   // 카메라(사용자) 위치에서 [0, 1.6, -3] 위치에 배치
+//   return (
+//     <mesh position={[0, 1.6, -3]}>
+//       <boxGeometry args={[1, 1, 1]} />
+//       <meshBasicMaterial color="red" />
+//     </mesh>
+//   );
+// }
 
 // ------------------------
 // 기본 씬 구성: 조명과 빨간 박스 포함

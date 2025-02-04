@@ -4,18 +4,17 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
+import BasicApp from './BasicApp.tsx';
 import Layout from './components/Layout.tsx';
 import Photo from './components/photo/Photo.tsx';
 import FrameApp from './FrameApp.tsx';
 import './index.css';
 import NftAppT from './NftAppT.tsx';
+import NftAppT2 from './NftAppT2.tsx';
 import Collection2 from './pages/Collection2.tsx';
 import PhotoChar from './pages/PhotoChar.tsx';
 import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
-import NftAppT2 from './NftAppT2.tsx';
-import NftAppT3 from './NftAppT3.tsx';
-import BasicApp from './BasicApp.tsx';
 
 const router = createBrowserRouter([
   {
