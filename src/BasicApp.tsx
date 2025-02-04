@@ -99,6 +99,9 @@ export default function BasicApp() {
   return (
     <>
       {isIOS ? (
+        // iOS 환경: polyfill 적용 후, XR 컨트롤러 없이 일반 Canvas에서 씬 렌더링
+        <NftAppT3 />
+      ) : (
         <>
           <button
             style={{
@@ -121,9 +124,6 @@ export default function BasicApp() {
             </XR>
           </Canvas>
         </>
-      ) : (
-        // iOS 환경: polyfill 적용 후, XR 컨트롤러 없이 일반 Canvas에서 씬 렌더링
-        <NftAppT3 />
       )}
     </>
   );
