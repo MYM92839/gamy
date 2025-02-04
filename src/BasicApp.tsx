@@ -148,7 +148,7 @@ export default function BasicApp() {
             <XR store={xrStore}>
               {sessionStarted && (
                 <>
-                  <XROrigin />
+                  <XROrigin position={[0, 0, 5]} />
                   <Scene />
                 </>
               )}
