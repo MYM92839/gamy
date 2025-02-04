@@ -17,14 +17,7 @@ if (isIOS) {
     // 모듈의 기본 내보내기를 사용합니다.
     // 필요한 경우 옵션을 전달할 수 있습니다.
     const WebXRPolyfill = module.default;
-    new WebXRPolyfill({
-      webvr: true,
-      cardboard: true,
-      allowCardboardOnDesktop: true,
-      cardboardConfig: {
-        DIRTY_SUBMIT_FRAME_BINDINGS: true,
-      },
-    });
+    new WebXRPolyfill();
     console.log('WebXRPolyfill loaded for iOS');
   });
 } else {
@@ -84,9 +77,7 @@ export default function BasicApp() {
     if (navigator.xr) {
       try {
         // immersive-ar 대신 immersive-vr도 테스트해볼 수 있습니다.
-        const session = await navigator.xr.requestSession('immersive-vr', {
-          requiredFeatures: ['local-floor'],
-        });
+        const session = await navigator.xr.requestSession('immersive-vr');
         console.log('XR session started on iOS (via polyfill):', session);
         setSessionStarted(true);
       } catch (err) {
