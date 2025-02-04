@@ -146,12 +146,10 @@ export default function BasicApp() {
 
           <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', zIndex: 1 }}>
             <XR store={xrStore}>
-              {sessionStarted && (
-                <>
-                  <XROrigin position={[0, 0, 5]} />
-                  <Scene />
-                </>
-              )}
+
+              <XROrigin position={[0, 0, 5]} />
+              <Scene />
+
             </XR>
           </Canvas>
 
