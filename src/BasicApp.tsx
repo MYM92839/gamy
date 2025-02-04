@@ -144,7 +144,7 @@ export default function BasicApp() {
 
           {/* XR 세션이 시작된 후 XR 씬 렌더링 */}
 
-          <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
+          <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', zIndex: 1 }}>
             <XR store={xrStore}>
               {sessionStarted && (
                 <>
@@ -156,7 +156,8 @@ export default function BasicApp() {
           </Canvas>
 
         </>
-      )}
+      )
+      }
     </>
   );
 }
