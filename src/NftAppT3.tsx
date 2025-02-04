@@ -22,7 +22,7 @@ const candidateQuat = new THREE.Quaternion();
 const candidateScale = new THREE.Vector3();
 
 const localNormal = new THREE.Vector3(0, 0, 1);
-const up = new THREE.Vector3(0, 1, 0);
+// const up = new THREE.Vector3(0, 1, 0);
 const camDir = new THREE.Vector3();
 const flipQuat = new THREE.Quaternion();
 const dummy = new THREE.Vector3(0, 1, 0);
