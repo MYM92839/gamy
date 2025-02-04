@@ -1,7 +1,7 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
 import { XR, XROrigin, createXRStore } from '@react-three/xr';
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
 
@@ -36,7 +36,7 @@ function Scene() {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <group position={[0, 1.16, -3]} scale={[0.1, 0.1, 0.1]}>
+        <group position={[0, 1.16, -3]} scale={[0.5, 0.5, 0.5]}>
           <Box on onRenderEnd={() => { }} />
         </group>
       </Suspense>
@@ -44,10 +44,28 @@ function Scene() {
   );
 }
 
+
 // ------------------------
 // 카메라 미리보기용 Video 컴포넌트 (비-iOS용)
 function CameraPreview() {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false,
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('카메라 스트림을 가져오는데 실패했습니다:', error);
+      }
+    }
+    startCamera();
+  }, []);
 
   return (
     <video
@@ -59,7 +77,7 @@ function CameraPreview() {
         width: '100vw',
         height: '100vh',
         objectFit: 'cover',
-        zIndex: -1, // 배경으로 보이게 z-index 설정
+        zIndex: 0, // 배경으로 보이게 z-index 설정
       }}
       autoPlay
       playsInline
@@ -84,7 +102,7 @@ export default function BasicApp() {
     }
     if (navigator.xr) {
       try {
-        const session = await navigator.xr.requestSession('immersive-vr', {
+        const session = await navigator.xr.requestSession('immersive-ar', {
           requiredFeatures: ['local-floor'],
         });
         console.log('XR session started on iOS (via polyfill):', session);
@@ -128,8 +146,12 @@ export default function BasicApp() {
 
           <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
             <XR store={xrStore}>
-              {sessionStarted && (<XROrigin />)}
-              <Scene />
+              {sessionStarted && (
+                <>
+                  {/* <XROrigin /> */}
+                  <Scene />
+                </>
+              )}
             </XR>
           </Canvas>
 
