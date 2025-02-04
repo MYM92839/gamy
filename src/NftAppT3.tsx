@@ -19,11 +19,11 @@ const tempScale1 = new THREE.Vector3();
 
 const candidatePos = new THREE.Vector3();
 const candidateQuat = new THREE.Quaternion();
-const candidateScale = new THREE.Vector3();
+// const candidateScale = new THREE.Vector3();
 
 const localNormal = new THREE.Vector3(0, 0, 1);
 // const up = new THREE.Vector3(0, 1, 0);
-const camDir = new THREE.Vector3();
+// const camDir = new THREE.Vector3();
 // flipQuat와 dummy는 더 이상 사용하지 않아도 되지만, 혹시 다른 곳에서 필요하다면 남겨둡니다.
 //
 const matt = new THREE.Matrix4();
@@ -78,7 +78,7 @@ export interface DebugData {
 function CameraTracker({
   planeFound,
   setPlaneFound,
-  stablePlane,
+  // stablePlane,
   setStablePlane,
   requestFinalizePlane,
   setCameraPosition,
