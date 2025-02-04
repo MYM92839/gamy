@@ -170,6 +170,13 @@ function CameraTracker({
 
         setStablePlane(true);
         setPlaneConfidence(1);
+        candidatePlaneMatrix.current.copy(newMatrix);
+        if (!initialCandidatePos.current) {
+          initialCandidatePos.current = candidatePosition.clone();
+          initialCandidateQuat.current = tempQuat1.clone();
+          console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
+          console.log("Initial candidate rotation saved:", initialCandidateQuat.current.toArray());
+        }
 
         // // 수직성 검사: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 이상이면, 즉 평면이 수평(바닥)에 가까우면 안정으로 판단
         // const verticality = Math.abs(tempVec2.dot(up));
