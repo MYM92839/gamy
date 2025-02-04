@@ -154,7 +154,7 @@ function CameraTracker({
         const candidatePosition = tempVec1.clone();
 
         // 최대 거리 조건: 25미터 이내 (필요에 따라 이 값을 조정)
-        if (candidatePosition.distanceTo(camera.position) > 25) {
+        if (candidatePosition.distanceTo(camera.position) > 2000) {
           setStablePlane(false);
           setPlaneConfidence(0);
           onDotValueChange?.(0);
