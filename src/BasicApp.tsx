@@ -1,6 +1,6 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, createXRStore } from '@react-three/xr';
+import { XR, XROrigin, createXRStore } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
@@ -49,24 +49,6 @@ function Scene() {
 function CameraPreview() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    // 카메라 스트림 요청
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      .then((stream) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch((err) => console.error('video play error', err));
-        }
-      })
-      .catch((err) => {
-        console.error('getUserMedia error:', err);
-      });
-  }, []);
-
   return (
     <video
       ref={videoRef}
@@ -96,7 +78,7 @@ export default function BasicApp() {
   const handleEnterXR = async () => {
     if (!isIOS) {
       console.log('Requesting XR session for non-iOS');
-      xrStore.enterXR('immersive-ar');
+      xrStore.enterAR()
       setSessionStarted(true);
       return;
     }
@@ -143,13 +125,14 @@ export default function BasicApp() {
           )}
 
           {/* XR 세션이 시작된 후 XR 씬 렌더링 */}
-          {sessionStarted && (
+          {
             <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }}>
               <XR store={xrStore}>
+                {sessionStarted && (<XROrigin />)}
                 <Scene />
               </XR>
             </Canvas>
-          )}
+          }
         </>
       )}
     </>
