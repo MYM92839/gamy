@@ -1,7 +1,7 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
-import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
 
@@ -46,8 +46,8 @@ function Scene({ visible }: { visible: boolean }) {
 
 // ------------------------
 // 카메라 미리보기용 Video 컴포넌트 (비-iOS용)
-// 부모에서 onCleanup 콜백을 받아 cleanup 완료 시점을 알립니다.
-function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
+// 이 컴포넌트는 AR 모드 진입 전에만 사용됩니다.
+function CameraPreview() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -71,12 +71,11 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
     startCamera();
 
     return () => {
+      // 언마운트 시 모든 트랙을 종료
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
         setStream(null);
       }
-      // cleanup 완료를 부모에 알림
-      if (onCleanup) onCleanup();
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,29 +91,13 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
         width: '100vw',
         height: '100vh',
         objectFit: 'cover',
-        zIndex: 0, // 배경으로 보이게 z-index 설정
+        zIndex: 0,
       }}
       autoPlay
       playsInline
       muted
     />
   );
-}
-
-// cleanup 완료 여부를 ref로 관리
-// 이 값은 CameraPreview의 cleanup 시에 true로 설정됩니다.
-const cameraCleanupRef = { current: false };
-
-// cleanup 완료를 기다리는 Promise (ref가 true가 될 때까지 폴링)
-function waitForCameraCleanup(): Promise<void> {
-  return new Promise((resolve) => {
-    const interval = setInterval(() => {
-      if (cameraCleanupRef.current) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, 50);
-  });
 }
 
 // ------------------------
@@ -124,35 +107,28 @@ export default function BasicApp() {
   const [cameraActive, setCameraActive] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // CameraPreview cleanup 완료 시 호출되는 콜백
-  const handleCameraCleanup = useCallback(() => {
-    console.log('Camera cleanup 완료');
-    cameraCleanupRef.current = true;
-  }, []);
-
   // XR 진입 버튼 핸들러:
   const handleEnterXR = async () => {
     console.log('XR 세션 진입 버튼 클릭');
-    // XR 진입 전에 카메라 스트림을 중지하여 리소스를 정리합니다.
-    setCameraActive(false); // CameraPreview 컴포넌트를 언마운트합니다.
-    cameraCleanupRef.current = false;
+    // AR 모드 진입 전에 미리보기 video 요소를 완전히 제거합니다.
+    setCameraActive(false);
 
-    // cleanup 완료를 기다립니다.
-    console.log('Camera cleanup 완료를 기다리는 중...');
-    await waitForCameraCleanup();
-    console.log('Camera cleanup 완료됨. XR 요청 실행');
+    // video 요소가 완전히 사라지도록 충분한 딜레이(예: 1000ms) 대기합니다.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log('미리보기 제거 후 XR 요청 실행');
 
     // XR 요청 실행
     if (!isIOS) {
       try {
         console.log('Requesting XR session for non-iOS');
-        await xrStore.enterAR();
+        await xrStore.enterAR(); // immersive-ar 세션이 요청됩니다.
         setSessionStarted(true);
       } catch (error) {
         console.error('XR session 시작 실패:', error);
       }
       return;
     }
+    // iOS의 경우 polyfill을 통해 AR 세션 요청
     if (navigator.xr) {
       try {
         const session = await navigator.xr.requestSession('immersive-ar', {
@@ -171,14 +147,12 @@ export default function BasicApp() {
   return (
     <>
       {isIOS ? (
-        // iOS 환경: polyfill 적용 후, XR 컨트롤러 없이 일반 Canvas에서 씬 렌더링
+        // iOS 환경에서는 polyfill 기반 앱(NftAppT3)을 사용합니다.
         <NftAppT3 />
       ) : (
         <>
-          {/* 카메라 미리보기 배경: cameraActive가 true일 때만 렌더링 */}
-          {cameraActive && !sessionStarted && (
-            <CameraPreview onCleanup={handleCameraCleanup} />
-          )}
+          {/* 미리보기 video는 AR 모드 진입 전(cameraActive true)일 때만 렌더링 */}
+          {cameraActive && !sessionStarted && <CameraPreview />}
 
           {/* XR 진입 버튼: XR 세션 시작 전만 표시 */}
           {!sessionStarted && (
@@ -200,7 +174,14 @@ export default function BasicApp() {
           {/* XR 세션이 시작된 후 XR 씬 렌더링 */}
           <Canvas
             ref={canvasRef}
-            style={{ width: '100vw', height: '100vh' }}
+            style={{
+              width: '100vw',
+              height: '100vh',
+              background: 'transparent',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+            }}
             gl={{ alpha: true }}
           >
             <XR store={xrStore}>
