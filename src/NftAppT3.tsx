@@ -161,15 +161,14 @@ function CameraTracker({
         const candidatePosition = tempVec1.clone();
 
         // // 최대 거리 조건: 5미터 이내
-        // if (candidatePosition.distanceTo(camera.position) > 5) {
-        //   setStablePlane(false);
-        //   setPlaneConfidence(0);
-        //   onDotValueChange?.(0);
-        //   return;
-        // }
+        if (candidatePosition.distanceTo(camera.position) > 5) {
+          setStablePlane(false);
+          setPlaneConfidence(0);
+          onDotValueChange?.(0);
+          return;
+        }
 
-
-        // // 수직성 검사: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 이상이면, 즉 평면이 수평(바닥)에 가까우면 안정으로 판단
+        // 수직성 검사: 평면의 노말과 up 벡터(0,1,0) 내적의 절대값이 0.6 이상이면, 즉 평면이 수평(바닥)에 가까우면 안정으로 판단
         const verticality = Math.abs(tempVec2.dot(up));
         if (verticality >= 0.6) {
           setStablePlane(true);
@@ -182,10 +181,10 @@ function CameraTracker({
             console.log("Initial candidate position saved:", initialCandidatePos.current.toArray());
             console.log("Initial candidate rotation saved:", initialCandidateQuat.current.toArray());
           }
-          //   // dot 값 계산: 카메라에서 후보 평면까지의 단위 벡터와 평면 노말 내적
+          // dot 값 계산: 카메라에서 후보 평면까지의 단위 벡터와 평면 노말 내적
           const camVec = new THREE.Vector3().subVectors(camera.position, candidatePosition).normalize();
           let dot = tempVec2.dot(camVec);
-          //   // 예외 처리: dot이 0이면 평면이 카메라와 직각 관계로 배치된 것으로 판단하여 안정 조건을 만족하도록 함
+          // 예외 처리: dot이 0이면 평면이 카메라와 직각 관계로 배치된 것으로 판단하여 안정 조건을 만족하도록 함
           if (dot === 0) {
             dot = 1;
           } else if (dot < 0) {
@@ -507,7 +506,7 @@ export default function NftAppT3() {
       <SlamCanvas id="three-canvas">
         <Suspense fallback={null}>
           <CameraTracker
-            setPlaneVisible={() => { }}
+            setPlaneVisible={() => {}}
             planeFound={planeFound}
             setPlaneFound={setPlaneFound}
             stablePlane={stablePlane}
