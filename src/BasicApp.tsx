@@ -2,6 +2,7 @@
 import { Canvas } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
 import { Suspense, useRef, useState } from 'react';
+import { Box } from './ArApp';
 
 // ------------------------
 // 먼저 polyfill을 앱 진입 전에 실행합니다.
@@ -56,7 +57,7 @@ function Scene() {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <RedBox />
+        <Box on onRenderEnd={() => { }} />
       </Suspense>
     </>
   );
