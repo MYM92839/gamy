@@ -152,6 +152,7 @@ function CameraTracker({
         // 평면 노말 계산 (기본 (0,0,1)에 후보 회전 적용)
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
         const candidatePosition = tempVec1.clone();
+        candidatePos.copy(candidatePosition);
 
         // 최대 거리 조건: 25미터 이내 (필요에 따라 이 값을 조정)
         if (candidatePosition.distanceTo(camera.position) > 2000) {
