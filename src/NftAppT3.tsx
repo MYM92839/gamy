@@ -19,15 +19,9 @@ const tempScale1 = new THREE.Vector3();
 
 const candidatePos = new THREE.Vector3();
 const candidateQuat = new THREE.Quaternion();
-// const candidateScale = new THREE.Vector3();
 
 const localNormal = new THREE.Vector3(0, 0, 1);
-// const up = new THREE.Vector3(0, 1, 0);
-// const camDir = new THREE.Vector3();
-// flipQuat와 dummy는 더 이상 사용하지 않아도 되지만, 혹시 다른 곳에서 필요하다면 남겨둡니다.
-//
 const matt = new THREE.Matrix4();
-
 const newMat = new THREE.Matrix4();
 
 /** =============== 유틸 함수들 ============== **/
@@ -78,7 +72,6 @@ export interface DebugData {
 function CameraTracker({
   planeFound,
   setPlaneFound,
-  // stablePlane,
   setStablePlane,
   requestFinalizePlane,
   setCameraPosition,
@@ -88,7 +81,6 @@ function CameraTracker({
   onDotValueChange,
   videoWidth,
   videoHeight,
-  // domWidth, circleX, circleY, circleR는 사용하지 않음
   onDebugUpdate,
 }: CameraTrackerProps) {
   const { char } = useParams();
@@ -110,7 +102,8 @@ function CameraTracker({
   const objectRef = useRef<THREE.Group>(null);
   const [objectPlaced, setObjectPlaced] = useState(false);
 
-  const translationScale = 0.01;
+  // translationScale 값을 SLAM의 단위에 맞게 조정 (여기서는 0.01로 설정)
+  const translationScale = 1;
   const objectFootOffset = 0.5;
   const fixedDistance = 1.5; // 카메라와 오브젝트 사이의 고정 거리
 
@@ -160,7 +153,7 @@ function CameraTracker({
         tempVec2.copy(localNormal).applyQuaternion(tempQuat1);
         const candidatePosition = tempVec1.clone();
 
-        // 최대 거리 조건: 5미터 이내
+        // 최대 거리 조건: 25미터 이내 (필요에 따라 이 값을 조정)
         if (candidatePosition.distanceTo(camera.position) > 25) {
           setStablePlane(false);
           setPlaneConfidence(0);
@@ -168,8 +161,7 @@ function CameraTracker({
           return;
         }
 
-        // 원래 수직성 검사 및 dot 계산 로직이 있었다면 여기서 처리하지만,
-        // 지금은 별도 회전 플립 없이 안정 상태로 처리합니다.
+        // 별도의 회전 플립 없이 안정 상태로 처리
         setStablePlane(true);
         setPlaneConfidence(1);
         candidatePlaneMatrix.current.copy(newMatrix);
@@ -202,24 +194,7 @@ function CameraTracker({
 
     // 평면 메시 업데이트 (후보 평면 표시)
     if (!planeFound && planeRef.current) {
-      // if (stablePlane) {
-      //   candidatePlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
-      //   // 후보 회전값 X축만 반전 (원래 로직)
-      //   candidateQuat.set(-candidateQuat.x, candidateQuat.y, candidateQuat.z, candidateQuat.w);
-      //   candidatePos.set(candidatePos.x, -candidatePos.y, -candidatePos.z);
-      //   // 90도 플립 보정 로직 제거 → 그대로 candidateQuat 사용
-      //   planeRef.current.position.copy(candidatePos);
-      //   planeRef.current.quaternion.copy(candidateQuat);
-      //   planeRef.current.scale.set(3, 3, 3);
-      // } else {
-      //   const defaultDistance = 2;
-      //   camDir.set(0, 0, 0);
-      //   camera.getWorldDirection(camDir);
-      //   const defaultPos = camera.position.clone().add(camDir.multiplyScalar(defaultDistance));
-      //   planeRef.current.position.copy(defaultPos);
-      //   planeRef.current.quaternion.copy(camera.quaternion);
-      //   planeRef.current.scale.set(3, 3, 3);
-      // }
+      // 현재 후보 평면은 별도의 회전 보정 없이 단순히 보이는 용도로 처리
       planeRef.current.visible = true;
     }
 
@@ -232,7 +207,7 @@ function CameraTracker({
 
     // 오브젝트 배치: 평면 확정 후, 고정 거리 보정 및 초기 후보 오프셋 보정을 적용하여 배치
     if (planeFound && !objectPlaced && objectRef.current) {
-      // 고정 거리 방식: 카메라에서 fixedDistance만큼 떨어진 방향으로 배치
+      // 카메라에서 fixedDistance만큼 떨어진 방향으로 배치
       const direction = new THREE.Vector3().subVectors(candidatePos, camera.position).normalize();
       const computedObjectPos = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(fixedDistance));
       computedObjectPos.y -= objectFootOffset;
@@ -243,11 +218,17 @@ function CameraTracker({
       // 회전 보정: 최종 평면 회전값에 초기 후보 회전 오프셋 보정 적용
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
       tempQuat1.set(-tempQuat1.x, tempQuat1.y, tempQuat1.z, tempQuat1.w);
-      // 여기서도 별도의 90도 플립 없이 기존 회전 보정만 수행
       if (initialCandidateQuat.current) {
         const rotationOffset = tempQuat1.clone().multiply(initialCandidateQuat.current.clone().invert());
         tempQuat1.multiply(rotationOffset);
       }
+      // 추가: 오브젝트가 항상 땅에 붙은(수평) 상태가 되도록 피치와 롤을 0으로 고정 (y축 회전만 남김)
+      const euler = new THREE.Euler().setFromQuaternion(tempQuat1, 'YXZ');
+      // YXZ 순서에서 Y: yaw, X: pitch, Z: roll
+      euler.x = 0; // pitch 0
+      euler.z = 0; // roll 0
+      tempQuat1.setFromEuler(euler);
+
       objectRef.current.quaternion.copy(tempQuat1);
       objectRef.current.scale.setScalar(scale);
       setObjectPosition(finalObjectPosition.current.clone());
