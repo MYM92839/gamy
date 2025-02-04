@@ -43,6 +43,10 @@ const router = createBrowserRouter([
         element: <NftAppT2 />
       },
       {
+        path: 'test',
+        element: <BasicApp />
+      },
+      {
         path: 'pl/:char',
         element: <BasicApp />
       },

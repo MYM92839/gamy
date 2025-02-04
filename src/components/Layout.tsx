@@ -1,6 +1,10 @@
+import { createXRStore } from "@react-three/xr";
 import { Outlet } from "react-router-dom";
 
+export const xrStore = createXRStore();
+
 export default function Layout() {
+
   return (
     <div id="layout" className="w-dvw min-h-screen h-screen mx-auto relative bg-[#344173] font-pretendard overscroll-contain touch-manipulation">
       <Outlet />
