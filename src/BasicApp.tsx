@@ -97,7 +97,7 @@ export default function BasicApp() {
       >
         Enter XR
       </button>
-      <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', position: 'fixed', zIndex: 9999 }}>
+      <Canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', position: 'fixed', zIndex: 9999, backgroundColor: 'rgba(255,0,0,0.1)' }}>
         {isIOS ? (
           // iOS: render the scene directly (polyfill may not fully support XR UI)
           <Scene />
@@ -107,7 +107,7 @@ export default function BasicApp() {
             <Scene />
           </XR>
         )}
-      </Canvas>
+      </Canvas >
     </>
   );
 }
