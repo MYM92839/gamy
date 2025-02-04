@@ -86,6 +86,9 @@ function CameraTracker({
   const { char } = useParams();
   const [searchParams] = useSearchParams();
   const scale = parseFloat(searchParams.get('scale') || '1');
+  const X = parseFloat(searchParams.get('x') || '0');
+  const Y = parseFloat(searchParams.get('y') || '0');
+  const Z = parseFloat(searchParams.get('z') || '0');
 
   const { alvaAR } = useSlam();
   const applyPose = useRef<any>(null);
@@ -215,6 +218,15 @@ function CameraTracker({
       finalObjectPosition.current = computedObjectPos.clone();
 
       objectRef.current.position.copy(finalObjectPosition.current);
+
+
+      if (X) {
+        objectRef.current.position.x = X
+      } if (Y) {
+        objectRef.current.position.y = Y
+      } if (Z) {
+        objectRef.current.position.z = Z
+      }
 
       // 회전 보정: 최종 평면 회전값에 초기 후보 회전 오프셋 보정 적용
       finalPlaneMatrix.current.decompose(tempVec1, tempQuat1, tempScale1);
