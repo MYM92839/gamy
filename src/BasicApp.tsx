@@ -200,7 +200,7 @@ export default function BasicApp() {
 
 
   useEffect(() => {
-    let id
+    let id: string | number | NodeJS.Timeout | undefined
     const func = async () => {
       await xrStore.enterAR(); // immersive-ar 세션 요청
       console.log("ENTER")
@@ -210,6 +210,9 @@ export default function BasicApp() {
       id = setTimeout(() => {
         func()
       }, 3000)
+    }
+    return () => {
+      clearTimeout(id)
     }
   }, [init])
   return (
