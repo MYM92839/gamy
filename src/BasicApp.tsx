@@ -73,13 +73,14 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
     return () => {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
       }
-      // cleanup이 완료되었음을 부모에 알림
+      // cleanup 완료를 부모에 알림
       if (onCleanup) onCleanup();
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 한 번만 실행
+  }, []);
 
   return (
     <video
@@ -100,60 +101,71 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
   );
 }
 
+// cleanup 완료 여부를 ref로 관리
+// 이 값은 CameraPreview의 cleanup 시에 true로 설정됩니다.
+const cameraCleanupRef = { current: false };
+
+// cleanup 완료를 기다리는 Promise (ref가 true가 될 때까지 폴링)
+function waitForCameraCleanup(): Promise<void> {
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (cameraCleanupRef.current) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 50);
+  });
+}
+
 // ------------------------
 // 메인 App 컴포넌트
 export default function BasicApp() {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [cameraActive, setCameraActive] = useState(true);
-  const [cameraCleanedUp, setCameraCleanedUp] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // CameraPreview cleanup 완료 시 호출되는 콜백
   const handleCameraCleanup = useCallback(() => {
     console.log('Camera cleanup 완료');
-    setCameraCleanedUp(true);
+    cameraCleanupRef.current = true;
   }, []);
 
   // XR 진입 버튼 핸들러:
   const handleEnterXR = async () => {
     console.log('XR 세션 진입 버튼 클릭');
     // XR 진입 전에 카메라 스트림을 중지하여 리소스를 정리합니다.
-    setCameraActive(false); // CameraPreview 컴포넌트를 언마운트 시킵니다.
-    setCameraCleanedUp(false);
+    setCameraActive(false); // CameraPreview 컴포넌트를 언마운트합니다.
+    cameraCleanupRef.current = false;
 
-    // 딜레이와 cleanup 완료 여부를 확인합니다.
-    setTimeout(async () => {
-      // cleanup 완료가 되었는지 확인 (추가 딜레이나 폴링을 적용할 수 있음)
-      if (!cameraCleanedUp) {
-        console.log('카메라 cleanup이 아직 완료되지 않았습니다. 추가 대기...');
-        // 추가 딜레이 (예: 500ms 더 대기)
-        await new Promise((resolve) => setTimeout(resolve, 500));
+    // cleanup 완료를 기다립니다.
+    console.log('Camera cleanup 완료를 기다리는 중...');
+    await waitForCameraCleanup();
+    console.log('Camera cleanup 완료됨. XR 요청 실행');
+
+    // XR 요청 실행
+    if (!isIOS) {
+      try {
+        console.log('Requesting XR session for non-iOS');
+        await xrStore.enterAR();
+        setSessionStarted(true);
+      } catch (error) {
+        console.error('XR session 시작 실패:', error);
       }
-      // XR 요청 실행
-      if (!isIOS) {
-        try {
-          console.log('Requesting XR session for non-iOS');
-          await xrStore.enterAR();
-          setSessionStarted(true);
-        } catch (error) {
-          console.error('XR session 시작 실패:', error);
-        }
-        return;
+      return;
+    }
+    if (navigator.xr) {
+      try {
+        const session = await navigator.xr.requestSession('immersive-ar', {
+          requiredFeatures: ['local-floor'],
+        });
+        console.log('XR session started on iOS (via polyfill):', session);
+        setSessionStarted(true);
+      } catch (err) {
+        console.error('Failed to start XR session on iOS', err);
       }
-      if (navigator.xr) {
-        try {
-          const session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['local-floor'],
-          });
-          console.log('XR session started on iOS (via polyfill):', session);
-          setSessionStarted(true);
-        } catch (err) {
-          console.error('Failed to start XR session on iOS', err);
-        }
-      } else {
-        console.warn('navigator.xr not available on this device.');
-      }
-    }, 500); // 초기 딜레이를 500ms로 설정
+    } else {
+      console.warn('navigator.xr not available on this device.');
+    }
   };
 
   return (
