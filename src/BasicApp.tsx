@@ -30,13 +30,13 @@ const xrStore = createXRStore();
 
 // ------------------------
 // 사용자 위치에서 3미터 앞에 빨간 박스를 배치하는 컴포넌트 (예시)
-function Scene() {
+function Scene({ visible }: { visible: boolean }) {
   return (
     <>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <group position={[0, 1.16, -3]} scale={[0.5, 0.5, 0.5]}>
+        <group position={[0, 1.16, -3]} scale={[0.5, 0.5, 0.5]} visible={visible}>
           <Box on onRenderEnd={() => { }} />
         </group>
       </Suspense>
@@ -148,7 +148,7 @@ export default function BasicApp() {
             <XR store={xrStore}>
 
               <XROrigin position={[0, 0, 5]} />
-              <Scene />
+              <Scene visible={sessionStarted} />
 
             </XR>
           </Canvas>
