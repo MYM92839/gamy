@@ -192,14 +192,14 @@ function CameraTracker({
         //     console.log("Initial candidate rotation saved:", initialCandidateQuat.current.toArray());
         //   }
         //   // dot 값 계산: 카메라에서 후보 평면까지의 단위 벡터와 평면 노말 내적
-        //   const camVec = new THREE.Vector3().subVectors(camera.position, candidatePosition).normalize();
-        //   let dot = tempVec2.dot(camVec);
+        const camVec = new THREE.Vector3().subVectors(camera.position, candidatePosition).normalize();
+        let dot = tempVec2.dot(camVec);
         //   // 예외 처리: dot이 0이면 평면이 카메라와 직각 관계로 배치된 것으로 판단하여 안정 조건을 만족하도록 함
-        //   if (dot === 0) {
-        //     dot = 1;
-        //   } else if (dot < 0) {
-        //     dot = -dot;
-        //   }
+        if (dot === 0) {
+          dot = 1;
+        } else if (dot < 0) {
+          dot = -dot;
+        }
         //   onDotValueChange?.(dot);
         // } else {
         //   setStablePlane(false);
