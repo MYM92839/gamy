@@ -1,7 +1,7 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
 import { XR, XROrigin, createXRStore } from '@react-three/xr';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
 
