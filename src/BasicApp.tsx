@@ -13,18 +13,18 @@ const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) &&
   !(window as any).MSStream;
 
-if (isIOS) {
-  import('webxr-polyfill').then((module) => {
-    const WebXRPolyfill = module.default;
-    new WebXRPolyfill({
-      webvr: true,
-      cardboard: false,
-    });
-    console.log('WebXRPolyfill loaded for iOS');
-  });
-} else {
-  console.log('Non-iOS environment, polyfill not loaded');
-}
+// if (isIOS) {
+//   import('webxr-polyfill').then((module) => {
+//     const WebXRPolyfill = module.default;
+//     new WebXRPolyfill({
+//       webvr: true,
+//       cardboard: false,
+//     });
+//     console.log('WebXRPolyfill loaded for iOS');
+//   });
+// } else {
+//   console.log('Non-iOS environment, polyfill not loaded');
+// }
 
 // ------------------------
 // XR 스토어 (iOS가 아닌 경우 사용)
@@ -200,12 +200,17 @@ export default function BasicApp() {
 
 
   useEffect(() => {
+    let id
     const func = async () => {
       await xrStore.enterAR(); // immersive-ar 세션 요청
-
+      console.log("ENTER")
       setSessionStarted(true)
     }
-    if (init) func()
+    if (init) {
+      id = setTimeout(() => {
+        func()
+      }, 3000)
+    }
   }, [init])
   return (
     <>
