@@ -50,8 +50,15 @@ function Scene({ visible }: { visible: boolean }) {
 
 // ------------------------
 // CameraPreview 컴포넌트 (AR 모드 진입 전용)
-// 부모의 onCleanup 콜백을 통해 cleanup 완료를 알립니다.
-function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
+// 부모에서 onCleanup 콜백을 통해 cleanup 완료를 알리고,
+// shouldStop prop이 true이면 graceful하게 스트림을 중단합니다.
+function CameraPreview({
+  onCleanup,
+  shouldStop = false,
+}: {
+  onCleanup?: () => void;
+  shouldStop?: boolean;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -83,7 +90,7 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
         });
         setStream(null);
       }
-      console.log('CameraPreview cleanup complete');
+      console.log('CameraPreview unmount cleanup complete');
       if (onCleanup) {
         onCleanup();
       }
@@ -92,6 +99,19 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
     // 빈 배열로 한 번만 실행
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // shouldStop이 true가 되면 graceful하게 스트림을 중단하고 video를 숨깁니다.
+  useEffect(() => {
+    if (shouldStop && videoRef.current) {
+      console.log('CameraPreview: Stopping stream gracefully');
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+      // 스트림 해제 후 onCleanup 호출 (이미 unmount 시에도 호출되지만, 여기서도 보장)
+      if (onCleanup) {
+        onCleanup();
+      }
+    }
+  }, [shouldStop, onCleanup]);
 
   return (
     <video
@@ -116,7 +136,11 @@ function CameraPreview({ onCleanup }: { onCleanup?: () => void }) {
 // 메인 App 컴포넌트
 export default function BasicApp() {
   const [sessionStarted, setSessionStarted] = useState(false);
+  // cameraActive는 미리보기 컴포넌트가 렌더링되는지 여부를 결정합니다.
   const [cameraActive, setCameraActive] = useState(true);
+  // stopPreview: 미리보기 스트림을 graceful하게 중단하도록 CameraPreview에 전달합니다.
+  const [stopPreview, setStopPreview] = useState(false);
+  // cleanup 완료 여부를 관리합니다.
   const [cameraCleaned, setCameraCleaned] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -136,13 +160,15 @@ export default function BasicApp() {
   // XR 진입 버튼 핸들러
   const handleEnterXR = async () => {
     console.log('XR enter clicked');
-    // 미리보기 컴포넌트를 제거하고 cleanup 상태 초기화
-    setCameraActive(false);
+    // 미리보기 graceful 중단 요청
+    setStopPreview(true);
+    // 미리보기 컴포넌트를 그대로 렌더링 상태로 두고, cleanup 완료를 기다립니다.
     setCameraCleaned(false);
-
-    // CameraPreview 컴포넌트가 완전히 cleanup 될 때까지 기다립니다.
     await waitForCameraCleanup();
     console.log('Camera cleanup complete, starting XR');
+
+    // 이제 미리보기를 DOM에서 제거합니다.
+    setCameraActive(false);
 
     // XR 요청 실행
     if (!isIOS) {
@@ -178,9 +204,12 @@ export default function BasicApp() {
         <NftAppT3 />
       ) : (
         <>
-          {/* 미리보기 video는 AR 모드 진입 전(cameraActive true)일 때만 렌더링 */}
+          {/* 미리보기 video는 cameraActive가 true일 때만 렌더링 */}
           {cameraActive && !sessionStarted && (
-            <CameraPreview onCleanup={handleCameraCleanup} />
+            <CameraPreview
+              shouldStop={stopPreview}
+              onCleanup={handleCameraCleanup}
+            />
           )}
 
           {/* XR 진입 버튼: XR 세션 시작 전만 표시 */}
