@@ -68,7 +68,7 @@ export default function BasicApp() {
     // iOS: try to request an XR session using polyfill
     if (navigator.xr) {
       try {
-        const session = await navigator.xr.requestSession('immersive-ar', {
+        const session = await navigator.xr.requestSession('immersive-vr', {
           requiredFeatures: ['local-floor']
         });
         console.log('XR session started on iOS (via polyfill):', session);
