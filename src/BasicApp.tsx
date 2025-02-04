@@ -1,6 +1,6 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR } from '@react-three/xr';
+import { XR, XROrigin } from '@react-three/xr';
 import { Suspense, useEffect, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
@@ -264,6 +264,7 @@ export default function BasicApp() {
             }}
           >
             <XR store={xrStore}>
+              <XROrigin position={[0, -1.5, 0]} />
               <Scene visible={sessionStarted} />
             </XR>
           </Canvas>
