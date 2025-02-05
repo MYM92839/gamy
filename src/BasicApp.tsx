@@ -54,7 +54,7 @@ function Scene({ visible }: { visible: boolean }) {
 /**
  * PinchZoom 컴포넌트
  * use-gesture의 onPinch 핸들러를 사용하여 두 손가락 제스처로 카메라 zoom 값을 제어합니다.
- * 제스처 캡처를 위해 전체 영역을 덮지만, pointerEvents: 'none'으로 설정하여 UI에 영향을 주지 않습니다.
+ * 이 컴포넌트는 전체 영역을 덮으면서 pointerEvents: 'none'으로 설정되어 제스처 감지 전용으로 사용됩니다.
  */
 const PinchZoom = () => {
   const { camera } = useThree();
@@ -81,7 +81,7 @@ const PinchZoom = () => {
         width: '100%',
         height: '100%',
         touchAction: 'none',
-        pointerEvents: 'none', // 제스처 감지 전용, UI 이벤트에 방해하지 않음.
+        pointerEvents: 'none', // 제스처 감지 전용: UI 이벤트에 영향을 주지 않음.
         zIndex: 0,
         background: 'transparent',
       }}
@@ -229,33 +229,25 @@ export default function BasicApp() {
             }}
           >
             <XR store={xrStore}>
-              {/* XRDomOverlay 내부에 PinchZoom과 UI 컨테이너를 함께 렌더링 */}
+              {/* XRDomOverlay: UI 컨테이너(포털)를 사용하여 캔버스 위에 DOM UI를 오버레이 */}
               <XRDomOverlay
                 style={{
                   position: 'fixed',
                   inset: 0,
                   width: '100%',
                   height: '100%',
-                  pointerEvents: 'none', // 기본적으로 이벤트는 투과하도록 함
+                  // pointerEvents 기본값(auto)로 두어 내부 UI가 정상 동작하도록 함.
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                {/* PinchZoom: 제스처 감지용 overlay (pointerEvents: 'none') */}
+                {/* PinchZoom: 제스처 감지 전용, pointerEvents: 'none' */}
                 <PinchZoom />
-                {/* UI 컨테이너: pointerEvents: 'auto'로 설정하여 UI 이벤트가 작동하도록 함 */}
-                <div
-                  style={{
-                    pointerEvents: 'auto',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                >
+                {/* UI 컨테이너 */}
+                <div style={{ width: '100%', height: '100%' }}>
                   {/* 캡쳐 모달 */}
-                  <div
-                    style={{
-                      ...customStyles,
-                      display: modalIsOpen ? 'block' : 'none',
-                    }}
-                  >
+                  <div style={{ ...customStyles, display: modalIsOpen ? 'block' : 'none' }}>
                     <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
                       <div className="flex-1 rounded-sm overflow-hidden z-[999] isolate">
                         {fotoUrl && (
