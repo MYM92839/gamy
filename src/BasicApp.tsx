@@ -1,8 +1,7 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, XROrigin } from '@react-three/xr';
+import { XR, XROrigin, XRDomOverlay } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import ReactDOM from 'react-dom';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
@@ -16,19 +15,16 @@ Modal.setAppElement('#root');
 // 모달 스타일 (content 스타일만 사용)
 //
 const customStyles = {
-  content: {
-    top: '50%',
-    left: '50%',
-    right: 'auto',
-    bottom: 'auto',
-    marginRight: '-50%',
-    borderRadius: '16px',
-    width: '100dvw',
-    height: '100dvh',
-    padding: '8px',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 999,
-  },
+  inset: 0,
+  right: 'auto',
+  bottom: 'auto',
+  backgroundColor: 'white',
+  borderRadius: '16px',
+  width: '100vw',
+  height: '100vh',
+  padding: '8px',
+  zIndex: 10000,
+
 };
 
 const isIOS =
@@ -90,17 +86,18 @@ const UIOverlay = ({
   circleR: number;
   circleColor: string;
 }) => {
+  console.log("URL", fotoUrl)
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 1000,
+        zIndex: 10000,
         pointerEvents: 'auto',
       }}
     >
       {/* 캡쳐 모달 */}
-      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="캡쳐 모달">
+      <div style={{ ...customStyles, display: modalIsOpen ? 'block' : 'none' }}>
         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             {fotoUrl && (
@@ -116,7 +113,7 @@ const UIOverlay = ({
             </button>
           </div>
         </div>
-      </Modal>
+      </div>
       {/* 기본 UI 버튼들 */}
       {!modalIsOpen && (
         <>
@@ -151,7 +148,7 @@ const UIOverlay = ({
         </>
       )}
       {/* 안내용 원과 토끼 부르기 버튼 */}
-      {!show && (
+      {!modalIsOpen && !show && (
         <>
           <div
             style={{
@@ -180,7 +177,7 @@ const UIOverlay = ({
           <button
             style={{
               position: 'fixed',
-              bottom: '10%',
+              bottom: '20%',
               left: '50%',
               transform: 'translateX(-50%)',
               backgroundColor: 'darkblue',
@@ -272,9 +269,11 @@ export default function BasicApp() {
 
   const captureImage = async () => {
     const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
-    const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-      .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+    // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+    //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+    const threeCanvas: HTMLCanvasElement | null = document.querySelector('[data-webxr_runtime]')?.children[3] as HTMLCanvasElement;
     const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+    console.log("ININi", container, videoElement, threeCanvas)
 
     if (!container || !videoElement || !threeCanvas) {
       console.warn('Required elements not ready');
@@ -385,6 +384,7 @@ export default function BasicApp() {
     setIsOpen(true);
     captureImage();
   }
+
   function closeModal() {
     setIsOpen(false);
   }
@@ -424,7 +424,6 @@ export default function BasicApp() {
     const func = async () => {
       // VR 모드로 진입 (AR 대신 VR로 전환)
       await xrStore.enterVR();
-      console.log('ENTER VR');
       setSessionStarted(true);
     };
     if (init) {
@@ -467,25 +466,28 @@ export default function BasicApp() {
                 <XROrigin position={[0, 0.5, 0]} />
                 {/* CameraZoomHandle를 사용하여 핀치/드래그 입력으로 카메라 zoom 제어 */}
                 <Scene visible={sessionStarted && show} />
+                <XRDomOverlay>
+                  <UIOverlay
+                    modalIsOpen={modalIsOpen}
+                    fotoUrl={fotoUrl}
+                    openModal={openModal}
+                    closeModal={closeModal}
+                    closeSaveModal={closeSaveModal}
+                    show={show}
+                    setShow={setShow}
+                    domWidth={domWidth}
+                    domHeight={domHeight}
+                    circleX={circleX}
+                    circleY={circleY}
+                    circleR={circleR}
+                    circleColor={circleColor}
+                  />
+                </XRDomOverlay>
               </XR>
             </Canvas>
           </div>
           {/* UI 영역을 Portal을 이용해 별도 DOM (#overlay-root)에 렌더링 */}
-          {/* <UIOverlay
-            modalIsOpen={modalIsOpen}
-            fotoUrl={fotoUrl}
-            openModal={openModal}
-            closeModal={closeModal}
-            closeSaveModal={closeSaveModal}
-            show={show}
-            setShow={setShow}
-            domWidth={domWidth}
-            domHeight={domHeight}
-            circleX={circleX}
-            circleY={circleY}
-            circleR={circleR}
-            circleColor={circleColor}
-          /> */}
+          {/*  */}
         </>
       )}
     </>
