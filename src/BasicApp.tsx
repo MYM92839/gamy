@@ -241,13 +241,17 @@ function BackgroundVideo() {
 //
 export default function BasicApp() {
 
-  const [mount] = useState(true) // TODO: TEST
+  const [mount, setMount] = useState(false) // TODO: TEST
   const [init, setInit] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
   const [show, setShow] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null)
+
+
+
 
   const domWidth = 360;
   const domHeight = 640;
@@ -412,7 +416,7 @@ export default function BasicApp() {
     let id: string | number | NodeJS.Timeout | undefined;
     const func = async () => {
       // VR 모드로 진입 (AR 대신 VR로 전환)
-      await xrStore.enterXR('immersive-vr');
+      await xrStore.enterAR()
       setSessionStarted(true);
     };
     if (init) {
@@ -429,26 +433,35 @@ export default function BasicApp() {
 
 
 
-  // useEffect(() => {
+  useEffect(() => {
 
-  //   const func = async () => {
-  //     const constraints = {
-  //       video: {
-  //         facingMode: { ideal: 'environment' },
-  //         width: { ideal: 1280 },
-  //         height: { ideal: 720 }
-  //       },
-  //       audio: false
-  //     };
+    const func = async () => {
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
 
-  //     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-  //     stream.getTracks().forEach((track) => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream.getTracks().forEach((track) => track.stop());
 
-  //     setMount(true)
-  //   }
+      setMount(true)
+    }
 
-  //   func()
-  // }, [])
+    func()
+  }, [])
+
+
+  const onTest = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+    }
+    streamRef.current = null
+    setMount(true)
+  }
   return (
     <>
       {isIOS ? (
@@ -456,7 +469,6 @@ export default function BasicApp() {
       ) : mount ? (
         <>
           {/* 배경에 카메라 스트림을 표시 */}
-          <BackgroundVideo />
           {/* XR 캔버스 영역 */}
           <div style={{ position: 'absolute', inset: 0 }}>
             <Canvas
@@ -483,7 +495,9 @@ export default function BasicApp() {
                   <UIOverlay
                     modalIsOpen={modalIsOpen}
                     fotoUrl={fotoUrl}
-                    openModal={openModal}
+                    openModal={() => {
+                      setMount(false)
+                    }}
                     closeModal={closeModal}
                     closeSaveModal={closeSaveModal}
                     show={show}
@@ -502,7 +516,25 @@ export default function BasicApp() {
           {/* UI 영역을 Portal을 이용해 별도 DOM (#overlay-root)에 렌더링 */}
           {/*  */}
         </>
-      ) : null}
+      ) : <>
+        <BackgroundVideo />
+        <button
+          style={{
+            position: 'fixed',
+            bottom: '48px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'transparent',
+            border: 'none',
+            padding: '1rem',
+            zIndex: 1001,
+          }}
+          onClick={onTest}
+        >
+          <Capture />
+        </button>
+      </>
+      }
     </>
   );
 }
