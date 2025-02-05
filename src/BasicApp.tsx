@@ -43,7 +43,7 @@ function Scene({ visible }: { visible: boolean }) {
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          <Box on onRenderEnd={() => { }} />
+          {visible && <Box on onRenderEnd={() => { }} />}
         </group>
       </Suspense>
     </>

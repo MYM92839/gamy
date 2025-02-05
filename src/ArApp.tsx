@@ -255,13 +255,13 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
     console.log("ON", actions, sactions, on)
     if (actions && sactions && on) {
       if (sactions.Scene) {
-        // if (shadowRef.current) shadowRef.current.visible = true;
+        if (shadowRef.current) shadowRef.current.visible = true;
         if (modelRef.current) modelRef.current.visible = false;
         sactions.Scene.reset().play();
         sactions.Scene?.setLoop(THREE.LoopOnce, 1);
         sactions.Scene.clampWhenFinished = true;
         smixer.addEventListener('finished', () => {
-          // if (shadowRef.current) shadowRef.current.visible = false;
+          if (shadowRef.current) shadowRef.current.visible = false;
           if (modelRef.current) modelRef.current.visible = true;
           if (actions.jump) {
             actions.jump.reset().play();
@@ -415,7 +415,7 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
         ref={modelRef}
         visible={true}
         scale={[0.15, 0.15, 0.15]}
-        position={[-0.45, -1, -1]}
+        position={[-0.45, -2, -1]}
         rotation={[0, 0, 0]}
       >
         <group name="Group001">
