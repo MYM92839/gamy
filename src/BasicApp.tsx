@@ -231,7 +231,6 @@ export default function BasicApp() {
           >
             <XR store={xrStore}>
               {/* PinchZoom는 XRDomOverlay보다 먼저 렌더링되어 뒤에 위치하므로, UI는 그 위에 표시됩니다. */}
-              <PinchZoom />
               {/* XRDomOverlay에 pointerEvents: 'none' 처리 */}
               <XRDomOverlay
                 style={{
@@ -243,7 +242,8 @@ export default function BasicApp() {
                   pointerEvents: 'none',
                 }}
               >
-                {/* 모달 */}
+                              <PinchZoom />
+               {/* 모달 */}
                 <div
                   style={{
                     ...customStyles,
