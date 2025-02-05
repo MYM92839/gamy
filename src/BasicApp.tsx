@@ -1,6 +1,7 @@
 // App.tsx
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
+import { useGesture } from '@use-gesture/react';
 import { Suspense, useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
@@ -8,7 +9,6 @@ import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import { xrStore } from './components/Layout';
-import { useGesture } from '@use-gesture/react';
 
 Modal.setAppElement('#root');
 
@@ -57,10 +57,10 @@ function Scene({ visible }: { visible: boolean }) {
  * 이 컴포넌트는 전체 영역을 덮으면서 pointerEvents: 'none'으로 설정되어 제스처 감지 전용으로 사용됩니다.
  */
 const PinchZoom = () => {
-  const { camera } = useThree();
+  // const { camera } = useThree();
   const bind = useGesture(
     {
-      onPinch: ({ offset: [d] }) => {
+      onPinch: () => {
         // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
         // const newZoom = Math.max(0.5, Math.min(3, d));
         // camera.zoom = newZoom;
