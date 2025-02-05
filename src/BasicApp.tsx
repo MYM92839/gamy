@@ -8,6 +8,7 @@ import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import { xrStore } from './components/Layout';
+import Button from "./components/Button";
 
 Modal.setAppElement('#root');
 
@@ -174,23 +175,9 @@ const UIOverlay = ({
               />
             </svg>
           </div>
-          <button
-            style={{
-              position: 'fixed',
-              bottom: '20%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              backgroundColor: 'darkblue',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '1rem',
-              zIndex: 1001,
-            }}
+          <Button
             onClick={() => setShow(true)}
-          >
-            토끼 부르기
-          </button>
+            title=" 토끼 부르기" className="z-[1001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit" />
         </>
       )}
     </div>
@@ -218,7 +205,7 @@ function BackgroundVideo() {
           }
           // onloadeddata 이벤트를 기다렸다가 play() 호출
           videoRef.current.onloadeddata = () => {
-            console.log("jhi")
+
             videoRef.current?.play().catch((err) =>
               console.error('Video play error:', err)
             );
