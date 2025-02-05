@@ -1,6 +1,6 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, XROrigin, XRDomOverlay, useXR, createXRStore } from '@react-three/xr';
+import { XR, XRDomOverlay, XROrigin, createXRStore } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
