@@ -1,7 +1,7 @@
 // App.tsx
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
-import { useGesture } from '@use-gesture/react';
+// import { useGesture } from '@use-gesture/react';
 import { Suspense, useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
@@ -13,7 +13,7 @@ import { xrStore } from './components/Layout';
 Modal.setAppElement('#root');
 
 // 모달 스타일 (content 스타일만 사용)
-const customStyles = {
+const customStyles = {/*  */
 
   top: '50%',
   left: '50%',
@@ -57,37 +57,37 @@ function Scene({ visible }: { visible: boolean }) {
  * PinchZoom 컴포넌트
  * @use-gesture/react를 사용하여 두 손가락의 핀치 제스처로 카메라 zoom 값을 제어합니다.
  */
-const PinchZoom = () => {
-  const { camera } = useThree();
-  const bind = useGesture(
-    {
-      onPinch: ({ offset: [d] }) => {
-        // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
-        const newZoom = Math.max(0.5, Math.min(3, d));
-        camera.zoom = newZoom;
-        camera.updateProjectionMatrix();
-      },
-    },
-    {
-      pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
-    }
-  );
-  return (
-    <div
-      {...bind()}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        touchAction: 'none',
-        zIndex: 1, // XRDomOverlay UI가 이보다 높은 z-index여야 함.
-        background: 'transparent',
-      }}
-    />
-  );
-};
+// const PinchZoom = () => {
+//   const { camera } = useThree();
+//   const bind = useGesture(
+//     {
+//       onPinch: ({ offset: [d] }) => {
+//         // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
+//         const newZoom = Math.max(0.5, Math.min(3, d));
+//         camera.zoom = newZoom;
+//         camera.updateProjectionMatrix();
+//       },
+//     },
+//     {
+//       pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
+//     }
+//   );
+//   return (
+//     <div
+//       {...bind()}
+//       style={{
+//         position: 'absolute',
+//         top: 0,
+//         left: 0,
+//         width: '100%',
+//         height: '100%',
+//         touchAction: 'none',
+//         zIndex: 1, // XRDomOverlay UI가 이보다 높은 z-index여야 함.
+//         background: 'transparent',
+//       }}
+//     />
+//   );
+// };
 
 export default function BasicApp() {
   const [init, setInit] = useState(false);
