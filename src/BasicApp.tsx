@@ -245,7 +245,13 @@ export default function BasicApp() {
                 {/* PinchZoom: 제스처 감지 전용, pointerEvents: 'none' */}
                 <PinchZoom />
                 {/* UI 컨테이너 */}
-                <div style={{ width: '100%', height: '100%' }}>
+                <div style={{
+                  position: 'fixed',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  zIndex: 1
+                }}>
                   {/* 캡쳐 모달 */}
                   <div style={{ ...customStyles, display: modalIsOpen ? 'block' : 'none' }}>
                     <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
