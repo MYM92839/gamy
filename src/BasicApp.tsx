@@ -98,24 +98,6 @@ const UIOverlay = ({
         pointerEvents: 'auto',
       }}
     >
-      {/* 캡쳐 모달 */}
-      <div style={{ ...customStyles, display: modalIsOpen ? 'block' : 'none' }}>
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            {fotoUrl && (
-              <img style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={fotoUrl} alt="캡쳐 이미지" />
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={closeModal} style={{ flex: 1 }}>
-              다시찍기
-            </button>
-            <button onClick={closeSaveModal} style={{ flex: 1 }}>
-              저장하기
-            </button>
-          </div>
-        </div>
-      </div>
       {/* 기본 UI 버튼들 */}
       {!modalIsOpen && (
         <>
@@ -734,14 +716,14 @@ const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasR
     return () => {
       if (id) clearTimeout(id)
     }
-  }, [isMount])
+  }, [isMount,fotoUrl])
 
   return (
     <div style={{ ...customStyles, display: 'block', position: 'fixed' }}>
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {fotoUrl && (
-            <img style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={fotoUrl} alt="캡쳐 이미지" />
+            <img style={{ width: '100%', height: '100%', objectFit: 'contain',zIndex:999999 }} src={fotoUrl} alt="캡쳐 이미지" />
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
