@@ -59,28 +59,19 @@ function Scene({ visible }: { visible: boolean }) {
  */
 const PinchZoom = () => {
   const { camera } = useThree();
-  // useGesture를 사용하여 핀치 제스처를 처리합니다.
-  // offset: scale 값으로 초기 offset 값이 전달되며, 이를 이용하여 zoom 값을 결정합니다.
   const bind = useGesture(
     {
       onPinch: ({ offset: [d] }) => {
-        // d 값은 pinch scale 값로 전달됩니다.
-        // d가 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
-        // 예를 들어, 카메라 zoom을 d로 직접 설정하거나 d에 배율을 곱해 조절할 수 있습니다.
-        // 여기서는 d 값을 직접 사용하며, 최소 0.5, 최대 3으로 제한합니다.
+        // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
         const newZoom = Math.max(0.5, Math.min(3, d));
         camera.zoom = newZoom;
         camera.updateProjectionMatrix();
       },
     },
     {
-      // 초기 pinch scale 값을 1로 설정하고, scaleBounds를 사용하여 범위를 제한합니다.
       pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
     }
   );
-
-  // overlay 역할을 하는 div를 생성하여 전체 화면에 핸들러를 적용합니다.
-  // 이 div는 pointer 이벤트를 가로채어 제스처를 처리합니다.
   return (
     <div
       {...bind()}
@@ -91,7 +82,7 @@ const PinchZoom = () => {
         width: '100%',
         height: '100%',
         touchAction: 'none',
-        zIndex: 1000, // 필요에 따라 zIndex 조정
+        zIndex: 1, // XRDomOverlay UI가 이보다 높은 z-index여야 함.
         background: 'transparent',
       }}
     />
@@ -239,7 +230,9 @@ export default function BasicApp() {
             }}
           >
             <XR store={xrStore}>
-              {/* XR DomOverlay 내의 UI */}
+              {/* PinchZoom는 XRDomOverlay보다 먼저 렌더링되어 뒤에 위치하므로, UI는 그 위에 표시됩니다. */}
+              <PinchZoom />
+              {/* XRDomOverlay에 pointerEvents: 'none' 처리 */}
               <XRDomOverlay
                 style={{
                   width: '100%',
@@ -247,10 +240,17 @@ export default function BasicApp() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  pointerEvents: 'none',
                 }}
               >
-                {/* 캡쳐 모달 */}
-                <div style={{ ...customStyles, display: modalIsOpen ? 'block' : 'none' }}>
+                {/* 모달 */}
+                <div
+                  style={{
+                    ...customStyles,
+                    display: modalIsOpen ? 'block' : 'none',
+                    pointerEvents: 'auto',
+                  }}
+                >
                   <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
                     <div className="flex-1 rounded-sm overflow-hidden z-[999] isolate">
                       {fotoUrl && (
@@ -265,12 +265,14 @@ export default function BasicApp() {
                       <button
                         className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]"
                         onClick={closeModal}
+                        style={{ pointerEvents: 'auto' }}
                       >
                         다시찍기
                       </button>
                       <button
                         className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]"
                         onClick={closeSaveModal}
+                        style={{ pointerEvents: 'auto' }}
                       >
                         저장하기
                       </button>
@@ -278,7 +280,7 @@ export default function BasicApp() {
                   </div>
                 </div>
 
-                {/* 모달이 열리지 않았을 때 */}
+                {/* 모달이 열리지 않았을 때의 UI */}
                 {!modalIsOpen && (
                   <>
                     <button
@@ -292,6 +294,7 @@ export default function BasicApp() {
                         left: '24px',
                         backgroundColor: 'transparent',
                         padding: '1rem',
+                        pointerEvents: 'auto',
                       }}
                       onClick={() => {
                         window.history.back();
@@ -312,6 +315,7 @@ export default function BasicApp() {
                         left: '50%',
                         transform: 'translateX(-50%)',
                         marginLeft: 'auto',
+                        pointerEvents: 'auto',
                       }}
                       onClick={openModal}
                     >
@@ -320,6 +324,7 @@ export default function BasicApp() {
                   </>
                 )}
 
+                {/* 배경에 원과 버튼 */}
                 {!show && (
                   <>
                     <div
@@ -333,6 +338,7 @@ export default function BasicApp() {
                         background: 'transparent',
                         overflow: 'hidden',
                         zIndex: 9998,
+                        pointerEvents: 'auto',
                       }}
                     >
                       <svg
@@ -364,6 +370,7 @@ export default function BasicApp() {
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
+                        pointerEvents: 'auto',
                       }}
                       onClick={() => setShow(true)}
                     >
@@ -371,11 +378,7 @@ export default function BasicApp() {
                     </button>
                   </>
                 )}
-                {/* @use-gesture/react를 이용한 핀치 줌 기능 */}
-                <PinchZoom />
               </XRDomOverlay>
-
-
 
               <XROrigin position={[0, 0.5, 0]} />
               <Scene visible={sessionStarted && show} />
