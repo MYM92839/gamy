@@ -279,7 +279,7 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
             videoRef.current?.play().catch((err) =>
               console.error('Video play error:', err)
             );
-              setIsMount(true)
+            setIsMount(true)
           };
         }
       })
@@ -325,7 +325,6 @@ export default function BasicApp() {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
-  const [fotoUrl, setFotoUrl] = useState<string>('');
   const [show, setShow] = useState(false);
   const streamRef = useRef<MediaStream | null>(null)
   const [isMount, setIsMount] = useState(false)
@@ -412,28 +411,12 @@ export default function BasicApp() {
           threeParams.drawHeight
         );
       }
-
-      // Step 3: 최종 이미지를 PNG로 저장
-      offscreenCanvas.toBlob((blob) => {
-        if (blob) {
-          setFoto(blob);
-        }
-      }, 'image/png');
     } catch (error) {
       console.error('Error capturing image:', error);
     }
 
   }
 
-  useEffect(() => {
-    if (foto) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFotoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(foto);
-    }
-  }, [foto]);
 
   // function openModal() {
   //   setIsOpen(true);
@@ -555,11 +538,8 @@ export default function BasicApp() {
             show={show}
             sessionStarted={sessionStarted}
             modalIsOpen={modalIsOpen}
-            fotoUrl={fotoUrl}
             openModal={() => {
               func1()
-
-
               setMount(false)
             }}
             closeModal={closeModal}
@@ -579,10 +559,9 @@ export default function BasicApp() {
         </>
       ) : <>
         <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} />
-      {isMount&&  <ModalU
+        {isMount && <ModalU
           isMount={isMount}
           modalIsOpen={modalIsOpen}
-          fotoUrl={fotoUrl}
           setFoto={setFoto}
           closeModal={onTest}
           closeSaveModal={closeSaveModal}
@@ -595,113 +574,121 @@ export default function BasicApp() {
 }
 
 
-const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasRef, isMount }: any) {
+const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMount }: any) {
+  const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
     const func = () => {
-        const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
-        // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-        //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-        const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+      const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
+      // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+      //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+      const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
 
-        if (!container || !videoElement) {
-          console.warn('Required elements not ready');
-          return;
-        }
+      if (!container || !videoElement) {
+        console.warn('Required elements not ready');
+        return;
+      }
 
-        // 캔버스 크기 설정
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        const devicePixelRatio = window.devicePixelRatio || 1;
+      // 캔버스 크기 설정
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      const devicePixelRatio = window.devicePixelRatio || 1;
 
-        const offscreenCanvas = document.createElement('canvas');
-        offscreenCanvas.width = containerWidth * devicePixelRatio;
-        offscreenCanvas.height = containerHeight * devicePixelRatio;
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = containerWidth * devicePixelRatio;
+      offscreenCanvas.height = containerHeight * devicePixelRatio;
 
-        const context = offscreenCanvas.getContext('2d');
-        if (!context) {
-          console.error('Failed to create canvas context.');
-          return;
-        }
+      const context = offscreenCanvas.getContext('2d');
+      if (!context) {
+        console.error('Failed to create canvas context.');
+        return;
+      }
 
-        // 고해상도 지원
-        context.scale(devicePixelRatio, devicePixelRatio);
+      // 고해상도 지원
+      context.scale(devicePixelRatio, devicePixelRatio);
 
-        // Helper function to calculate draw parameters
-        const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
-          const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-          const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+      // Helper function to calculate draw parameters
+      const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+        const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+        const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
 
-          if (elementWidth === 0 || elementHeight === 0) return null;
+        if (elementWidth === 0 || elementHeight === 0) return null;
 
-          const elementAspectRatio = elementWidth / elementHeight;
-          const containerAspectRatio = containerWidth / containerHeight;
+        const elementAspectRatio = elementWidth / elementHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
 
-          let drawWidth = containerWidth;
-          let drawHeight = containerHeight;
-          let offsetX = 0;
-          let offsetY = 0;
+        let drawWidth = containerWidth;
+        let drawHeight = containerHeight;
+        let offsetX = 0;
+        let offsetY = 0;
 
-          if (objectFit === 'cover') {
-            if (elementAspectRatio > containerAspectRatio) {
-              drawWidth = containerHeight * elementAspectRatio;
-              offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-            } else {
-              drawHeight = containerWidth / elementAspectRatio;
-              offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-            }
-          } else if (objectFit === 'contain') {
-            if (elementAspectRatio > containerAspectRatio) {
-              drawHeight = containerWidth / elementAspectRatio;
-              offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-            } else {
-              drawWidth = containerHeight * elementAspectRatio;
-              offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-            }
+        if (objectFit === 'cover') {
+          if (elementAspectRatio > containerAspectRatio) {
+            drawWidth = containerHeight * elementAspectRatio;
+            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+          } else {
+            drawHeight = containerWidth / elementAspectRatio;
+            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
           }
+        } else if (objectFit === 'contain') {
+          if (elementAspectRatio > containerAspectRatio) {
+            drawHeight = containerWidth / elementAspectRatio;
+            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+          } else {
+            drawWidth = containerHeight * elementAspectRatio;
+            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+          }
+        }
 
-          return { drawWidth, drawHeight, offsetX, offsetY };
-        };
+        return { drawWidth, drawHeight, offsetX, offsetY };
+      };
 
-        try {
-          // Step 1: 비디오를 캔버스에 그리기
-          const videoParams = calculateDrawParams(videoElement, 'cover');
-          const canvasParams = calculateDrawParams(canvasRef.current, 'cover');
+      try {
+        // Step 1: 비디오를 캔버스에 그리기
+        const videoParams = calculateDrawParams(videoElement, 'cover');
+        const canvasParams = calculateDrawParams(canvasRef.current, 'cover');
 
-          if (videoParams) {
+        if (videoParams) {
+          context.drawImage(
+            videoElement,
+            videoParams.offsetX,
+            videoParams.offsetY,
+            videoParams.drawWidth,
+            videoParams.drawHeight
+          );
+
+          if (canvasRef.current && canvasParams) {
             context.drawImage(
-              videoElement,
-              videoParams.offsetX,
-              videoParams.offsetY,
-              videoParams.drawWidth,
-              videoParams.drawHeight
-            );
-
-            if (canvasRef.current && canvasParams) {
-              context.drawImage(
-                canvasRef.current,
-                canvasParams.offsetX,
-                canvasParams.offsetY,
-                canvasParams.drawWidth,
-                canvasParams.drawHeight
-              )
-            }
+              canvasRef.current,
+              canvasParams.offsetX,
+              canvasParams.offsetY,
+              canvasParams.drawWidth,
+              canvasParams.drawHeight
+            )
           }
-
-          // Step 3: 최종 이미지를 PNG로 저장
-          offscreenCanvas.toBlob((blob: any) => {
-            if (blob) {
-              setFoto(blob);
-            }
-          }, 'image/png');
-        } catch (error) {
-          console.error('Error capturing image:', error);
         }
+
+        // Step 3: 최종 이미지를 PNG로 저장
+        offscreenCanvas.toBlob((blob: any) => {
+          if (blob) {
+            setFoto(blob);
+
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => {
+              setFotoUrl(reader.result as string);
+            };
+
+          }
+        }, 'image/png');
+      } catch (error) {
+        console.error('Error capturing image:', error);
+      }
     }
 
     let id: string | number | NodeJS.Timeout | undefined
 
-    if(isMount){
+    if (isMount) {
 
       id = setTimeout(() => {
         func()
@@ -719,7 +706,7 @@ const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasR
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {fotoUrl && (
-            <img style={{ width: '100%', height: '100%', objectFit: 'contain',zIndex:999999 }} src={fotoUrl} alt="캡쳐 이미지" />
+            <img style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 999999 }} src={fotoUrl} alt="캡쳐 이미지" />
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
