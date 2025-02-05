@@ -610,7 +610,7 @@ export default function BasicApp() {
       logDebug('captureARContent: data-webxr_runtime container not found.');
       return;
     }
-    const lastChild = container.lastElementChild;
+    const lastChild = container.firstElementChild;
     if (!(lastChild instanceof HTMLCanvasElement)) {
       logDebug('captureARContent: Last child is not a canvas element.');
       return;
