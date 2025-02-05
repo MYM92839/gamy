@@ -1,8 +1,8 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
-import { useGesture } from '@use-gesture/react';
-import { Suspense, useEffect, useState } from 'react';
+import { XR, XROrigin } from '@react-three/xr';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
@@ -12,26 +12,32 @@ import { xrStore } from './components/Layout';
 
 Modal.setAppElement('#root');
 
+//
 // 모달 스타일 (content 스타일만 사용)
+//
 const customStyles = {
-  top: '50%',
-  left: '50%',
-  right: 'auto',
-  bottom: 'auto',
-  marginRight: '-50%',
-  borderRadius: '16px',
-  width: '100dvw',
-  height: '100dvh',
-  padding: '8px',
-  transform: 'translate(-50%, -50%)',
-  zIndex: 999,
+  content: {
+    top: '50%',
+    left: '50%',
+    right: 'auto',
+    bottom: 'auto',
+    marginRight: '-50%',
+    borderRadius: '16px',
+    width: '100dvw',
+    height: '100dvh',
+    padding: '8px',
+    transform: 'translate(-50%, -50%)',
+    zIndex: 999,
+  },
 };
 
 const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) &&
   !(window as any).MSStream;
 
-// Scene 컴포넌트 (예시: 사용자 위치에서 3미터 앞에 빨간 박스)
+//
+// Scene 컴포넌트: 예시로 박스를 표시
+//
 function Scene({ visible }: { visible: boolean }) {
   return (
     <>
@@ -51,44 +57,204 @@ function Scene({ visible }: { visible: boolean }) {
   );
 }
 
-/**
- * PinchZoom 컴포넌트
- * use-gesture의 onPinch 핸들러를 사용하여 두 손가락 제스처로 카메라 zoom 값을 제어합니다.
- * 이 컴포넌트는 전체 영역을 덮으면서 pointerEvents: 'none'으로 설정되어 제스처 감지 전용으로 사용됩니다.
- */
-const PinchZoom = () => {
-  // const { camera } = useThree();
-  const bind = useGesture(
-    {
-      onPinch: () => {
-        // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
-        // const newZoom = Math.max(0.5, Math.min(3, d));
-        // camera.zoom = newZoom;
-        // camera.updateProjectionMatrix();
-      },
-    },
-    {
-      pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
-    }
-  );
+//
+// UIOverlay 컴포넌트
+// XR 캔버스 위에 렌더링할 UI를 React Portal을 이용하여 별도 DOM (#overlay-root)에 표시합니다.
+//
+const UIOverlay = ({
+  modalIsOpen,
+  fotoUrl,
+  openModal,
+  closeModal,
+  closeSaveModal,
+  show,
+  setShow,
+  domWidth,
+  domHeight,
+  circleX,
+  circleY,
+  circleR,
+  circleColor,
+}: {
+  modalIsOpen: boolean;
+  fotoUrl: string;
+  openModal: () => void;
+  closeModal: () => void;
+  closeSaveModal: () => void;
+  show: boolean;
+  setShow: (v: boolean) => void;
+  domWidth: number;
+  domHeight: number;
+  circleX: number;
+  circleY: number;
+  circleR: number;
+  circleColor: string;
+}) => {
   return (
     <div
-      {...bind()}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        pointerEvents: 'auto',
+      }}
+    >
+      {/* 캡쳐 모달 */}
+      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="캡쳐 모달">
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            {fotoUrl && (
+              <img style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={fotoUrl} alt="캡쳐 이미지" />
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={closeModal} style={{ flex: 1 }}>
+              다시찍기
+            </button>
+            <button onClick={closeSaveModal} style={{ flex: 1 }}>
+              저장하기
+            </button>
+          </div>
+        </div>
+      </Modal>
+      {/* 기본 UI 버튼들 */}
+      {!modalIsOpen && (
+        <>
+          <button
+            style={{
+              position: 'fixed',
+              bottom: '65px',
+              left: '24px',
+              background: 'transparent',
+              border: 'none',
+              zIndex: 1001,
+            }}
+            onClick={() => window.history.back()}
+          >
+            <Back />
+          </button>
+          <button
+            style={{
+              position: 'fixed',
+              bottom: '48px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'transparent',
+              border: 'none',
+              padding: '1rem',
+              zIndex: 1001,
+            }}
+            onClick={openModal}
+          >
+            <Capture />
+          </button>
+        </>
+      )}
+      {/* 안내용 원과 토끼 부르기 버튼 */}
+      {!show && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              width: `${domWidth}px`,
+              height: `${domHeight}px`,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'transparent',
+              overflow: 'hidden',
+              zIndex: 1000,
+            }}
+          >
+            <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
+              <circle
+                cx={circleX}
+                cy={circleY}
+                r={circleR}
+                fill="none"
+                stroke={circleColor}
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+          <button
+            style={{
+              position: 'fixed',
+              bottom: '10%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: 'darkblue',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '1rem',
+              zIndex: 1001,
+            }}
+            onClick={() => setShow(true)}
+          >
+            토끼 부르기
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
+//
+// VR 모드에서 사용자의 카메라 피드를 배경으로 보여주기 위한 컴포넌트
+// getUserMedia를 사용하여 video 스트림을 받아 배경에 표시합니다.
+//
+function BackgroundVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      })
+      .then((stream) => {
+        if (videoRef.current) {
+          // 이미 스트림이 할당되어 있지 않은지 확인
+          if (videoRef.current.srcObject !== stream) {
+            videoRef.current.srcObject = stream;
+          }
+          // onloadeddata 이벤트를 기다렸다가 play() 호출
+          videoRef.current.onloadeddata = () => {
+            console.log("jhi")
+            videoRef.current?.play().catch((err) =>
+              console.error('Video play error:', err)
+            );
+          };
+        }
+      })
+      .catch((err) => console.error('getUserMedia error:', err));
+  }, []);
+
+  return (
+    <video
+      id="three-video"
+      ref={videoRef}
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
-        touchAction: 'none',
-        pointerEvents: 'none', // 제스처 감지 전용: UI 이벤트에 영향을 주지 않음.
-        zIndex: 0,
-        background: 'transparent',
+        width: '100vw',
+        height: '100vh',
+        objectFit: 'cover',
+        zIndex: 0, // 캔버스 뒤쪽에 배경으로 표시
       }}
+      autoPlay
+      playsInline
+      muted
+      loop
     />
   );
-};
+}
 
+//
+// 메인 앱
+//
 export default function BasicApp() {
   const [init, setInit] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -104,40 +270,107 @@ export default function BasicApp() {
   const circleR = 100;
   const circleColor = init ? 'blue' : 'red';
 
-  /**
-   * 캡쳐 함수: XR 모드에서 보이는 최종 화면(WebGL 캔버스 전체)을 캡쳐하여 Blob을 생성합니다.
-   */
-  const captureImage = () => {
-    const threeCanvas = document.querySelector('#three-canvas canvas') as HTMLCanvasElement | null;
-    if (!threeCanvas) {
-      console.warn('Three.js canvas가 DOM에서 발견되지 않았습니다.');
+  const captureImage = async () => {
+    const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
+    const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+      .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+    const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+
+    if (!container || !videoElement || !threeCanvas) {
+      console.warn('Required elements not ready');
       return;
     }
-    const canvasWidth = threeCanvas.clientWidth;
-    const canvasHeight = threeCanvas.clientHeight;
+
+    // 캔버스 크기 설정
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
     const devicePixelRatio = window.devicePixelRatio || 1;
 
     const offscreenCanvas = document.createElement('canvas');
-    offscreenCanvas.width = canvasWidth * devicePixelRatio;
-    offscreenCanvas.height = canvasHeight * devicePixelRatio;
+    offscreenCanvas.width = containerWidth * devicePixelRatio;
+    offscreenCanvas.height = containerHeight * devicePixelRatio;
+
     const context = offscreenCanvas.getContext('2d');
     if (!context) {
-      console.error('오프스크린 canvas의 context 생성 실패');
+      console.error('Failed to create canvas context.');
       return;
     }
-    context.scale(devicePixelRatio, devicePixelRatio);
-    context.drawImage(threeCanvas, 0, 0, canvasWidth, canvasHeight);
 
-    offscreenCanvas.toBlob((blob) => {
-      if (blob) {
-        setFoto(blob);
-      } else {
-        setFoto(null);
+    // 고해상도 지원
+    context.scale(devicePixelRatio, devicePixelRatio);
+
+    // Helper function to calculate draw parameters
+    const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+      const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+      const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+
+      if (elementWidth === 0 || elementHeight === 0) return null;
+
+      const elementAspectRatio = elementWidth / elementHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
+
+      let drawWidth = containerWidth;
+      let drawHeight = containerHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (objectFit === 'cover') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        } else {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        }
+      } else if (objectFit === 'contain') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        } else {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        }
       }
-    }, 'image/png');
+
+      return { drawWidth, drawHeight, offsetX, offsetY };
+    };
+
+    try {
+      // Step 1: 비디오를 캔버스에 그리기
+      const videoParams = calculateDrawParams(videoElement, 'cover');
+      if (videoParams) {
+        context.drawImage(
+          videoElement,
+          videoParams.offsetX,
+          videoParams.offsetY,
+          videoParams.drawWidth,
+          videoParams.drawHeight
+        );
+      }
+
+      // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
+      const threeParams = calculateDrawParams(threeCanvas, 'cover');
+      if (threeParams) {
+        context.drawImage(
+          threeCanvas,
+          threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight
+        );
+      }
+
+      // Step 3: 최종 이미지를 PNG로 저장
+      offscreenCanvas.toBlob((blob) => {
+        if (blob) {
+          setFoto(blob);
+        }
+      }, 'image/png');
+    } catch (error) {
+      console.error('Error capturing image:', error);
+    }
   };
 
-  // Blob이 업데이트되면 DataURL로 변환하여 fotoUrl에 저장 (모달 이미지 표시용)
   useEffect(() => {
     if (foto) {
       const reader = new FileReader();
@@ -152,16 +385,13 @@ export default function BasicApp() {
     setIsOpen(true);
     captureImage();
   }
-
   function closeModal() {
     setIsOpen(false);
   }
-
   function closeSaveModal() {
     if (foto) shareOrDownloadImage(foto);
     setIsOpen(false);
   }
-
   const shareOrDownloadImage = (blob: Blob): void => {
     if (
       navigator.canShare &&
@@ -192,8 +422,9 @@ export default function BasicApp() {
   useEffect(() => {
     let id: string | number | NodeJS.Timeout | undefined;
     const func = async () => {
-      await xrStore.enterAR(); // immersive-ar 세션 요청
-      console.log('ENTER');
+      // VR 모드로 진입 (AR 대신 VR로 전환)
+      await xrStore.enterVR();
+      console.log('ENTER VR');
       setSessionStarted(true);
     };
     if (init) {
@@ -209,177 +440,52 @@ export default function BasicApp() {
   return (
     <>
       {isIOS ? (
-        // iOS에서는 polyfill 기반 앱(NftAppT3)을 사용
         <NftAppT3 />
       ) : (
         <>
-          <Canvas
-            id="three-canvas"
-            style={{
-              width: '100vw',
-              height: '100vh',
-              background: 'transparent',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-            }}
-            gl={{ alpha: true }}
-            onCreated={() => {
-              setInit(true);
-            }}
-          >
-            <XR store={xrStore}>
-              {/* XRDomOverlay: UI 컨테이너(포털)를 사용하여 캔버스 위에 DOM UI를 오버레이 */}
-              <XRDomOverlay
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  // pointerEvents 기본값(auto)로 두어 내부 UI가 정상 동작하도록 함.
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {/* PinchZoom: 제스처 감지 전용, pointerEvents: 'none' */}
-                <PinchZoom />
-                {/* UI 컨테이너 */}
-                <div style={{
-                  position: 'fixed',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  zIndex: 1
-                }}>
-                  {/* 캡쳐 모달 */}
-                  <div style={{ ...customStyles, display: modalIsOpen ? 'block' : 'none' }}>
-                    <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
-                      <div className="flex-1 rounded-sm overflow-hidden z-[999] isolate">
-                        {fotoUrl && (
-                          <img
-                            className="flex-1 object-contain z-[999]"
-                            src={fotoUrl}
-                            alt="캡쳐 이미지"
-                          />
-                        )}
-                      </div>
-                      <div className="w-full flex gap-x-2 font-semibold">
-                        <button
-                          className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]"
-                          onClick={closeModal}
-                        >
-                          다시찍기
-                        </button>
-                        <button
-                          className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]"
-                          onClick={closeSaveModal}
-                        >
-                          저장하기
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 모달이 열리지 않았을 때의 UI */}
-                  {!modalIsOpen && (
-                    <>
-                      <button
-                        style={{
-                          zIndex: 999,
-                          position: 'fixed',
-                          width: 'fit-content',
-                          height: 'fit-content',
-                          border: 0,
-                          bottom: '65px',
-                          left: '24px',
-                          backgroundColor: 'transparent',
-                        }}
-                        onClick={() => {
-                          window.history.back();
-                        }}
-                      >
-                        <Back style={{}} />
-                      </button>
-                      <button
-                        style={{
-                          zIndex: 999,
-                          position: 'fixed',
-                          width: 'fit-content',
-                          height: 'fit-content',
-                          border: 0,
-                          backgroundColor: 'transparent',
-                          padding: '1rem',
-                          bottom: '48px',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                        }}
-                        onClick={openModal}
-                      >
-                        <Capture style={{}} />
-                      </button>
-                    </>
-                  )}
-
-                  {/* 배경에 원과 버튼 */}
-                  {!show && (
-                    <>
-                      <div
-                        style={{
-                          position: 'fixed',
-                          width: `${domWidth}px`,
-                          height: `${domHeight}px`,
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%,-50%)',
-                          background: 'transparent',
-                          overflow: 'hidden',
-                          zIndex: 9998,
-                        }}
-                      >
-                        <svg
-                          width={domWidth}
-                          height={domHeight}
-                          style={{ position: 'absolute', top: 0, left: 0 }}
-                        >
-                          <circle
-                            cx={circleX}
-                            cy={circleY}
-                            r={circleR}
-                            fill="none"
-                            stroke={circleColor}
-                            strokeWidth="2"
-                          />
-                        </svg>
-                      </div>
-
-                      <button
-                        style={{
-                          position: 'fixed',
-                          bottom: '10%',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          zIndex: 99999,
-                          padding: '1rem',
-                          fontSize: '1rem',
-                          backgroundColor: 'darkblue',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                        }}
-                        onClick={() => setShow(true)}
-                      >
-                        토끼 부르기
-                      </button>
-                    </>
-                  )}
-                </div>
-              </XRDomOverlay>
-
-              <XROrigin position={[0, 0.5, 0]} />
-              <Scene visible={sessionStarted && show} />
-            </XR>
-          </Canvas>
+          {/* 배경에 카메라 스트림을 표시 */}
+          <BackgroundVideo />
+          {/* XR 캔버스 영역 */}
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <Canvas
+              id="three-canvas"
+              style={{
+                width: '100vw',
+                height: '100vh',
+                background: 'transparent',
+              }}
+              gl={{ alpha: true, preserveDrawingBuffer: true }}
+              onCreated={(state) => {
+                // XR 세션 시작 전에 한 번만 크기를 설정합니다.
+                state.gl.setPixelRatio(window.devicePixelRatio);
+                state.gl.setSize(window.innerWidth, window.innerHeight);
+                // 이후에는 XR 세션이 시작되면 크기 변경을 하지 않도록 합니다.
+                setInit(true);
+              }}
+            >
+              <XR store={xrStore}>
+                <XROrigin position={[0, 0.5, 0]} />
+                {/* CameraZoomHandle를 사용하여 핀치/드래그 입력으로 카메라 zoom 제어 */}
+                <Scene visible={sessionStarted && show} />
+              </XR>
+            </Canvas>
+          </div>
+          {/* UI 영역을 Portal을 이용해 별도 DOM (#overlay-root)에 렌더링 */}
+          {/* <UIOverlay
+            modalIsOpen={modalIsOpen}
+            fotoUrl={fotoUrl}
+            openModal={openModal}
+            closeModal={closeModal}
+            closeSaveModal={closeSaveModal}
+            show={show}
+            setShow={setShow}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            circleColor={circleColor}
+          /> */}
         </>
       )}
     </>

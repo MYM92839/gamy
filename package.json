@@ -15,6 +15,7 @@
     "@artcom/react-three-arjs": "^0.5.6",
     "@react-three/drei": "^9.107.0",
     "@react-three/fiber": "8.13.4",
+    "@react-three/handle": "^6.6.2",
     "@react-three/postprocessing": "^2.16.2",
     "@react-three/xr": "^6.6.2",
     "@rollup/plugin-commonjs": "^28.0.2",
