@@ -304,9 +304,7 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
             videoRef.current?.play().catch((err) =>
               console.error('Video play error:', err)
             );
-
               setIsMount(true)
-
           };
         }
       })
@@ -603,7 +601,7 @@ export default function BasicApp() {
         </>
       ) : <>
         <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} />
-        <ModalU
+      {isMount&&  <ModalU
           isMount={isMount}
           modalIsOpen={modalIsOpen}
           fotoUrl={fotoUrl}
@@ -611,7 +609,7 @@ export default function BasicApp() {
           closeModal={onTest}
           closeSaveModal={closeSaveModal}
           canvasRef={offCanvasRef}
-        />
+        />}
       </>
       }
     </>
@@ -623,7 +621,6 @@ const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasR
 
   useEffect(() => {
     const func = () => {
-      if (isMount) {
         const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
         // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
         //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
@@ -722,14 +719,17 @@ const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasR
         } catch (error) {
           console.error('Error capturing image:', error);
         }
-      }
     }
 
-    let id
+    let id: string | number | NodeJS.Timeout | undefined
 
-    id = setTimeout(() => {
-      func()
-    }, 2000)
+    if(isMount){
+
+      id = setTimeout(() => {
+        func()
+      }, 1000)
+    }
+
 
     return () => {
       if (id) clearTimeout(id)
