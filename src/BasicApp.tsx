@@ -501,7 +501,7 @@ export default function BasicApp() {
 
 
   useEffect(() => {
-
+    let id: string | number | NodeJS.Timeout | undefined
     const func = async () => {
       const constraints = {
         video: {
@@ -515,19 +515,33 @@ export default function BasicApp() {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       stream.getTracks().forEach((track) => track.stop());
 
-      setMount(true)
+      id = setTimeout(() => {
+        setMount(true)
+      }, 3000)
     }
 
     func()
+
+    return () => {
+      if (id) clearTimeout(id)
+    }
   }, [])
 
 
   const onTest = () => {
+    let id: string | number | NodeJS.Timeout | undefined
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
     }
     streamRef.current = null
-    setMount(true)
+    id = setTimeout(() => {
+      setMount(true)
+    }, 3000)
+
+    return () => {
+      if (id) clearTimeout(id)
+    }
   }
   return (
     <>
@@ -544,7 +558,6 @@ export default function BasicApp() {
             modalIsOpen={modalIsOpen}
             fotoUrl={fotoUrl}
             openModal={() => {
-              console.log("???")
               setMount(false)
             }}
             closeModal={closeModal}
