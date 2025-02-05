@@ -1,13 +1,12 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, XROrigin, XRDomOverlay } from '@react-three/xr';
+import { XR, XROrigin, XRDomOverlay, useXR, createXRStore } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
-import { xrStore } from './components/Layout';
 import Button from "./components/Button";
 
 Modal.setAppElement('#root');
@@ -88,6 +87,8 @@ const UIOverlay = ({
   circleColor: string;
 }) => {
   console.log("URL", fotoUrl)
+
+
   return (
     <div
       style={{
@@ -184,6 +185,88 @@ const UIOverlay = ({
   );
 };
 
+
+function ARHelper({ store }: any) {
+  const [init, setInit] = useState(false);
+  useEffect(() => {
+    if (!init) setInit(true)
+    return () => {
+      const func = () => {
+        store.getState().session?.end()
+      }
+      if (init) func()
+    }
+  }, [])
+
+  return null
+}
+
+
+function ARCanvas(props: any) {
+  const xrStore = createXRStore();
+  const [init, setInit] = useState(false);
+
+  useEffect(() => {
+    let id: string | number | NodeJS.Timeout | undefined;
+    const func = async () => {
+      // VR 모드로 진입 (AR 대신 VR로 전환)
+      await xrStore.enterAR()
+      props.setSessionStarted(true);
+    };
+    if (init) {
+      id = setTimeout(() => {
+        func();
+      }, 1000);
+    }
+    return () => {
+      clearTimeout(id);
+    };
+  }, [init]);
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <Canvas
+        id="three-canvas"
+        style={{
+          width: '100vw',
+          height: '100vh',
+          background: 'transparent',
+        }}
+        gl={{ alpha: true, preserveDrawingBuffer: true }}
+        onCreated={(state) => {
+          // XR 세션 시작 전에 한 번만 크기를 설정합니다.
+          state.gl.setPixelRatio(window.devicePixelRatio);
+          state.gl.setSize(window.innerWidth, window.innerHeight);
+          // 이후에는 XR 세션이 시작되면 크기 변경을 하지 않도록 합니다.
+          setInit(true);
+        }}
+      >
+        <XR store={xrStore}>
+          <ARHelper store={xrStore} />
+          <XROrigin position={[0, 0.5, 0]} />
+          {/* CameraZoomHandle를 사용하여 핀치/드래그 입력으로 카메라 zoom 제어 */}
+          <Scene visible={props.sessionStarted && props.show} />
+          <XRDomOverlay>
+            <UIOverlay
+              modalIsOpen={props.modalIsOpen}
+              fotoUrl={props.fotoUrl}
+              openModal={props.openModal}
+              closeModal={props.closeModal}
+              closeSaveModal={props.closeSaveModal}
+              show={props.show}
+              setShow={props.setShow}
+              domWidth={props.domWidth}
+              domHeight={props.domHeight}
+              circleX={props.circleX}
+              circleY={props.circleY}
+              circleR={props.circleR}
+              circleColor={props.circleColor}
+            />
+          </XRDomOverlay>
+        </XR>
+      </Canvas>
+    </div>
+  )
+}
 //
 // VR 모드에서 사용자의 카메라 피드를 배경으로 보여주기 위한 컴포넌트
 // getUserMedia를 사용하여 video 스트림을 받아 배경에 표시합니다.
@@ -242,7 +325,6 @@ function BackgroundVideo() {
 export default function BasicApp() {
 
   const [mount, setMount] = useState(false) // TODO: TEST
-  const [init, setInit] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
@@ -258,7 +340,7 @@ export default function BasicApp() {
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
   const circleR = 100;
-  const circleColor = init ? 'blue' : 'red';
+  const circleColor = 'blue'
 
   const captureImage = async () => {
     const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
@@ -412,22 +494,7 @@ export default function BasicApp() {
     }
   };
 
-  useEffect(() => {
-    let id: string | number | NodeJS.Timeout | undefined;
-    const func = async () => {
-      // VR 모드로 진입 (AR 대신 VR로 전환)
-      await xrStore.enterAR()
-      setSessionStarted(true);
-    };
-    if (init) {
-      id = setTimeout(() => {
-        func();
-      }, 1000);
-    }
-    return () => {
-      clearTimeout(id);
-    };
-  }, [init]);
+
 
 
 
@@ -470,49 +537,26 @@ export default function BasicApp() {
         <>
           {/* 배경에 카메라 스트림을 표시 */}
           {/* XR 캔버스 영역 */}
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <Canvas
-              id="three-canvas"
-              style={{
-                width: '100vw',
-                height: '100vh',
-                background: 'transparent',
-              }}
-              gl={{ alpha: true, preserveDrawingBuffer: true }}
-              onCreated={(state) => {
-                // XR 세션 시작 전에 한 번만 크기를 설정합니다.
-                state.gl.setPixelRatio(window.devicePixelRatio);
-                state.gl.setSize(window.innerWidth, window.innerHeight);
-                // 이후에는 XR 세션이 시작되면 크기 변경을 하지 않도록 합니다.
-                setInit(true);
-              }}
-            >
-              <XR store={xrStore}>
-                <XROrigin position={[0, 0.5, 0]} />
-                {/* CameraZoomHandle를 사용하여 핀치/드래그 입력으로 카메라 zoom 제어 */}
-                <Scene visible={sessionStarted && show} />
-                <XRDomOverlay>
-                  <UIOverlay
-                    modalIsOpen={modalIsOpen}
-                    fotoUrl={fotoUrl}
-                    openModal={() => {
-                      setMount(false)
-                    }}
-                    closeModal={closeModal}
-                    closeSaveModal={closeSaveModal}
-                    show={show}
-                    setShow={setShow}
-                    domWidth={domWidth}
-                    domHeight={domHeight}
-                    circleX={circleX}
-                    circleY={circleY}
-                    circleR={circleR}
-                    circleColor={circleColor}
-                  />
-                </XRDomOverlay>
-              </XR>
-            </Canvas>
-          </div>
+          <ARCanvas
+            setSessionStarted={sessionStarted}
+            show={show}
+            sessionStarted={sessionStarted}
+            modalIsOpen={modalIsOpen}
+            fotoUrl={fotoUrl}
+            openModal={() => {
+              console.log("???")
+              setMount(false)
+            }}
+            closeModal={closeModal}
+            closeSaveModal={closeSaveModal}
+            setShow={setShow}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            circleColor={circleColor}
+          />
           {/* UI 영역을 Portal을 이용해 별도 DOM (#overlay-root)에 렌더링 */}
           {/*  */}
         </>

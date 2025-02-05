@@ -1,7 +1,5 @@
-import { createXRStore } from "@react-three/xr";
 import { Outlet } from "react-router-dom";
 
-export const xrStore = createXRStore();
 
 export default function Layout() {
 
