@@ -1,6 +1,6 @@
 // App.tsx
 import { Canvas } from '@react-three/fiber';
-import { XR, XROrigin } from '@react-three/xr';
+import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Suspense, useEffect, useState } from 'react';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
@@ -139,65 +139,14 @@ function Scene({ visible }: { visible: boolean }) {
 export default function BasicApp() {
   const [init, setInit] = useState(false)
   const [sessionStarted, setSessionStarted] = useState(false);
-  // cameraActive는 미리보기 컴포넌트가 렌더링되는지 여부를 결정합니다.
-  // const [cameraActive, setCameraActive] = useState(true);
-  // // stopPreview: 미리보기 스트림을 graceful하게 중단하도록 CameraPreview에 전달합니다.
-  // const [stopPreview, setStopPreview] = useState(false);
-  // // cleanup 완료 여부를 관리합니다.
-  // const [cameraCleaned, setCameraCleaned] = useState(false);
-  // const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // // cleanup 완료 시 호출되는 콜백
-  // const handleCameraCleanup = useCallback(() => {
-  //   console.log('Camera cleanup callback called');
-  //   setCameraCleaned(true);
-  // }, []);
-
-  // // cleanup 완료를 기다리는 함수 (상태를 폴링)
-  // async function waitForCameraCleanup() {
-  //   while (!cameraCleaned) {
-  //     await new Promise((resolve) => setTimeout(resolve, 50));
-  //   }
-  // }
-
-  // XR 진입 버튼 핸들러
-  // const handleEnterXR = async () => {
-  //   console.log('XR enter clicked');
-  //   // 미리보기 graceful 중단 요청
-  //   setStopPreview(true);
-  //   // 미리보기 컴포넌트를 그대로 렌더링 상태로 두고, cleanup 완료를 기다립니다.
-  //   setCameraCleaned(false);
-  //   await waitForCameraCleanup();
-  //   console.log('Camera cleanup complete, starting XR');
-
-  //   // 이제 미리보기를 DOM에서 제거합니다.
-  //   setCameraActive(false);
-
-  //   // XR 요청 실행
-  //   if (!isIOS) {
-  //     try {
-  //       console.log('Requesting XR session for non-iOS');
-  //       setSessionStarted(true);
-  //     } catch (error) {
-  //       console.error('Failed to start XR session:', error);
-  //     }
-  //     return;
-  //   }
-  //   // iOS의 경우 polyfill 사용
-  //   if (navigator.xr) {
-  //     try {
-  //       const session = await navigator.xr.requestSession('immersive-ar', {
-  //         requiredFeatures: ['local-floor'],
-  //       });
-  //       console.log('XR session started on iOS (via polyfill):', session);
-  //       setSessionStarted(true);
-  //     } catch (err) {
-  //       console.error('Failed to start XR session on iOS:', err);
-  //     }
-  //   } else {
-  //     console.warn('navigator.xr not available on this device.');
-  //   }
-  // };
+  const [show, setShow] = useState(false)
+  const domWidth = 360;
+  const domHeight = 640;
+  const circleX = domWidth / 2;
+  const circleY = domHeight / 2;
+  const circleR = 100;
+  const circleColor = init ? 'blue' : 'red';
 
 
   useEffect(() => {
@@ -210,7 +159,7 @@ export default function BasicApp() {
     if (init) {
       id = setTimeout(() => {
         func()
-      }, 0)
+      }, 1000)
     }
     return () => {
       clearTimeout(id)
@@ -264,8 +213,54 @@ export default function BasicApp() {
             }}
           >
             <XR store={xrStore}>
-              <XROrigin position={[0, -1.5, 0]} />
-              <Scene visible={sessionStarted} />
+              {!show && <XRDomOverlay
+                style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <div
+                  style={{
+                    position: 'fixed',
+                    width: `${domWidth}px`,
+                    height: `${domHeight}px`,
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%,-50%)',
+                    background: 'transparent',
+                    overflow: 'hidden',
+                    zIndex: 9998,
+                  }}
+                >
+                  <svg
+                    width={domWidth}
+                    height={domHeight}
+                    style={{ position: 'absolute', top: 0, left: 0 }}
+                  >
+                    <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
+                  </svg>
+                </div>
+
+                <button
+                  style={{
+                    position: 'fixed',
+                    bottom: '10%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 99999,
+                    padding: '1rem',
+                    fontSize: '1rem',
+                    backgroundColor: 'darkblue',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px'
+                  }}
+                  onClick={() => setShow(true)}
+                >
+                  토끼 부르기
+                </button>
+              </XRDomOverlay>}
+
+
+              <XROrigin position={[0, 0.5, 0]} />
+              <Scene visible={sessionStarted && show} />
             </XR>
           </Canvas>
         </>
