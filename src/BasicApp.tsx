@@ -11,9 +11,7 @@ import Button from "./components/Button";
 
 Modal.setAppElement('#root');
 
-//
 // 모달 스타일 (content 스타일만 사용)
-//
 const customStyles = {
   inset: 0,
   right: 'auto',
@@ -26,13 +24,20 @@ const customStyles = {
   zIndex: 10000,
 };
 
+// iOS 분기용 플래그 (기존 코드 유지)
 const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) &&
   !(window as any).MSStream;
 
-//
+// offscreen 캔버스 생성 함수
+const createOffscreenCanvas = (width: number, height: number, devicePixelRatio: number) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width * devicePixelRatio;
+  canvas.height = height * devicePixelRatio;
+  return canvas;
+};
+
 // Scene 컴포넌트: 예시로 박스를 표시
-//
 function Scene({ visible }: { visible: boolean }) {
   return (
     <>
@@ -52,9 +57,7 @@ function Scene({ visible }: { visible: boolean }) {
   );
 }
 
-//
-// UIOverlay 컴포넌트
-//
+// UIOverlay 컴포넌트 (기존 UI 버튼 등)
 const UIOverlay = ({
   modalIsOpen,
   openModal,
@@ -81,7 +84,6 @@ const UIOverlay = ({
   circleR: number;
   circleColor: string;
 }) => {
-
   return (
     <div
       style={{
@@ -124,7 +126,7 @@ const UIOverlay = ({
           </button>
         </>
       )}
-      {/* 안내용 원과 토끼 부르기 버튼 */}
+      {/* 안내용 원과 버튼 (예시) */}
       {!modalIsOpen && !show && (
         <>
           <div
@@ -153,37 +155,18 @@ const UIOverlay = ({
           </div>
           <Button
             onClick={() => setShow(true)}
-            title=" 토끼 부르기" className="z-[1001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit" />
+            title=" 토끼 부르기"
+            className="z-[1001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+          />
         </>
       )}
     </div>
   );
 };
 
-//
-// ARHelper 컴포넌트
-//
-function ARHelper({ store }: any) {
-  const [init, setInit] = useState(false);
-
-  useEffect(() => {
-    if (!init) setInit(true);
-    return () => {
-      if (store.current) {
-        store.current.getState().session?.end();
-        store.current.destroy();
-        store.current = null;
-      }
-    };
-  }, []);
-
-  return null;
-}
-
-//
 // ARCanvas 컴포넌트
-//
 function ARCanvas(props: any) {
+  const { setOffscreenCanvas, logDebug } = props;
   const [init, setInit] = useState(false);
 
   useEffect(() => {
@@ -193,9 +176,9 @@ function ARCanvas(props: any) {
         try {
           await props.xrStoreRef.current.enterAR();
           props.setSessionStarted(true);
-          props.logDebug('XR session started.');
+          logDebug('XR session started.');
         } catch (err) {
-          props.logDebug('XR session failed to start: ' + err);
+          logDebug('XR session failed to start: ' + err);
         }
       }
     };
@@ -204,9 +187,7 @@ function ARCanvas(props: any) {
         func();
       }, 1000);
     }
-    return () => {
-      clearTimeout(id);
-    };
+    return () => clearTimeout(id);
   }, [init]);
 
   return (
@@ -223,11 +204,15 @@ function ARCanvas(props: any) {
           state.gl.setPixelRatio(window.devicePixelRatio);
           state.gl.setSize(window.innerWidth, window.innerHeight);
           setInit(true);
-          props.logDebug('Canvas created, init set to true.');
+          logDebug('Canvas created, init set to true.');
+
+          // offscreen 캔버스 생성 후 상위 상태에 저장
+          const offscreen = createOffscreenCanvas(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+          setOffscreenCanvas(offscreen);
+          logDebug('Offscreen canvas created in ARCanvas.');
         }}
       >
         <XR store={props.xrStoreRef.current}>
-          <ARHelper store={props.xrStoreRef} />
           <XROrigin position={[0, 0.5, 0]} />
           <Scene visible={props.sessionStarted && props.show} />
           <XRDomOverlay>
@@ -253,9 +238,7 @@ function ARCanvas(props: any) {
   );
 }
 
-//
-// BackgroundVideo: 카메라 피드를 보여줌
-//
+// BackgroundVideo: 사용자 카메라 피드를 표시
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -313,289 +296,30 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   );
 }
 
-//
-// DebugPanel 컴포넌트: 디버깅 로그를 화면에 표시합니다.
-//
-const DebugPanel = ({ logs }: { logs: string[] }) => {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        maxHeight: '40%',
-        overflowY: 'auto',
-        background: 'rgba(0,0,0,0.8)',
-        color: 'white',
-        fontSize: '12px',
-        padding: '8px',
-        zIndex: 11000,
-      }}
-    >
-      <div><strong>Debug Logs:</strong></div>
-      {logs.map((log, index) => (
-        <div key={index}>{log}</div>
-      ))}
-    </div>
-  );
-};
-
-//
-// 메인 앱 컴포넌트
-//
-export default function BasicApp() {
-  const xrStoreRef = useRef<any>(null);
-  const [mount, setMount] = useState(false);
-  const [sessionStarted, setSessionStarted] = useState(false);
-  const [modalIsOpen, setIsOpen] = useState(false);
-  const [foto, setFoto] = useState<Blob | null>(null);
-  const [show, setShow] = useState(false);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [isMount, setIsMount] = useState(false);
-  const offCanvasRef = useRef<any>(null);
-
-  // 디버그 로그 상태
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-
-  // 디버그 로그를 추가하는 함수
-  const logDebug = (msg: string) => {
-    console.log(msg);
-    setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-  };
-
-  const domWidth = 360;
-  const domHeight = 640;
-  const circleX = domWidth / 2;
-  const circleY = domHeight / 2;
-  const circleR = 100;
-  const circleColor = 'blue';
-
-  const func1 = async () => {
-    logDebug('func1: Capture started.');
-    const threeCanvas: HTMLCanvasElement | null = document.querySelector('[data-webxr_runtime]')?.children[3] as HTMLCanvasElement;
-    if (!threeCanvas) {
-      logDebug('func1: threeCanvas not found.');
-      return;
-    }
-    const containerWidth = threeCanvas.clientWidth;
-    const containerHeight = threeCanvas.clientHeight;
-    const devicePixelRatio = window.devicePixelRatio || 1;
-
-    const offscreenCanvas = document.createElement('canvas');
-    offscreenCanvas.width = containerWidth * devicePixelRatio;
-    offscreenCanvas.height = containerHeight * devicePixelRatio;
-    offCanvasRef.current = offscreenCanvas;
-
-    const context = offscreenCanvas.getContext('2d');
-    if (!context) {
-      logDebug('func1: Failed to create canvas context.');
-      return;
-    }
-    context.scale(devicePixelRatio, devicePixelRatio);
-
-    // draw parameters 계산 함수
-    const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
-      const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-      const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
-      if (elementWidth === 0 || elementHeight === 0) return null;
-      const elementAspectRatio = elementWidth / elementHeight;
-      const containerAspectRatio = containerWidth / containerHeight;
-      let drawWidth = containerWidth;
-      let drawHeight = containerHeight;
-      let offsetX = 0;
-      let offsetY = 0;
-      if (objectFit === 'cover') {
-        if (elementAspectRatio > containerAspectRatio) {
-          drawWidth = containerHeight * elementAspectRatio;
-          offsetX = (containerWidth - drawWidth) / 2;
-        } else {
-          drawHeight = containerWidth / elementAspectRatio;
-          offsetY = (containerHeight - drawHeight) / 2;
-        }
-      } else if (objectFit === 'contain') {
-        if (elementAspectRatio > containerAspectRatio) {
-          drawHeight = containerWidth / elementAspectRatio;
-          offsetY = (containerHeight - drawHeight) / 2;
-        } else {
-          drawWidth = containerHeight * elementAspectRatio;
-          offsetX = (containerWidth - drawWidth) / 2;
-        }
-      }
-      return { drawWidth, drawHeight, offsetX, offsetY };
-    };
-
-    try {
-      const threeParams = calculateDrawParams(threeCanvas, 'cover');
-      if (threeParams) {
-        context.drawImage(
-          threeCanvas,
-          threeParams.offsetX,
-          threeParams.offsetY,
-          threeParams.drawWidth,
-          threeParams.drawHeight
-        );
-        logDebug('func1: threeCanvas drawn.');
-      } else {
-        logDebug('func1: threeParams calculation failed.');
-      }
-    } catch (error) {
-      logDebug('func1: Error capturing image: ' + error);
-    }
-  };
-
-  function closeModal() {
-    setIsOpen(false);
-  }
-  function closeSaveModal() {
-    if (foto) {
-      shareOrDownloadImage(foto);
-      setIsOpen(false);
-    }
-  }
-  const shareOrDownloadImage = (blob: Blob): void => {
-    if (
-      navigator.canShare &&
-      navigator.canShare({ files: [new File([blob], 'moon.png', { type: blob.type })] })
-    ) {
-      const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
-        type: 'image/png',
-      });
-      navigator
-        .share({
-          files: [file],
-          title: 'My Captured Image',
-          text: 'Check out this captured photo!',
-        })
-        .catch((error) => {
-          logDebug('Sharing failed: ' + error);
-        });
-    } else {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `camera-frame-${new Date().getTime()}.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  useEffect(() => {
-    const func = async () => {
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        stream.getTracks().forEach((track) => track.stop());
-        xrStoreRef.current = createXRStore();
-        logDebug('UserMedia test succeeded.');
-      } catch (err) {
-        logDebug('UserMedia test failed: ' + err);
-      }
-    };
-
-    func();
-    onTest();
-  }, []);
-
-  const onTest = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      logDebug('onTest: Stopped previous stream.');
-    }
-    if (xrStoreRef.current) {
-      xrStoreRef.current.getState().session?.end();
-      xrStoreRef.current.destroy();
-      xrStoreRef.current = null;
-      logDebug('onTest: Previous XR session ended.');
-    }
-    xrStoreRef.current = createXRStore();
-    setTimeout(() => {
-      setMount(true);
-      logDebug('onTest: Mount set to true.');
-    }, 2000);
-  };
-
-  return (
-    <>
-      {isIOS ? (
-        <NftAppT3 />
-      ) : mount ? (
-        <>
-          <ARCanvas
-            xrStoreRef={xrStoreRef}
-            setSessionStarted={setSessionStarted}
-            show={show}
-            sessionStarted={sessionStarted}
-            modalIsOpen={modalIsOpen}
-            openModal={() => {
-              func1();
-              setMount(false);
-            }}
-            closeModal={closeModal}
-            closeSaveModal={closeSaveModal}
-            setShow={setShow}
-            domWidth={domWidth}
-            domHeight={domHeight}
-            circleX={circleX}
-            circleY={circleY}
-            circleR={circleR}
-            circleColor={circleColor}
-            draw={func1}
-            canvasRef={offCanvasRef}
-            logDebug={logDebug}
-          />
-        </>
-      ) : (
-        <>
-          <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
-          {isMount && (
-            <ModalU
-              isMount={isMount}
-              modalIsOpen={modalIsOpen}
-              setFoto={setFoto}
-              closeModal={onTest}
-              closeSaveModal={closeSaveModal}
-              canvasRef={offCanvasRef}
-              logDebug={logDebug}
-            />
-          )}
-        </>
-      )}
-      {/* 디버깅 로그 패널 */}
-      <DebugPanel logs={debugLogs} />
-    </>
-  );
-}
-
-//
-// ModalU 컴포넌트 (캡쳐된 이미지를 미리보기 및 재촬영/저장 버튼 제공)
-//
-const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMount, logDebug }: any) {
+// ModalU 컴포넌트: offscreen 캔버스를 상위에서 전달받아 캡쳐 진행
+const ModalU = function ({
+  closeModal,
+  closeSaveModal,
+  setFoto,
+  offscreenCanvas,
+  logDebug,
+  isMount,
+}: any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const captureImage = () => {
-      // video 요소와 container를 먼저 가져옵니다.
       const videoElement: HTMLVideoElement | null = document.querySelector('#three-video');
       const container = videoElement?.parentElement || null;
       if (!container || !videoElement) {
         logDebug('ModalU: Required video or container elements not ready.');
         return;
       }
-      // 캔버스 오버레이(또는 offscreen 캔버스)를 준비합니다.
-      if (!canvasRef.current) {
-        logDebug('ModalU: canvasRef.current is null, delaying capture...');
-        // 500ms 후에 다시 시도
+
+      if (!offscreenCanvas) {
+        logDebug('ModalU: offscreenCanvas is null, delaying capture...');
         timeoutId = setTimeout(captureImage, 500);
         return;
       }
@@ -603,22 +327,21 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
       const devicePixelRatio = window.devicePixelRatio || 1;
-      const offscreenCanvas = document.createElement('canvas');
+
+      // offscreen 캔버스 크기 재설정
       offscreenCanvas.width = containerWidth * devicePixelRatio;
       offscreenCanvas.height = containerHeight * devicePixelRatio;
       const context = offscreenCanvas.getContext('2d');
       if (!context) {
-        logDebug('ModalU: Failed to create canvas context.');
+        logDebug('ModalU: Failed to get offscreen canvas context.');
         return;
       }
       context.scale(devicePixelRatio, devicePixelRatio);
 
-      // draw parameters 계산 함수
       const calculateDrawParams = (
         element: HTMLVideoElement | HTMLCanvasElement,
         objectFit: 'cover' | 'contain'
       ) => {
-        // element가 null인 경우를 방지
         if (!element) return null;
         const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
         const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
@@ -651,8 +374,6 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
 
       try {
         const videoParams = calculateDrawParams(videoElement, 'cover');
-        let canvasParams = calculateDrawParams(canvasRef.current, 'cover');
-
         if (videoParams) {
           context.drawImage(
             videoElement,
@@ -662,19 +383,7 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
             videoParams.drawHeight
           );
           logDebug('ModalU: Video drawn on offscreen canvas.');
-
-          if (canvasRef.current && canvasParams) {
-            context.drawImage(
-              canvasRef.current,
-              canvasParams.offsetX,
-              canvasParams.offsetY,
-              canvasParams.drawWidth,
-              canvasParams.drawHeight
-            );
-            logDebug('ModalU: Offscreen canvas overlay drawn.');
-          }
         }
-
         offscreenCanvas.toBlob((blob: Blob | null) => {
           if (blob) {
             setFoto(blob);
@@ -693,32 +402,210 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
       }
     };
 
-    // 최초 시도: 1초 후에 캡쳐 시도
-    timeoutId = setTimeout(captureImage, 1000);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [isMount, canvasRef.current]);
-
+    if (isMount) {
+      timeoutId = setTimeout(captureImage, 1000);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [isMount, offscreenCanvas]);
 
   return (
-    <div style={{ ...customStyles, display: 'block', position: 'fixed' }}>
+    <div style={{ ...customStyles, position: 'fixed' }}>
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {fotoUrl && (
-            <img style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 999999 }} src={fotoUrl} alt="캡쳐 이미지" />
+            <img style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={fotoUrl} alt="캡쳐 이미지" />
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={closeModal} style={{ flex: 1 }}>
-            다시찍기
-          </button>
-          <button onClick={closeSaveModal} style={{ flex: 1 }}>
-            저장하기
-          </button>
+          <button onClick={closeModal} style={{ flex: 1 }}>다시찍기</button>
+          <button onClick={closeSaveModal} style={{ flex: 1 }}>저장하기</button>
         </div>
       </div>
     </div>
   );
 };
+
+// shareOrDownloadImage 함수: Blob을 공유하거나 다운로드
+const shareOrDownloadImage = (blob: Blob, logDebug: (msg: string) => void): void => {
+  if (
+    navigator.canShare &&
+    navigator.canShare({ files: [new File([blob], 'capture.png', { type: blob.type })] })
+  ) {
+    const file = new File([blob], `capture-${new Date().getTime()}.png`, {
+      type: 'image/png',
+    });
+    navigator
+      .share({
+        files: [file],
+        title: 'My Captured Image',
+        text: 'Check out this captured photo!',
+      })
+      .catch((error) => {
+        logDebug('Sharing failed: ' + error);
+      });
+  } else {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `capture-${new Date().getTime()}.png`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
+// DebugPanel 컴포넌트: 디버그 로그 출력
+const DebugPanel = ({ logs }: { logs: string[] }) => {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        maxHeight: '40%',
+        overflowY: 'auto',
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        fontSize: '12px',
+        padding: '8px',
+        zIndex: 11000,
+      }}
+    >
+      <div><strong>Debug Logs:</strong></div>
+      {logs.map((log, index) => (
+        <div key={index}>{log}</div>
+      ))}
+    </div>
+  );
+};
+
+// BasicApp: offscreen 캔버스를 상태로 관리하고 전체 UI를 렌더링
+export default function BasicApp() {
+  const xrStoreRef = useRef<any>(null);
+  const [mount, setMount] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [modalIsOpen, setIsOpen] = useState(false);
+  const [foto, setFoto] = useState<Blob | null>(null);
+  const [show, setShow] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [isMount, setIsMount] = useState(false);
+
+  // offscreen 캔버스를 상태로 관리 (초기 null)
+  const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
+
+  // 디버그 로그 상태
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const logDebug = (msg: string) => {
+    console.log(msg);
+    setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  };
+
+  const domWidth = 360;
+  const domHeight = 640;
+  const circleX = domWidth / 2;
+  const circleY = domHeight / 2;
+  const circleR = 100;
+  const circleColor = 'blue';
+
+  // onTest: XRStore 초기화 및 마운트 상태 전환
+  const onTest = () => {
+    if (xrStoreRef.current) {
+      xrStoreRef.current.getState().session?.end();
+      xrStoreRef.current.destroy();
+      xrStoreRef.current = null;
+      logDebug('onTest: Previous XR session ended.');
+    }
+    xrStoreRef.current = createXRStore();
+    setTimeout(() => {
+      setMount(true);
+      logDebug('onTest: Mount set to true.');
+    }, 2000);
+  };
+
+  // closeSaveModal: 사진 저장(공유 또는 다운로드) 처리
+  const handleCloseSaveModal = () => {
+    if (foto) {
+      shareOrDownloadImage(foto, logDebug);
+    } else {
+      logDebug('handleCloseSaveModal: No image to share/download.');
+    }
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const func = async () => {
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream.getTracks().forEach((track) => track.stop());
+        xrStoreRef.current = createXRStore();
+        logDebug('UserMedia test succeeded.');
+      } catch (err) {
+        logDebug('UserMedia test failed: ' + err);
+      }
+    };
+
+    func();
+    onTest();
+  }, []);
+
+  return (
+    <>
+      {isIOS ? (
+        // iOS 기기에서는 기존 iOS 전용 컴포넌트 렌더링
+        <NftAppT3 />
+      ) : mount ? (
+        <>
+          <ARCanvas
+            xrStoreRef={xrStoreRef}
+            setSessionStarted={setSessionStarted}
+            show={show}
+            sessionStarted={sessionStarted}
+            modalIsOpen={modalIsOpen}
+            openModal={() => {
+              // 캡쳐 후 모달 열기
+              setIsOpen(true);
+            }}
+            closeModal={() => setIsOpen(false)}
+            closeSaveModal={handleCloseSaveModal}
+            setShow={setShow}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            circleColor={circleColor}
+            setOffscreenCanvas={setOffscreenCanvas}
+            logDebug={logDebug}
+          />
+        </>
+      ) : (
+        <>
+          <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
+          {isMount && (
+            <ModalU
+              isMount={isMount}
+              modalIsOpen={modalIsOpen}
+              setFoto={setFoto}
+              closeModal={() => {
+                setIsOpen(false);
+                onTest();
+              }}
+              closeSaveModal={handleCloseSaveModal}
+              offscreenCanvas={offscreenCanvas}
+              logDebug={logDebug}
+            />
+          )}
+        </>
+      )}
+      <DebugPanel logs={debugLogs} />
+    </>
+  );
+}
