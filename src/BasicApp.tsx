@@ -2,12 +2,12 @@
 import { Canvas } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Suspense, useEffect, useState } from 'react';
+import Modal from 'react-modal';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
-import { xrStore } from './components/Layout';
-import Capture from './assets/icons/Capture';
 import Back from './assets/icons/Back';
-import Modal from 'react-modal';
+import Capture from './assets/icons/Capture';
+import { xrStore } from './components/Layout';
 
 const customStyles = {
   overlay: {
@@ -231,7 +231,7 @@ export default function BasicApp() {
   /**
  * XR 모드에서 보이는 최종 화면(WebGL 캔버스 전체)을 캡쳐하여 PNG Blob으로 반환합니다.
  */
-  const captureImage = async (): Promise<Blob | null> => {
+  const captureImage = () => {
     // Three.js 캔버스 요소를 선택합니다.
     // react-three/ar의 경우 SlamCanvas 내부에 있는 canvas를 선택할 수 있습니다.
     const threeCanvas = document.querySelector('#three-canvas canvas') as HTMLCanvasElement | null;
@@ -262,18 +262,26 @@ export default function BasicApp() {
     context.drawImage(threeCanvas, 0, 0, canvasWidth, canvasHeight);
 
     // 최종 캡쳐한 이미지를 PNG Blob으로 변환합니다.
-    return new Promise<Blob | null>((resolve) => {
-      offscreenCanvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          resolve(null);
-        }
-      }, 'image/png');
-    });
+    offscreenCanvas.toBlob((blob) => {
+      if (blob) {
+        setFoto(blob);
+      } else {
+        setFoto(null);
+      }
+    }, 'image/png');
+
   };
 
 
+  useEffect(() => {
+    if (foto) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFotoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(foto);
+    }
+  }, [foto]);
 
   return (
     <>
