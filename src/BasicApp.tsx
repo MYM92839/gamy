@@ -306,10 +306,10 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
               console.error('Video play error:', err)
             );
 
-         id=   setTimeout(()=>{
+            id = setTimeout(() => {
               setIsMount(true)
 
-            },1000)
+            }, 1000)
           };
         }
       })
@@ -321,7 +321,7 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
         streamRef.current.getTracks().forEach((track: any) => track.stop());
         streamRef.current = null
       }
-      if(id){
+      if (id) {
         clearTimeout(id)
       }
 
@@ -628,115 +628,118 @@ export default function BasicApp() {
 const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasRef, isMount }: any) {
 
   useEffect(() => {
-    const func = ()=>{
-    if (isMount) {
-      const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
-      // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-      //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-      const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+    const func = () => {
+      if (isMount) {
+        const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
+        // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+        //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+        const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
 
-      if (!container || !videoElement) {
-        console.warn('Required elements not ready');
-        return;
-      }
-
-      // 캔버스 크기 설정
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      const devicePixelRatio = window.devicePixelRatio || 1;
-
-      const offscreenCanvas = document.createElement('canvas');
-      offscreenCanvas.width = containerWidth * devicePixelRatio;
-      offscreenCanvas.height = containerHeight * devicePixelRatio;
-
-      const context = offscreenCanvas.getContext('2d');
-      if (!context) {
-        console.error('Failed to create canvas context.');
-        return;
-      }
-
-      // 고해상도 지원
-      context.scale(devicePixelRatio, devicePixelRatio);
-
-      // Helper function to calculate draw parameters
-      const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
-        const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-        const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
-
-        if (elementWidth === 0 || elementHeight === 0) return null;
-
-        const elementAspectRatio = elementWidth / elementHeight;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        let drawWidth = containerWidth;
-        let drawHeight = containerHeight;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (objectFit === 'cover') {
-          if (elementAspectRatio > containerAspectRatio) {
-            drawWidth = containerHeight * elementAspectRatio;
-            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-          } else {
-            drawHeight = containerWidth / elementAspectRatio;
-            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-          }
-        } else if (objectFit === 'contain') {
-          if (elementAspectRatio > containerAspectRatio) {
-            drawHeight = containerWidth / elementAspectRatio;
-            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-          } else {
-            drawWidth = containerHeight * elementAspectRatio;
-            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-          }
+        if (!container || !videoElement) {
+          console.warn('Required elements not ready');
+          return;
         }
 
-        return { drawWidth, drawHeight, offsetX, offsetY };
-      };
+        // 캔버스 크기 설정
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        const devicePixelRatio = window.devicePixelRatio || 1;
 
-      try {
-        // Step 1: 비디오를 캔버스에 그리기
-        const videoParams = calculateDrawParams(videoElement, 'cover');
-        if (videoParams) {
-          context.drawImage(
-            videoElement,
-            videoParams.offsetX,
-            videoParams.offsetY,
-            videoParams.drawWidth,
-            videoParams.drawHeight
-          );
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = containerWidth * devicePixelRatio;
+        offscreenCanvas.height = containerHeight * devicePixelRatio;
 
-          if (canvasRef.current) {
+        const context = offscreenCanvas.getContext('2d');
+        if (!context) {
+          console.error('Failed to create canvas context.');
+          return;
+        }
+
+        // 고해상도 지원
+        context.scale(devicePixelRatio, devicePixelRatio);
+
+        // Helper function to calculate draw parameters
+        const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+          const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+          const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+
+          if (elementWidth === 0 || elementHeight === 0) return null;
+
+          const elementAspectRatio = elementWidth / elementHeight;
+          const containerAspectRatio = containerWidth / containerHeight;
+
+          let drawWidth = containerWidth;
+          let drawHeight = containerHeight;
+          let offsetX = 0;
+          let offsetY = 0;
+
+          if (objectFit === 'cover') {
+            if (elementAspectRatio > containerAspectRatio) {
+              drawWidth = containerHeight * elementAspectRatio;
+              offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+            } else {
+              drawHeight = containerWidth / elementAspectRatio;
+              offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+            }
+          } else if (objectFit === 'contain') {
+            if (elementAspectRatio > containerAspectRatio) {
+              drawHeight = containerWidth / elementAspectRatio;
+              offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+            } else {
+              drawWidth = containerHeight * elementAspectRatio;
+              offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+            }
+          }
+
+          return { drawWidth, drawHeight, offsetX, offsetY };
+        };
+
+        try {
+          // Step 1: 비디오를 캔버스에 그리기
+          const videoParams = calculateDrawParams(videoElement, 'cover');
+          const canvasParams = calculateDrawParams(canvasRef.current, 'cover');
+
+          if (videoParams) {
             context.drawImage(
-              canvasRef.current,
+              videoElement,
               videoParams.offsetX,
               videoParams.offsetY,
               videoParams.drawWidth,
               videoParams.drawHeight
-            )
+            );
+
+            if (canvasRef.current && canvasParams) {
+              context.drawImage(
+                canvasRef.current,
+                canvasParams.offsetX,
+                canvasParams.offsetY,
+                canvasParams.drawWidth,
+                canvasParams.drawHeight
+              )
+            }
           }
+
+          // Step 3: 최종 이미지를 PNG로 저장
+          offscreenCanvas.toBlob((blob: any) => {
+            if (blob) {
+              setFoto(blob);
+            }
+          }, 'image/png');
+        } catch (error) {
+          console.error('Error capturing image:', error);
         }
-
-        // Step 3: 최종 이미지를 PNG로 저장
-        offscreenCanvas.toBlob((blob: any) => {
-          if (blob) {
-            setFoto(blob);
-          }
-        }, 'image/png');
-      } catch (error) {
-        console.error('Error capturing image:', error);
       }
-    }}
+    }
 
-  let id
+    let id
 
-  id=setTimeout(()=>{
-    func()
-  },1000)
+    id = setTimeout(() => {
+      func()
+    }, 1000)
 
-  return ()=>{
-    if(id)clearTimeout(id)
-  }
+    return () => {
+      if (id) clearTimeout(id)
+    }
   }, [isMount])
 
   return (
