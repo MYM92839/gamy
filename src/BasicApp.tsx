@@ -71,7 +71,7 @@ const UIOverlay = ({
   circleColor,
 }: {
   modalIsOpen: boolean;
-  fotoUrl: string;
+  fotoUrl: string; // 사용하지 않음(미리보기 이미지 관련)
   openModal: () => void;
   closeModal: () => void;
   closeSaveModal: () => void;
@@ -218,7 +218,7 @@ function ARCanvas(props: any) {
           <XRDomOverlay>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
-              fotoUrl={props.fotoUrl}
+              fotoUrl={''} // 미사용
               openModal={props.openModal}
               closeModal={props.closeModal}
               closeSaveModal={props.closeSaveModal}
@@ -311,6 +311,7 @@ const ModalU = function ({
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const captureImage = () => {
+      // 여기서는 video 요소와 offscreenCanvas를 이용해 캡쳐 진행
       const videoElement: HTMLVideoElement | null = document.querySelector('#three-video');
       const container = videoElement?.parentElement || null;
       if (!container || !videoElement) {
@@ -328,7 +329,7 @@ const ModalU = function ({
       const containerHeight = container.clientHeight;
       const devicePixelRatio = window.devicePixelRatio || 1;
 
-      // offscreen 캔버스 크기 재설정
+      // offscreen 캔버스 크기 재설정 및 드로잉 (ModalU에서는 video의 내용만 캡쳐)
       offscreenCanvas.width = containerWidth * devicePixelRatio;
       offscreenCanvas.height = containerHeight * devicePixelRatio;
       const context = offscreenCanvas.getContext('2d');
@@ -338,68 +339,24 @@ const ModalU = function ({
       }
       context.scale(devicePixelRatio, devicePixelRatio);
 
-      const calculateDrawParams = (
-        element: HTMLVideoElement | HTMLCanvasElement,
-        objectFit: 'cover' | 'contain'
-      ) => {
-        if (!element) return null;
-        const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-        const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
-        if (elementWidth === 0 || elementHeight === 0) return null;
-        const elementAspectRatio = elementWidth / elementHeight;
-        const containerAspectRatio = containerWidth / containerHeight;
-        let drawWidth = containerWidth;
-        let drawHeight = containerHeight;
-        let offsetX = 0;
-        let offsetY = 0;
-        if (objectFit === 'cover') {
-          if (elementAspectRatio > containerAspectRatio) {
-            drawWidth = containerHeight * elementAspectRatio;
-            offsetX = (containerWidth - drawWidth) / 2;
-          } else {
-            drawHeight = containerWidth / elementAspectRatio;
-            offsetY = (containerHeight - drawHeight) / 2;
-          }
-        } else if (objectFit === 'contain') {
-          if (elementAspectRatio > containerAspectRatio) {
-            drawHeight = containerWidth / elementAspectRatio;
-            offsetY = (containerHeight - drawHeight) / 2;
-          } else {
-            drawWidth = containerHeight * elementAspectRatio;
-            offsetX = (containerWidth - drawWidth) / 2;
-          }
-        }
-        return { drawWidth, drawHeight, offsetX, offsetY };
-      };
+      // video 요소를 offscreen 캔버스에 그림
+      context.drawImage(videoElement, 0, 0, containerWidth, containerHeight);
+      logDebug('ModalU: Video drawn on offscreen canvas.');
 
-      try {
-        const videoParams = calculateDrawParams(videoElement, 'cover');
-        if (videoParams) {
-          context.drawImage(
-            videoElement,
-            videoParams.offsetX,
-            videoParams.offsetY,
-            videoParams.drawWidth,
-            videoParams.drawHeight
-          );
-          logDebug('ModalU: Video drawn on offscreen canvas.');
+      // offscreen 캔버스를 Blob으로 변환
+      offscreenCanvas.toBlob((blob: Blob | null) => {
+        if (blob) {
+          setFoto(blob);
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onload = () => {
+            setFotoUrl(reader.result as string);
+            logDebug('ModalU: Captured image blob converted to URL.');
+          };
+        } else {
+          logDebug('ModalU: toBlob returned null.');
         }
-        offscreenCanvas.toBlob((blob: Blob | null) => {
-          if (blob) {
-            setFoto(blob);
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onload = () => {
-              setFotoUrl(reader.result as string);
-              logDebug('ModalU: Captured image blob converted to URL.');
-            };
-          } else {
-            logDebug('ModalU: toBlob returned null.');
-          }
-        }, 'image/png');
-      } catch (error) {
-        logDebug('ModalU: Error capturing image: ' + error);
-      }
+      }, 'image/png');
     };
 
     if (isMount) {
@@ -522,6 +479,33 @@ export default function BasicApp() {
     }, 2000);
   };
 
+  // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 그린 후,
+  // ARCanvas를 언마운트하기 위해 mount를 false로 전환
+  const captureARContent = () => {
+    const threeCanvas = document.querySelector('#three-canvas') as HTMLCanvasElement;
+    if (!threeCanvas) {
+      logDebug('captureARContent: threeCanvas not found.');
+      return;
+    }
+    const containerWidth = threeCanvas.clientWidth;
+    const containerHeight = threeCanvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (offscreenCanvas) {
+      offscreenCanvas.width = containerWidth * dpr;
+      offscreenCanvas.height = containerHeight * dpr;
+      const ctx = offscreenCanvas.getContext('2d');
+      if (!ctx) {
+        logDebug('captureARContent: Failed to get offscreen canvas context.');
+        return;
+      }
+      ctx.scale(dpr, dpr);
+      ctx.drawImage(threeCanvas, 0, 0, containerWidth, containerHeight);
+      logDebug('captureARContent: AR content captured to offscreen canvas.');
+    } else {
+      logDebug('captureARContent: offscreenCanvas is null.');
+    }
+  };
+
   // closeSaveModal: 사진 저장(공유 또는 다운로드) 처리
   const handleCloseSaveModal = () => {
     if (foto) {
@@ -570,7 +554,11 @@ export default function BasicApp() {
             sessionStarted={sessionStarted}
             modalIsOpen={modalIsOpen}
             openModal={() => {
-              // 캡쳐 후 모달 열기
+              // ARCanvas에서 캡쳐 버튼 클릭 시,
+              // 먼저 AR 콘텐츠를 offscreen 캔버스에 복사한 후,
+              // mount 상태를 false로 변경해 ARCanvas를 언마운트하고 ModalU를 렌더링함.
+              captureARContent();
+              setMount(false);
               setIsOpen(true);
             }}
             closeModal={() => setIsOpen(false)}
