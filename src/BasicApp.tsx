@@ -40,14 +40,14 @@ const createOffscreenCanvas = (width: number, height: number, devicePixelRatio: 
 /////////////////////////
 // XR 세션 클린업 함수
 /////////////////////////
-const cleanupXRSession = (xrStoreRef: any, logDebug: (msg: string) => void) => {
-  if (xrStoreRef.current) {
-    xrStoreRef.current.getState().session?.end();
-    xrStoreRef.current.destroy();
-    xrStoreRef.current = null;
-    logDebug('cleanupXRSession: XR session ended and destroyed.');
-  }
-};
+// const cleanupXRSession = (xrStoreRef: any, logDebug: (msg: string) => void) => {
+//   if (xrStoreRef.current) {
+//     xrStoreRef.current.getState().session?.end();
+//     xrStoreRef.current.destroy();
+//     xrStoreRef.current = null;
+//     logDebug('cleanupXRSession: XR session ended and destroyed.');
+//   }
+// };
 
 /////////////////////////
 // Scene 컴포넌트 (three.js 콘텐츠)
@@ -322,36 +322,36 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
 // captureARContent 함수
 /////////////////////////
 // [data-webxr_runtime]의 마지막 자식 캔버스를 선택하여 offscreenCanvas에 AR 콘텐츠를 복사
-const captureARContent = (offscreenCanvas: HTMLCanvasElement | null, logDebug: (msg: string) => void) => {
-  const container = document.querySelector('[data-webxr_runtime]');
-  if (!container) {
-    logDebug('captureARContent: data-webxr_runtime container not found.');
-    return;
-  }
-  const lastChild = container.lastElementChild;
-  if (!(lastChild instanceof HTMLCanvasElement)) {
-    logDebug('captureARContent: Last child is not a canvas element.');
-    return;
-  }
-  const threeCanvas = lastChild;
-  const containerWidth = threeCanvas.clientWidth;
-  const containerHeight = threeCanvas.clientHeight;
-  const dpr = window.devicePixelRatio || 1;
-  if (offscreenCanvas) {
-    offscreenCanvas.width = containerWidth * dpr;
-    offscreenCanvas.height = containerHeight * dpr;
-    const ctx = offscreenCanvas.getContext('2d');
-    if (!ctx) {
-      logDebug('captureARContent: Failed to get offscreen canvas context.');
-      return;
-    }
-    ctx.scale(dpr, dpr);
-    ctx.drawImage(threeCanvas, 0, 0, containerWidth, containerHeight);
-    logDebug('captureARContent: AR content captured to offscreen canvas.');
-  } else {
-    logDebug('captureARContent: offscreenCanvas is null.');
-  }
-};
+// const captureARContent = (offscreenCanvas: HTMLCanvasElement | null, logDebug: (msg: string) => void) => {
+//   const container = document.querySelector('[data-webxr_runtime]');
+//   if (!container) {
+//     logDebug('captureARContent: data-webxr_runtime container not found.');
+//     return;
+//   }
+//   const lastChild = container.lastElementChild;
+//   if (!(lastChild instanceof HTMLCanvasElement)) {
+//     logDebug('captureARContent: Last child is not a canvas element.');
+//     return;
+//   }
+//   const threeCanvas = lastChild;
+//   const containerWidth = threeCanvas.clientWidth;
+//   const containerHeight = threeCanvas.clientHeight;
+//   const dpr = window.devicePixelRatio || 1;
+//   if (offscreenCanvas) {
+//     offscreenCanvas.width = containerWidth * dpr;
+//     offscreenCanvas.height = containerHeight * dpr;
+//     const ctx = offscreenCanvas.getContext('2d');
+//     if (!ctx) {
+//       logDebug('captureARContent: Failed to get offscreen canvas context.');
+//       return;
+//     }
+//     ctx.scale(dpr, dpr);
+//     ctx.drawImage(threeCanvas, 0, 0, containerWidth, containerHeight);
+//     logDebug('captureARContent: AR content captured to offscreen canvas.');
+//   } else {
+//     logDebug('captureARContent: offscreenCanvas is null.');
+//   }
+// };
 
 /////////////////////////
 // ModalU 컴포넌트
