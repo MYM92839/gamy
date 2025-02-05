@@ -286,7 +286,6 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    let id: string | number | NodeJS.Timeout | undefined
     navigator.mediaDevices
       .getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
@@ -306,10 +305,8 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
               console.error('Video play error:', err)
             );
 
-            id = setTimeout(() => {
               setIsMount(true)
 
-            }, 1000)
           };
         }
       })
@@ -320,9 +317,6 @@ function BackgroundVideo({ streamRef, setIsMount }: any) {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track: any) => track.stop());
         streamRef.current = null
-      }
-      if (id) {
-        clearTimeout(id)
       }
 
     }
@@ -735,7 +729,7 @@ const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasR
 
     id = setTimeout(() => {
       func()
-    }, 1000)
+    }, 2000)
 
     return () => {
       if (id) clearTimeout(id)
