@@ -37,7 +37,21 @@ const createOffscreenCanvas = (width: number, height: number, devicePixelRatio: 
   return canvas;
 };
 
-// Scene 컴포넌트: 예시로 박스를 표시
+/////////////////////////
+// XR 세션 클린업 함수
+/////////////////////////
+const cleanupXRSession = (xrStoreRef: any, logDebug: (msg: string) => void) => {
+  if (xrStoreRef.current) {
+    xrStoreRef.current.getState().session?.end();
+    xrStoreRef.current.destroy();
+    xrStoreRef.current = null;
+    logDebug('cleanupXRSession: XR session ended and destroyed.');
+  }
+};
+
+/////////////////////////
+// Scene 컴포넌트 (three.js 콘텐츠)
+/////////////////////////
 function Scene({ visible }: { visible: boolean }) {
   return (
     <>
@@ -57,7 +71,9 @@ function Scene({ visible }: { visible: boolean }) {
   );
 }
 
-// UIOverlay 컴포넌트 (기존 UI 버튼 등)
+/////////////////////////
+// UIOverlay 컴포넌트 (기존 UI 버튼)
+/////////////////////////
 const UIOverlay = ({
   modalIsOpen,
   openModal,
@@ -71,7 +87,7 @@ const UIOverlay = ({
   circleColor,
 }: {
   modalIsOpen: boolean;
-  fotoUrl: string; // 사용하지 않음(미리보기 이미지 관련)
+  fotoUrl: string; // 미사용
   openModal: () => void;
   closeModal: () => void;
   closeSaveModal: () => void;
@@ -164,7 +180,9 @@ const UIOverlay = ({
   );
 };
 
-// ARCanvas 컴포넌트
+/////////////////////////
+// ARCanvas 컴포넌트 (XR 세션에서 three.js 콘텐츠 렌더링)
+/////////////////////////
 function ARCanvas(props: any) {
   const { setOffscreenCanvas, logDebug } = props;
   const [init, setInit] = useState(false);
@@ -183,9 +201,7 @@ function ARCanvas(props: any) {
       }
     };
     if (init) {
-      id = setTimeout(() => {
-        func();
-      }, 1000);
+      id = setTimeout(func, 1000);
     }
     return () => clearTimeout(id);
   }, [init]);
@@ -207,7 +223,11 @@ function ARCanvas(props: any) {
           logDebug('Canvas created, init set to true.');
 
           // offscreen 캔버스 생성 후 상위 상태에 저장
-          const offscreen = createOffscreenCanvas(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+          const offscreen = createOffscreenCanvas(
+            window.innerWidth,
+            window.innerHeight,
+            window.devicePixelRatio || 1
+          );
           setOffscreenCanvas(offscreen);
           logDebug('Offscreen canvas created in ARCanvas.');
         }}
@@ -238,7 +258,9 @@ function ARCanvas(props: any) {
   );
 }
 
-// BackgroundVideo: 사용자 카메라 피드를 표시
+/////////////////////////
+// BackgroundVideo 컴포넌트 (사용자 카메라 스트림)
+/////////////////////////
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -296,7 +318,45 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   );
 }
 
-// ModalU 컴포넌트: offscreen 캔버스를 상위에서 전달받아 캡쳐 진행
+/////////////////////////
+// captureARContent 함수
+/////////////////////////
+// [data-webxr_runtime]의 마지막 자식 캔버스를 선택하여 offscreenCanvas에 AR 콘텐츠를 복사
+const captureARContent = (offscreenCanvas: HTMLCanvasElement | null, logDebug: (msg: string) => void) => {
+  const container = document.querySelector('[data-webxr_runtime]');
+  if (!container) {
+    logDebug('captureARContent: data-webxr_runtime container not found.');
+    return;
+  }
+  const lastChild = container.lastElementChild;
+  if (!(lastChild instanceof HTMLCanvasElement)) {
+    logDebug('captureARContent: Last child is not a canvas element.');
+    return;
+  }
+  const threeCanvas = lastChild;
+  const containerWidth = threeCanvas.clientWidth;
+  const containerHeight = threeCanvas.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  if (offscreenCanvas) {
+    offscreenCanvas.width = containerWidth * dpr;
+    offscreenCanvas.height = containerHeight * dpr;
+    const ctx = offscreenCanvas.getContext('2d');
+    if (!ctx) {
+      logDebug('captureARContent: Failed to get offscreen canvas context.');
+      return;
+    }
+    ctx.scale(dpr, dpr);
+    ctx.drawImage(threeCanvas, 0, 0, containerWidth, containerHeight);
+    logDebug('captureARContent: AR content captured to offscreen canvas.');
+  } else {
+    logDebug('captureARContent: offscreenCanvas is null.');
+  }
+};
+
+/////////////////////////
+// ModalU 컴포넌트
+/////////////////////////
+// ModalU에서는 이미 captureARContent로 캡쳐된 offscreenCanvas의 내용을 그대로 Blob으로 변환하여 표시합니다.
 const ModalU = function ({
   closeModal,
   closeSaveModal,
@@ -311,17 +371,17 @@ const ModalU = function ({
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const captureImage = () => {
-      // 여기서는 video 요소와 offscreenCanvas를 이용해 캡쳐 진행
-      const videoElement: HTMLVideoElement | null = document.querySelector('#three-video');
-      const container = videoElement?.parentElement || null;
-      if (!container || !videoElement) {
-        logDebug('ModalU: Required video or container elements not ready.');
-        return;
-      }
-
       if (!offscreenCanvas) {
         logDebug('ModalU: offscreenCanvas is null, delaying capture...');
         timeoutId = setTimeout(captureImage, 500);
+        return;
+      }
+      const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
+
+      const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+
+      if (!container || !videoElement || !offscreenCanvas) {
+        console.warn('Required elements not ready');
         return;
       }
 
@@ -329,22 +389,80 @@ const ModalU = function ({
       const containerHeight = container.clientHeight;
       const devicePixelRatio = window.devicePixelRatio || 1;
 
-      // offscreen 캔버스 크기 재설정 및 드로잉 (ModalU에서는 video의 내용만 캡쳐)
-      offscreenCanvas.width = containerWidth * devicePixelRatio;
-      offscreenCanvas.height = containerHeight * devicePixelRatio;
-      const context = offscreenCanvas.getContext('2d');
+      const offscreenCanvas2 = document.createElement('canvas');
+      offscreenCanvas2.width = containerWidth * devicePixelRatio;
+      offscreenCanvas2.height = containerHeight * devicePixelRatio;
+
+      const context = offscreenCanvas2.getContext('2d');
       if (!context) {
-        logDebug('ModalU: Failed to get offscreen canvas context.');
+        console.error('Failed to create canvas context.');
         return;
       }
+
+      // 고해상도 지원
       context.scale(devicePixelRatio, devicePixelRatio);
 
-      // video 요소를 offscreen 캔버스에 그림
-      context.drawImage(videoElement, 0, 0, containerWidth, containerHeight);
-      logDebug('ModalU: Video drawn on offscreen canvas.');
+      const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+        const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+        const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
 
-      // offscreen 캔버스를 Blob으로 변환
-      offscreenCanvas.toBlob((blob: Blob | null) => {
+        if (elementWidth === 0 || elementHeight === 0) return null;
+
+        const elementAspectRatio = elementWidth / elementHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        let drawWidth = containerWidth;
+        let drawHeight = containerHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (objectFit === 'cover') {
+          if (elementAspectRatio > containerAspectRatio) {
+            drawWidth = containerHeight * elementAspectRatio;
+            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+          } else {
+            drawHeight = containerWidth / elementAspectRatio;
+            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+          }
+        } else if (objectFit === 'contain') {
+          if (elementAspectRatio > containerAspectRatio) {
+            drawHeight = containerWidth / elementAspectRatio;
+            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+          } else {
+            drawWidth = containerHeight * elementAspectRatio;
+            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+          }
+        }
+
+        return { drawWidth, drawHeight, offsetX, offsetY };
+      };
+
+     const videoParams = calculateDrawParams(videoElement, 'cover');
+     console.log('video/*  */',videoParams,videoElement,context)
+      if (videoParams) {
+        context.drawImage(
+          videoElement,
+          videoParams.offsetX,
+          videoParams.offsetY,
+          videoParams.drawWidth,
+          videoParams.drawHeight
+        );
+      }
+
+     // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
+      const threeParams = calculateDrawParams(offscreenCanvas, 'cover');
+      if (threeParams) {
+        context.drawImage(
+          offscreenCanvas,
+          threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight
+        );
+      }
+
+
+      offscreenCanvas2.toBlob((blob: Blob | null) => {
         if (blob) {
           setFoto(blob);
           const reader = new FileReader();
@@ -360,7 +478,7 @@ const ModalU = function ({
     };
 
     if (isMount) {
-      timeoutId = setTimeout(captureImage, 1000);
+      timeoutId = setTimeout(captureImage, 2000);
     }
     return () => clearTimeout(timeoutId);
   }, [isMount, offscreenCanvas]);
@@ -382,7 +500,9 @@ const ModalU = function ({
   );
 };
 
-// shareOrDownloadImage 함수: Blob을 공유하거나 다운로드
+/////////////////////////
+// shareOrDownloadImage 함수
+/////////////////////////
 const shareOrDownloadImage = (blob: Blob, logDebug: (msg: string) => void): void => {
   if (
     navigator.canShare &&
@@ -410,7 +530,9 @@ const shareOrDownloadImage = (blob: Blob, logDebug: (msg: string) => void): void
   }
 };
 
-// DebugPanel 컴포넌트: 디버그 로그 출력
+/////////////////////////
+// DebugPanel 컴포넌트
+/////////////////////////
 const DebugPanel = ({ logs }: { logs: string[] }) => {
   return (
     <div
@@ -436,7 +558,9 @@ const DebugPanel = ({ logs }: { logs: string[] }) => {
   );
 };
 
-// BasicApp: offscreen 캔버스를 상태로 관리하고 전체 UI를 렌더링
+/////////////////////////
+// BasicApp 컴포넌트
+/////////////////////////
 export default function BasicApp() {
   const xrStoreRef = useRef<any>(null);
   const [mount, setMount] = useState(false);
@@ -447,7 +571,7 @@ export default function BasicApp() {
   const streamRef = useRef<MediaStream | null>(null);
   const [isMount, setIsMount] = useState(false);
 
-  // offscreen 캔버스를 상태로 관리 (초기 null)
+  // offscreen 캔버스를 상태로 관리
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
 
   // 디버그 로그 상태
@@ -479,14 +603,19 @@ export default function BasicApp() {
     }, 2000);
   };
 
-  // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 그린 후,
-  // ARCanvas를 언마운트하기 위해 mount를 false로 전환
+  // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 복사
   const captureARContent = () => {
-    const threeCanvas = document.querySelector('#three-canvas') as HTMLCanvasElement;
-    if (!threeCanvas) {
-      logDebug('captureARContent: threeCanvas not found.');
+    const container = document.querySelector('[data-webxr_runtime]');
+    if (!container) {
+      logDebug('captureARContent: data-webxr_runtime container not found.');
       return;
     }
+    const lastChild = container.lastElementChild;
+    if (!(lastChild instanceof HTMLCanvasElement)) {
+      logDebug('captureARContent: Last child is not a canvas element.');
+      return;
+    }
+    const threeCanvas = lastChild;
     const containerWidth = threeCanvas.clientWidth;
     const containerHeight = threeCanvas.clientHeight;
     const dpr = window.devicePixelRatio || 1;
@@ -535,7 +664,6 @@ export default function BasicApp() {
         logDebug('UserMedia test failed: ' + err);
       }
     };
-
     func();
     onTest();
   }, []);
@@ -547,6 +675,7 @@ export default function BasicApp() {
         <NftAppT3 />
       ) : mount ? (
         <>
+          {/* XR 세션 중에는 BackgroundVideo는 렌더링하지 않고 ARCanvas만 표시 */}
           <ARCanvas
             xrStoreRef={xrStoreRef}
             setSessionStarted={setSessionStarted}
@@ -554,10 +683,18 @@ export default function BasicApp() {
             sessionStarted={sessionStarted}
             modalIsOpen={modalIsOpen}
             openModal={() => {
-              // ARCanvas에서 캡쳐 버튼 클릭 시,
-              // 먼저 AR 콘텐츠를 offscreen 캔버스에 복사한 후,
-              // mount 상태를 false로 변경해 ARCanvas를 언마운트하고 ModalU를 렌더링함.
+              // openModal 클릭 시:
+              // 1. XR 세션에서 three.js 캔버스 내용을 offscreen 캔버스에 복사
               captureARContent();
+              // 2. XR 세션 클린업 (기존 XR 세션 종료)
+              if (xrStoreRef.current) {
+                xrStoreRef.current.getState().session?.end();
+                xrStoreRef.current.destroy();
+                xrStoreRef.current = null;
+                logDebug('cleanupXRSession: XR session ended and destroyed.');
+              }
+              // 3. offscreenCanvas는 그대로 ModalU에서 사용
+              // 4. ARCanvas를 언마운트하여 ModalU를 렌더링
               setMount(false);
               setIsOpen(true);
             }}
@@ -576,6 +713,7 @@ export default function BasicApp() {
         </>
       ) : (
         <>
+          {/* XR 세션 종료 후 BackgroundVideo를 통해 유저 카메라 영상이 표시됨 */}
           <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
           {isMount && (
             <ModalU
