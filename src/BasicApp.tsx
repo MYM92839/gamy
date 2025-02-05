@@ -188,11 +188,14 @@ const UIOverlay = ({
 
 function ARHelper({ store }: any) {
   const [init, setInit] = useState(false);
+
   useEffect(() => {
     if (!init) setInit(true)
     return () => {
       const func = () => {
-        store.getState().session?.end()
+        store.current.getState().session?.end()
+        store.current.destroy()
+        store.current = null
       }
       if (init) func()
     }
@@ -201,7 +204,6 @@ function ARHelper({ store }: any) {
   return null
 }
 
-const xrStore = createXRStore();
 
 function ARCanvas(props: any) {
   const [init, setInit] = useState(false);
@@ -210,8 +212,10 @@ function ARCanvas(props: any) {
     let id: string | number | NodeJS.Timeout | undefined;
     const func = async () => {
       // VR 모드로 진입 (AR 대신 VR로 전환)
-      await xrStore.enterAR()
-      props.setSessionStarted(true);
+      if (props.xrStoreRef.current) {
+        await props.xrStoreRef.current.enterAR()
+        props.setSessionStarted(true);
+      }
     };
     if (init) {
       id = setTimeout(() => {
@@ -242,8 +246,8 @@ function ARCanvas(props: any) {
           setInit(true);
         }}
       >
-        <XR store={xrStore}>
-          <ARHelper store={xrStore} />
+        <XR store={props.xrStoreRef.current}>
+          <ARHelper store={props.xrStoreRef} />
           <XROrigin position={[0, 0.5, 0]} />
           {/* CameraZoomHandle를 사용하여 핀치/드래그 입력으로 카메라 zoom 제어 */}
           <Scene visible={props.sessionStarted && props.show} />
@@ -325,9 +329,9 @@ function BackgroundVideo() {
 // 메인 앱
 //
 export default function BasicApp() {
-
+  const xrStoreRef = useRef<any>/*  */(null)
   const [mount, setMount] = useState(false) // TODO: TEST
-  const [sessionStarted,] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
@@ -516,6 +520,7 @@ export default function BasicApp() {
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       stream.getTracks().forEach((track) => track.stop());
+      xrStoreRef.current = createXRStore()
 
       id = setTimeout(() => {
         setMount(true)
@@ -537,6 +542,9 @@ export default function BasicApp() {
       streamRef.current.getTracks().forEach((track) => track.stop());
     }
     streamRef.current = null
+
+    xrStoreRef.current = createXRStore()
+
     id = setTimeout(() => {
       setMount(true)
     }, 3000)
@@ -545,6 +553,10 @@ export default function BasicApp() {
       if (id) clearTimeout(id)
     }
   }
+
+  useEffect(() => {
+
+  }, [mount])
   return (
     <>
       {isIOS ? (
@@ -554,7 +566,8 @@ export default function BasicApp() {
           {/* 배경에 카메라 스트림을 표시 */}
           {/* XR 캔버스 영역 */}
           <ARCanvas
-            setSessionStarted={sessionStarted}
+            xrStoreRef={xrStoreRef}
+            setSessionStarted={setSessionStarted}
             show={show}
             sessionStarted={sessionStarted}
             modalIsOpen={modalIsOpen}
