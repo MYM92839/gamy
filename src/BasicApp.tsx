@@ -437,8 +437,8 @@ const ModalU = function ({
         return { drawWidth, drawHeight, offsetX, offsetY };
       };
 
-     const videoParams = calculateDrawParams(videoElement, 'cover');
-     console.log('video/*  */',videoParams,videoElement,context)
+      const videoParams = calculateDrawParams(videoElement, 'cover');
+      console.log('video/*  */', videoParams, videoElement, context)
       if (videoParams) {
         context.drawImage(
           videoElement,
@@ -449,7 +449,7 @@ const ModalU = function ({
         );
       }
 
-     // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
+      // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
       const threeParams = calculateDrawParams(offscreenCanvas, 'cover');
       if (threeParams) {
         context.drawImage(
@@ -606,11 +606,12 @@ export default function BasicApp() {
   // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 복사
   const captureARContent = () => {
     const container = document.querySelector('[data-webxr_runtime]');
+    const t = container?.querySelector('[data-engine="three.js r157"')
     if (!container) {
       logDebug('captureARContent: data-webxr_runtime container not found.');
       return;
     }
-    const lastChild = container.firstElementChild;
+    const lastChild = t || container.firstElementChild;
     if (!(lastChild instanceof HTMLCanvasElement)) {
       logDebug('captureARContent: Last child is not a canvas element.');
       return;
