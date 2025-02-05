@@ -57,10 +57,7 @@ function Scene({ visible }: { visible: boolean }) {
 //
 const UIOverlay = ({
   modalIsOpen,
-  fotoUrl,
   openModal,
-  closeModal,
-  closeSaveModal,
   show,
   setShow,
   domWidth,
