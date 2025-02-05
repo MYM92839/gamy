@@ -252,7 +252,6 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
   const { actions: sactions, mixer: smixer } = useAnimations(sanimations, shadowRef);
 
   useEffect(() => {
-    console.log("ON", actions, sactions, on)
     if (actions && sactions && on) {
       if (sactions.Scene) {
         if (shadowRef.current) shadowRef.current.visible = true;
@@ -288,127 +287,129 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
       <group name="Scene"
         ref={shadowRef}
         dispose={null}
-        position={[0, 3, -3]} rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
-        <mesh
-          name="side_body"
-          castShadow
-          receiveShadow
-          geometry={snodes.side_body.geometry}
-          material={smaterials.side_body}
-          position={[130.714, 0, 232.759]}>
+        >
+        <group position={[0, 3, -3]} rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <mesh
-            name="side_arm_01"
+            name="side_body"
             castShadow
             receiveShadow
-            geometry={snodes.side_arm_01.geometry}
-            material={smaterials.side_arm_01}
-            position={[-23.36, 0, -187.798]}
-            rotation={[0, 0.217, 0]}>
+            geometry={snodes.side_body.geometry}
+            material={smaterials.side_body}
+            position={[130.714, 0, 232.759]}>
             <mesh
-              name="hammer_2"
+              name="side_arm_01"
               castShadow
               receiveShadow
-              geometry={snodes.hammer_2.geometry}
-              material={smaterials.hammer}
-              position={[-114.686, 0, -20.255]}
-              rotation={[0, -0.417, 0]}
+              geometry={snodes.side_arm_01.geometry}
+              material={smaterials.side_arm_01}
+              position={[-23.36, 0, -187.798]}
+              rotation={[0, 0.217, 0]}>
+              <mesh
+                name="hammer_2"
+                castShadow
+                receiveShadow
+                geometry={snodes.hammer_2.geometry}
+                material={smaterials.hammer}
+                position={[-114.686, 0, -20.255]}
+                rotation={[0, -0.417, 0]}
+              />
+            </mesh>
+            <mesh
+              name="side_arm_02"
+              castShadow
+              receiveShadow
+              geometry={snodes.side_arm_02.geometry}
+              material={smaterials.side_arm_01}
+              position={[-13.721, 0, -182.62]}
+              rotation={[0, -0.53, 0]}
+            />
+            <mesh
+              name="side_head"
+              castShadow
+              receiveShadow
+              geometry={snodes.side_head.geometry}
+              material={smaterials.side_head}
+              position={[-32.802, 0, -208.305]}>
+              <mesh
+                name="side_ear_01"
+                castShadow
+                receiveShadow
+                geometry={snodes.side_ear_01.geometry}
+                material={smaterials.side_ear_01}
+                position={[7.607, 0, -217.067]}
+              />
+              <mesh
+                name="side_ear_02"
+                castShadow
+                receiveShadow
+                geometry={snodes.side_ear_02.geometry}
+                material={smaterials.side_ear_01}
+                position={[-21.755, 0, -217.067]}
+              />
+            </mesh>
+            <mesh
+              name="side_leg"
+              castShadow
+              receiveShadow
+              geometry={snodes.side_leg.geometry}
+              material={smaterials.side_leg}
+              position={[20.683, 0, -35.483]}
+            />
+            <mesh
+              name="side_leg_2"
+              castShadow
+              receiveShadow
+              geometry={snodes.side_leg_2.geometry}
+              material={smaterials.side_leg}
+              position={[35.364, 0, -35.483]}
+              rotation={[0, 0.472, 0]}
+            />
+            <mesh
+              name="side_tail"
+              castShadow
+              receiveShadow
+              geometry={snodes.side_tail.geometry}
+              material={smaterials.side_tail}
+              position={[79.32, 0, -49.652]}
             />
           </mesh>
           <mesh
-            name="side_arm_02"
+            name="side_foot"
             castShadow
             receiveShadow
-            geometry={snodes.side_arm_02.geometry}
-            material={smaterials.side_arm_01}
-            position={[-13.721, 0, -182.62]}
-            rotation={[0, -0.53, 0]}
+            geometry={snodes.side_foot.geometry}
+            material={smaterials.side_foot}
+            position={[73.215, 0, 313.132]}
           />
           <mesh
-            name="side_head"
+            name="side_foot_2"
             castShadow
             receiveShadow
-            geometry={snodes.side_head.geometry}
-            material={smaterials.side_head}
-            position={[-32.802, 0, -208.305]}>
-            <mesh
-              name="side_ear_01"
-              castShadow
-              receiveShadow
-              geometry={snodes.side_ear_01.geometry}
-              material={smaterials.side_ear_01}
-              position={[7.607, 0, -217.067]}
-            />
-            <mesh
-              name="side_ear_02"
-              castShadow
-              receiveShadow
-              geometry={snodes.side_ear_02.geometry}
-              material={smaterials.side_ear_01}
-              position={[-21.755, 0, -217.067]}
-            />
-          </mesh>
-          <mesh
-            name="side_leg"
-            castShadow
-            receiveShadow
-            geometry={snodes.side_leg.geometry}
-            material={smaterials.side_leg}
-            position={[20.683, 0, -35.483]}
+            geometry={snodes.side_foot_2.geometry}
+            material={smaterials.side_foot}
+            position={[125.638, 0, 317.857]}
           />
-          <mesh
-            name="side_leg_2"
-            castShadow
-            receiveShadow
-            geometry={snodes.side_leg_2.geometry}
-            material={smaterials.side_leg}
-            position={[35.364, 0, -35.483]}
-            rotation={[0, 0.472, 0]}
-          />
-          <mesh
-            name="side_tail"
-            castShadow
-            receiveShadow
-            geometry={snodes.side_tail.geometry}
-            material={smaterials.side_tail}
-            position={[79.32, 0, -49.652]}
-          />
-        </mesh>
+        </group>
         <mesh
-          name="side_foot"
+          name="cramp"
           castShadow
           receiveShadow
-          geometry={snodes.side_foot.geometry}
-          material={smaterials.side_foot}
-          position={[73.215, 0, 313.132]}
+          geometry={snodes.cramp.geometry}
+          material={smaterials.cramp}
+          position={[-0.78, 0.004, -3]}
+          rotation={[Math.PI / 2, 0, 0]}
+          scale={0.01}
         />
         <mesh
-          name="side_foot_2"
+          name="hammer"
           castShadow
           receiveShadow
-          geometry={snodes.side_foot_2.geometry}
-          material={smaterials.side_foot}
-          position={[125.638, 0, 317.857]}
+          geometry={snodes.hammer.geometry}
+          material={smaterials.hammer}
+          position={[-0.09, 2.498, -3]}
+          scale={0}
         />
-      </group>
-      <mesh
-        name="cramp"
-        castShadow
-        receiveShadow
-        geometry={snodes.cramp.geometry}
-        material={smaterials.cramp}
-        position={[-0.78, 0.004, -3]}
-        rotation={[Math.PI / 2, 0, 0]}
-        scale={0.01}
-      />
-      <mesh
-        name="hammer"
-        castShadow
-        receiveShadow
-        geometry={snodes.hammer.geometry}
-        material={smaterials.hammer}
-        position={[-0.09, 2.498, -3]}
-        scale={0}
-      />
+        </group>
       {/*  ////// */}
       <group
         name="Scene"
