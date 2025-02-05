@@ -240,6 +240,8 @@ function BackgroundVideo() {
 // 메인 앱
 //
 export default function BasicApp() {
+
+  const [mount] = useState(true) // TODO: TEST
   const [init, setInit] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [modalIsOpen, setIsOpen] = useState(false);
@@ -410,7 +412,7 @@ export default function BasicApp() {
     let id: string | number | NodeJS.Timeout | undefined;
     const func = async () => {
       // VR 모드로 진입 (AR 대신 VR로 전환)
-      await xrStore.enterVR();
+      await xrStore.enterXR('immersive-vr');
       setSessionStarted(true);
     };
     if (init) {
@@ -423,11 +425,35 @@ export default function BasicApp() {
     };
   }, [init]);
 
+
+
+
+
+  // useEffect(() => {
+
+  //   const func = async () => {
+  //     const constraints = {
+  //       video: {
+  //         facingMode: { ideal: 'environment' },
+  //         width: { ideal: 1280 },
+  //         height: { ideal: 720 }
+  //       },
+  //       audio: false
+  //     };
+
+  //     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  //     stream.getTracks().forEach((track) => track.stop());
+
+  //     setMount(true)
+  //   }
+
+  //   func()
+  // }, [])
   return (
     <>
       {isIOS ? (
         <NftAppT3 />
-      ) : (
+      ) : mount ? (
         <>
           {/* 배경에 카메라 스트림을 표시 */}
           <BackgroundVideo />
@@ -476,7 +502,7 @@ export default function BasicApp() {
           {/* UI 영역을 Portal을 이용해 별도 DOM (#overlay-root)에 렌더링 */}
           {/*  */}
         </>
-      )}
+      ) : null}
     </>
   );
 }
