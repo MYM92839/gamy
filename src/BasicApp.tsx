@@ -1,5 +1,5 @@
 // App.tsx
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Suspense, useEffect, useState } from 'react';
 import Modal from 'react-modal';
@@ -8,6 +8,7 @@ import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import { xrStore } from './components/Layout';
+import { useGesture } from '@use-gesture/react';
 
 Modal.setAppElement('#root');
 
@@ -55,38 +56,38 @@ function Scene({ visible }: { visible: boolean }) {
  * use-gesture의 onPinch 핸들러를 사용하여 두 손가락 제스처로 카메라 zoom 값을 제어합니다.
  * 이 컴포넌트는 전체 영역을 덮으면서 pointerEvents: 'none'으로 설정되어 제스처 감지 전용으로 사용됩니다.
  */
-// const PinchZoom = () => {
-//   const { camera } = useThree();
-//   const bind = useGesture(
-//     {
-//       onPinch: ({ offset: [d] }) => {
-//         // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
-//         const newZoom = Math.max(0.5, Math.min(3, d));
-//         camera.zoom = newZoom;
-//         camera.updateProjectionMatrix();
-//       },
-//     },
-//     {
-//       pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
-//     }
-//   );
-//   return (
-//     <div
-//       {...bind()}
-//       style={{
-//         position: 'absolute',
-//         top: 0,
-//         left: 0,
-//         width: '100%',
-//         height: '100%',
-//         touchAction: 'none',
-//         pointerEvents: 'none', // 제스처 감지 전용: UI 이벤트에 영향을 주지 않음.
-//         zIndex: 0,
-//         background: 'transparent',
-//       }}
-//     />
-//   );
-// };
+const PinchZoom = () => {
+  const { camera } = useThree();
+  const bind = useGesture(
+    {
+      onPinch: ({ offset: [d] }) => {
+        // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
+        // const newZoom = Math.max(0.5, Math.min(3, d));
+        // camera.zoom = newZoom;
+        // camera.updateProjectionMatrix();
+      },
+    },
+    {
+      pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
+    }
+  );
+  return (
+    <div
+      {...bind()}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        touchAction: 'none',
+        pointerEvents: 'none', // 제스처 감지 전용: UI 이벤트에 영향을 주지 않음.
+        zIndex: 0,
+        background: 'transparent',
+      }}
+    />
+  );
+};
 
 export default function BasicApp() {
   const [init, setInit] = useState(false);
@@ -242,7 +243,7 @@ export default function BasicApp() {
                 }}
               >
                 {/* PinchZoom: 제스처 감지 전용, pointerEvents: 'none' */}
-                {/* <PinchZoom /> */}
+                <PinchZoom />
                 {/* UI 컨테이너 */}
                 <div style={{
                   position: 'fixed',
