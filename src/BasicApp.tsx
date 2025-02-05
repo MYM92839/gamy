@@ -712,7 +712,7 @@ const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasR
     return () => {
       if (id) clearTimeout(id)
     }
-  }, [isMount,fotoUrl])
+  }, [isMount])
 
   return (
     <div style={{ ...customStyles, display: 'block', position: 'fixed' }}>
