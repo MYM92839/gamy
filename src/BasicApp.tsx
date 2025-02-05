@@ -582,13 +582,24 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
-    const func = () => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const captureImage = () => {
+      // video 요소와 container를 먼저 가져옵니다.
       const videoElement: HTMLVideoElement | null = document.querySelector('#three-video');
       const container = videoElement?.parentElement || null;
       if (!container || !videoElement) {
-        logDebug('ModalU: Required elements not ready.');
+        logDebug('ModalU: Required video or container elements not ready.');
         return;
       }
+      // 캔버스 오버레이(또는 offscreen 캔버스)를 준비합니다.
+      if (!canvasRef.current) {
+        logDebug('ModalU: canvasRef.current is null, delaying capture...');
+        // 500ms 후에 다시 시도
+        timeoutId = setTimeout(captureImage, 500);
+        return;
+      }
+
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
       const devicePixelRatio = window.devicePixelRatio || 1;
@@ -602,7 +613,13 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
       }
       context.scale(devicePixelRatio, devicePixelRatio);
 
-      const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+      // draw parameters 계산 함수
+      const calculateDrawParams = (
+        element: HTMLVideoElement | HTMLCanvasElement,
+        objectFit: 'cover' | 'contain'
+      ) => {
+        // element가 null인 경우를 방지
+        if (!element) return null;
         const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
         const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
         if (elementWidth === 0 || elementHeight === 0) return null;
@@ -634,7 +651,8 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
 
       try {
         const videoParams = calculateDrawParams(videoElement, 'cover');
-        const canvasParams = calculateDrawParams(canvasRef.current, 'cover');
+        let canvasParams = calculateDrawParams(canvasRef.current, 'cover');
+
         if (videoParams) {
           context.drawImage(
             videoElement,
@@ -644,6 +662,7 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
             videoParams.drawHeight
           );
           logDebug('ModalU: Video drawn on offscreen canvas.');
+
           if (canvasRef.current && canvasParams) {
             context.drawImage(
               canvasRef.current,
@@ -655,7 +674,8 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
             logDebug('ModalU: Offscreen canvas overlay drawn.');
           }
         }
-        offscreenCanvas.toBlob((blob: any) => {
+
+        offscreenCanvas.toBlob((blob: Blob | null) => {
           if (blob) {
             setFoto(blob);
             const reader = new FileReader();
@@ -673,16 +693,14 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, canvasRef, isMou
       }
     };
 
-    let id: ReturnType<typeof setTimeout>;
-    if (isMount) {
-      id = setTimeout(() => {
-        func();
-      }, 1000);
-    }
+    // 최초 시도: 1초 후에 캡쳐 시도
+    timeoutId = setTimeout(captureImage, 1000);
+
     return () => {
-      clearTimeout(id);
+      clearTimeout(timeoutId);
     };
-  }, [isMount]);
+  }, [isMount, canvasRef.current]);
+
 
   return (
     <div style={{ ...customStyles, display: 'block', position: 'fixed' }}>
