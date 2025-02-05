@@ -201,9 +201,9 @@ function ARHelper({ store }: any) {
   return null
 }
 
+const xrStore = createXRStore();
 
 function ARCanvas(props: any) {
-  const xrStore = createXRStore();
   const [init, setInit] = useState(false);
 
   useEffect(() => {
@@ -222,6 +222,8 @@ function ARCanvas(props: any) {
       clearTimeout(id);
     };
   }, [init]);
+
+
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <Canvas
