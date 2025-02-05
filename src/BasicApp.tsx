@@ -605,13 +605,16 @@ export default function BasicApp() {
 
   // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 복사
   const captureARContent = () => {
+    const threeCanvas1: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+      .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+
     const container = document.querySelector('[data-webxr_runtime]');
     const t = container?.querySelector('[data-engine="three.js r157"')
     if (!container) {
       logDebug('captureARContent: data-webxr_runtime container not found.');
       return;
     }
-    const lastChild = t || container.firstElementChild;
+    const lastChild = threeCanvas1 || t || container.firstElementChild;
     if (!(lastChild instanceof HTMLCanvasElement)) {
       logDebug('captureARContent: Last child is not a canvas element.');
       return;
