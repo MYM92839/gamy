@@ -243,7 +243,7 @@ export default function BasicApp() {
                 }}
               >
                 {/* PinchZoom: 제스처 감지 전용, pointerEvents: 'none' */}
-                <PinchZoom />
+                {/* <PinchZoom /> */}
                 {/* UI 컨테이너 */}
                 <div style={{
                   position: 'fixed',
