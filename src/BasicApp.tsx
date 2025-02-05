@@ -533,30 +533,30 @@ const shareOrDownloadImage = (blob: Blob, logDebug: (msg: string) => void): void
 /////////////////////////
 // DebugPanel 컴포넌트
 /////////////////////////
-const DebugPanel = ({ logs }: { logs: string[] }) => {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        maxHeight: '40%',
-        overflowY: 'auto',
-        background: 'rgba(0,0,0,0.8)',
-        color: 'white',
-        fontSize: '12px',
-        padding: '8px',
-        zIndex: 11000,
-      }}
-    >
-      <div><strong>Debug Logs:</strong></div>
-      {logs.map((log, index) => (
-        <div key={index}>{log}</div>
-      ))}
-    </div>
-  );
-};
+// const DebugPanel = ({ logs }: { logs: string[] }) => {
+//   return (
+//     <div
+//       style={{
+//         position: 'fixed',
+//         bottom: 0,
+//         left: 0,
+//         width: '100%',
+//         maxHeight: '40%',
+//         overflowY: 'auto',
+//         background: 'rgba(0,0,0,0.8)',
+//         color: 'white',
+//         fontSize: '12px',
+//         padding: '8px',
+//         zIndex: 11000,
+//       }}
+//     >
+//       <div><strong>Debug Logs:</strong></div>
+//       {logs.map((log, index) => (
+//         <div key={index}>{log}</div>
+//       ))}
+//     </div>
+//   );
+// };
 
 /////////////////////////
 // BasicApp 컴포넌트
@@ -575,7 +575,7 @@ export default function BasicApp() {
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
 
   // 디버그 로그 상태
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [, setDebugLogs] = useState<string[]>([]);
   const logDebug = (msg: string) => {
     console.log(msg);
     setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -731,7 +731,7 @@ export default function BasicApp() {
           )}
         </>
       )}
-      <DebugPanel logs={debugLogs} />
+      {/* <DebugPanel logs={debugLogs} /> */}
     </>
   );
 }
