@@ -234,6 +234,8 @@ export default function BasicApp() {
               {/* XRDomOverlay에 pointerEvents: 'none' 처리 */}
               <XRDomOverlay
                 style={{
+                  position:'fixed',
+                  inset:0,
                   width: '100%',
                   height: '100%',
                   display: 'flex',
