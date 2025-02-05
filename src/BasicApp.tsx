@@ -84,8 +84,6 @@ const UIOverlay = ({
   circleR: number;
   circleColor: string;
 }) => {
-  console.log("URL", fotoUrl)
-
 
   return (
     <div
@@ -206,9 +204,6 @@ function ARCanvas(props: any) {
       }, 1000);
     }
     return () => {
-      props.draw()
-
-
       clearTimeout(id);
     };
   }, [init]);
@@ -562,6 +557,9 @@ export default function BasicApp() {
             modalIsOpen={modalIsOpen}
             fotoUrl={fotoUrl}
             openModal={() => {
+              func1()
+
+
               setMount(false)
             }}
             closeModal={closeModal}
