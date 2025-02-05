@@ -193,11 +193,14 @@ function ARHelper({ store }: any) {
     if (!init) setInit(true)
     return () => {
       const func = () => {
-        store.current.getState().session?.end()
-        store.current.destroy()
-        store.current = null
+        if(store.current){
+          store.current.getState().session?.end()
+          store.current.destroy()
+          store.current = null
+        }
+
       }
-      if (init) func()
+   func()
     }
   }, [])
 
@@ -208,28 +211,40 @@ function ARHelper({ store }: any) {
 function ARCanvas(props: any) {
   const [init, setInit] = useState(false);
 
-  useEffect(() => {
-    let id: string | number | NodeJS.Timeout | undefined;
-    const func = async () => {
-      // VR 모드로 진입 (AR 대신 VR로 전환)
-      if (props.xrStoreRef.current) {
-        await props.xrStoreRef.current.enterAR()
-        props.setSessionStarted(true);
-      }
-    };
+  // useEffect(() => {
+  //   let id: string | number | NodeJS.Timeout | undefined;
+  //   const func = async () => {
+  //     // VR 모드로 진입 (AR 대신 VR로 전환)
+  //     if (props.xrStoreRef.current) {
+  //       await props.xrStoreRef.current.enterAR()
+  //       props.setSessionStarted(true);
+  //     }
+  //   };
+  //   if (init) {
+  //     id = setTimeout(() => {
+  //       func();
+  //     }, 1000);
+  //   }
+  //   return () => {
+  //     clearTimeout(id);
+  //   };
+  // }, [init]);
+
+  const handleon = async () => {
     if (init) {
-      id = setTimeout(() => {
-        func();
-      }, 1000);
+      await props.xrStoreRef.current.enterAR()
+      props.setSessionStarted(true);
     }
-    return () => {
-      clearTimeout(id);
-    };
-  }, [init]);
 
-
+  }
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
+      <button
+        style={{
+          position: 'fixed',
+          zIndex: 111111111
+        }}
+        onClick={handleon}>찌닝!!!!</button>
       <Canvas
         id="three-canvas"
         style={{
@@ -277,7 +292,7 @@ function ARCanvas(props: any) {
 // VR 모드에서 사용자의 카메라 피드를 배경으로 보여주기 위한 컴포넌트
 // getUserMedia를 사용하여 video 스트림을 받아 배경에 표시합니다.
 //
-function BackgroundVideo() {
+function BackgroundVideo({ streamRef }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -291,10 +306,11 @@ function BackgroundVideo() {
           // 이미 스트림이 할당되어 있지 않은지 확인
           if (videoRef.current.srcObject !== stream) {
             videoRef.current.srcObject = stream;
+
+            streamRef.current = stream
           }
           // onloadeddata 이벤트를 기다렸다가 play() 호출
           videoRef.current.onloadeddata = () => {
-
             videoRef.current?.play().catch((err) =>
               console.error('Video play error:', err)
             );
@@ -302,6 +318,15 @@ function BackgroundVideo() {
         }
       })
       .catch((err) => console.error('getUserMedia error:', err));
+
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track: any) => track.stop());
+        streamRef.current = null
+      }
+
+    }
   }, []);
 
   return (
@@ -522,9 +547,6 @@ export default function BasicApp() {
       stream.getTracks().forEach((track) => track.stop());
       xrStoreRef.current = createXRStore()
 
-      id = setTimeout(() => {
-        setMount(true)
-      }, 1000)
     }
 
     func()
@@ -535,7 +557,9 @@ export default function BasicApp() {
   }, [])
 
 
+
   const onTest = () => {
+
     let id: string | number | NodeJS.Timeout | undefined
 
     if (streamRef.current) {
@@ -560,9 +584,14 @@ export default function BasicApp() {
     }
   }
 
+
+
+
   useEffect(() => {
 
   }, [mount])
+
+
   return (
     <>
       {isIOS ? (
@@ -595,7 +624,7 @@ export default function BasicApp() {
           {/*  */}
         </>
       ) : <>
-        <BackgroundVideo />
+        <BackgroundVideo streamRef={streamRef} />
         <button
           style={{
             position: 'fixed',
