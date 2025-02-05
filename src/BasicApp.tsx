@@ -1,7 +1,7 @@
 // App.tsx
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin } from '@react-three/xr';
-// import { useGesture } from '@use-gesture/react';
+import { useGesture } from '@use-gesture/react';
 import { Suspense, useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { Box } from './ArApp';
@@ -13,8 +13,7 @@ import { xrStore } from './components/Layout';
 Modal.setAppElement('#root');
 
 // 모달 스타일 (content 스타일만 사용)
-const customStyles = {/*  */
-
+const customStyles = {
   top: '50%',
   left: '50%',
   right: 'auto',
@@ -26,7 +25,6 @@ const customStyles = {/*  */
   padding: '8px',
   transform: 'translate(-50%, -50%)',
   zIndex: 999,
-
 };
 
 const isIOS =
@@ -56,38 +54,40 @@ function Scene({ visible }: { visible: boolean }) {
 /**
  * PinchZoom 컴포넌트
  * @use-gesture/react를 사용하여 두 손가락의 핀치 제스처로 카메라 zoom 값을 제어합니다.
+ * pointerEvents: 'none'으로 설정하여 UI에 영향을 주지 않습니다.
  */
-// const PinchZoom = () => {
-//   const { camera } = useThree();
-//   const bind = useGesture(
-//     {
-//       onPinch: ({ offset: [d] }) => {
-//         // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
-//         const newZoom = Math.max(0.5, Math.min(3, d));
-//         camera.zoom = newZoom;
-//         camera.updateProjectionMatrix();
-//       },
-//     },
-//     {
-//       pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
-//     }
-//   );
-//   return (
-//     <div
-//       {...bind()}
-//       style={{
-//         position: 'absolute',
-//         top: 0,
-//         left: 0,
-//         width: '100%',
-//         height: '100%',
-//         touchAction: 'none',
-//         zIndex: 1, // XRDomOverlay UI가 이보다 높은 z-index여야 함.
-//         background: 'transparent',
-//       }}
-//     />
-//   );
-// };
+const PinchZoom = () => {
+  const { camera } = useThree();
+  const bind = useGesture(
+    {
+      onPinch: ({ offset: [d] }) => {
+        // d 값이 1이면 기본, 값이 커지면 zoom in, 작아지면 zoom out
+        const newZoom = Math.max(0.5, Math.min(3, d));
+        camera.zoom = newZoom;
+        camera.updateProjectionMatrix();
+      },
+    },
+    {
+      pinch: { scaleBounds: { min: 0.5, max: 3 }, rubberband: false },
+    }
+  );
+  return (
+    <div
+      {...bind()}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        touchAction: 'none',
+        pointerEvents: 'none', // 제스처 감지를 위해 이벤트는 캡처하지만 UI에 영향을 주지 않음.
+        zIndex: 0,
+        background: 'transparent',
+      }}
+    />
+  );
+};
 
 export default function BasicApp() {
   const [init, setInit] = useState(false);
@@ -170,7 +170,6 @@ export default function BasicApp() {
       const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
         type: 'image/png',
       });
-
       navigator
         .share({
           files: [file],
@@ -230,156 +229,157 @@ export default function BasicApp() {
             }}
           >
             <XR store={xrStore}>
-              {/* PinchZoom는 XRDomOverlay보다 먼저 렌더링되어 뒤에 위치하므로, UI는 그 위에 표시됩니다. */}
-              {/* XRDomOverlay에 pointerEvents: 'none' 처리 */}
+              {/* PinchZoom은 XRDomOverlay 외부(형제 요소)에서 렌더링 */}
+              <PinchZoom />
+
+              {/* XRDomOverlay: UI용 컨테이너 */}
               <XRDomOverlay
                 style={{
-                  position:'fixed',
-                  inset:0,
+                  position: 'fixed',
+                  inset: 0,
                   width: '100%',
                   height: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  pointerEvents: 'none',
+                  pointerEvents: 'none', // 기본적으로 이벤트 투과
                 }}
               >
-                              {/* <PinchZoom /> */}
-               {/* 모달 */}
+                {/* UI 컨테이너: pointerEvents 'auto'로 설정 */}
                 <div
                   style={{
-                    ...customStyles,
-                    display: modalIsOpen ? 'block' : 'none',
                     pointerEvents: 'auto',
+                    width: '100%',
+                    height: '100%',
                   }}
                 >
-                  <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
-                    <div className="flex-1 rounded-sm overflow-hidden z-[999] isolate">
-                      {fotoUrl && (
-                        <img
-                          className="flex-1 object-contain z-[999]"
-                          src={fotoUrl}
-                          alt="캡쳐 이미지"
-                        />
-                      )}
-                    </div>
-                    <div className="w-full flex gap-x-2 font-semibold">
-                      <button
-                        className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]"
-                        onClick={closeModal}
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        다시찍기
-                      </button>
-                      <button
-                        className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]"
-                        onClick={closeSaveModal}
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        저장하기
-                      </button>
+                  {/* 캡쳐 모달 */}
+                  <div
+                    style={{
+                      ...customStyles,
+                      display: modalIsOpen ? 'block' : 'none',
+                    }}
+                  >
+                    <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
+                      <div className="flex-1 rounded-sm overflow-hidden z-[999] isolate">
+                        {fotoUrl && (
+                          <img
+                            className="flex-1 object-contain z-[999]"
+                            src={fotoUrl}
+                            alt="캡쳐 이미지"
+                          />
+                        )}
+                      </div>
+                      <div className="w-full flex gap-x-2 font-semibold">
+                        <button
+                          className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]"
+                          onClick={closeModal}
+                        >
+                          다시찍기
+                        </button>
+                        <button
+                          className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]"
+                          onClick={closeSaveModal}
+                        >
+                          저장하기
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* 모달이 열리지 않았을 때의 UI */}
-                {!modalIsOpen && (
-                  <>
-                    <button
-                      style={{
-                        zIndex: 999,
-                        position: 'fixed',
-                        width: 'fit-content',
-                        height: 'fit-content',
-                        border: 0,
-                        bottom: '65px',
-                        left: '24px',
-                        backgroundColor: 'transparent',
-                        padding: '1rem',
-                        pointerEvents: 'auto',
-                      }}
-                      onClick={() => {
-                        window.history.back();
-                      }}
-                    >
-                      <Back style={{}} />
-                    </button>
-                    <button
-                      style={{
-                        zIndex: 999,
-                        position: 'fixed',
-                        width: 'fit-content',
-                        height: 'fit-content',
-                        border: 0,
-                        backgroundColor: 'transparent',
-                        padding: '1rem',
-                        bottom: '48px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginLeft: 'auto',
-                        pointerEvents: 'auto',
-                      }}
-                      onClick={openModal}
-                    >
-                      <Capture style={{}} />
-                    </button>
-                  </>
-                )}
-
-                {/* 배경에 원과 버튼 */}
-                {!show && (
-                  <>
-                    <div
-                      style={{
-                        position: 'fixed',
-                        width: `${domWidth}px`,
-                        height: `${domHeight}px`,
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%,-50%)',
-                        background: 'transparent',
-                        overflow: 'hidden',
-                        zIndex: 9998,
-                        pointerEvents: 'auto',
-                      }}
-                    >
-                      <svg
-                        width={domWidth}
-                        height={domHeight}
-                        style={{ position: 'absolute', top: 0, left: 0 }}
+                  {/* 모달이 열리지 않았을 때의 UI */}
+                  {!modalIsOpen && (
+                    <>
+                      <button
+                        style={{
+                          zIndex: 999,
+                          position: 'fixed',
+                          width: 'fit-content',
+                          height: 'fit-content',
+                          border: 0,
+                          bottom: '65px',
+                          left: '24px',
+                          backgroundColor: 'transparent',
+                        }}
+                        onClick={() => {
+                          window.history.back();
+                        }}
                       >
-                        <circle
-                          cx={circleX}
-                          cy={circleY}
-                          r={circleR}
-                          fill="none"
-                          stroke={circleColor}
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    </div>
+                        <Back style={{}} />
+                      </button>
+                      <button
+                        style={{
+                          zIndex: 999,
+                          position: 'fixed',
+                          width: 'fit-content',
+                          height: 'fit-content',
+                          border: 0,
+                          backgroundColor: 'transparent',
+                          padding: '1rem',
+                          bottom: '48px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                        }}
+                        onClick={openModal}
+                      >
+                        <Capture style={{}} />
+                      </button>
+                    </>
+                  )}
 
-                    <button
-                      style={{
-                        position: 'fixed',
-                        bottom: '10%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 99999,
-                        padding: '1rem',
-                        fontSize: '1rem',
-                        backgroundColor: 'darkblue',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        pointerEvents: 'auto',
-                      }}
-                      onClick={() => setShow(true)}
-                    >
-                      토끼 부르기
-                    </button>
-                  </>
-                )}
+                  {/* 배경에 원과 버튼 */}
+                  {!show && (
+                    <>
+                      <div
+                        style={{
+                          position: 'fixed',
+                          width: `${domWidth}px`,
+                          height: `${domHeight}px`,
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%,-50%)',
+                          background: 'transparent',
+                          overflow: 'hidden',
+                          zIndex: 9998,
+                        }}
+                      >
+                        <svg
+                          width={domWidth}
+                          height={domHeight}
+                          style={{ position: 'absolute', top: 0, left: 0 }}
+                        >
+                          <circle
+                            cx={circleX}
+                            cy={circleY}
+                            r={circleR}
+                            fill="none"
+                            stroke={circleColor}
+                            strokeWidth="2"
+                          />
+                        </svg>
+                      </div>
+
+                      <button
+                        style={{
+                          position: 'fixed',
+                          bottom: '10%',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          zIndex: 99999,
+                          padding: '1rem',
+                          fontSize: '1rem',
+                          backgroundColor: 'darkblue',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                        }}
+                        onClick={() => setShow(true)}
+                      >
+                        토끼 부르기
+                      </button>
+                    </>
+                  )}
+                </div>
               </XRDomOverlay>
 
               <XROrigin position={[0, 0.5, 0]} />
