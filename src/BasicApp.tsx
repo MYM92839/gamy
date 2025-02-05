@@ -53,8 +53,8 @@ function Scene({ visible }: { visible: boolean }) {
 
 /**
  * PinchZoom 컴포넌트
- * @use-gesture/react를 사용하여 두 손가락의 핀치 제스처로 카메라 zoom 값을 제어합니다.
- * pointerEvents: 'none'으로 설정하여 UI에 영향을 주지 않습니다.
+ * use-gesture의 onPinch 핸들러를 사용하여 두 손가락 제스처로 카메라 zoom 값을 제어합니다.
+ * 제스처 캡처를 위해 전체 영역을 덮지만, pointerEvents: 'none'으로 설정하여 UI에 영향을 주지 않습니다.
  */
 const PinchZoom = () => {
   const { camera } = useThree();
@@ -81,7 +81,7 @@ const PinchZoom = () => {
         width: '100%',
         height: '100%',
         touchAction: 'none',
-        pointerEvents: 'none', // 제스처 감지를 위해 이벤트는 캡처하지만 UI에 영향을 주지 않음.
+        pointerEvents: 'none', // 제스처 감지 전용, UI 이벤트에 방해하지 않음.
         zIndex: 0,
         background: 'transparent',
       }}
@@ -105,7 +105,7 @@ export default function BasicApp() {
   const circleColor = init ? 'blue' : 'red';
 
   /**
-   * XR 모드에서 보이는 최종 화면(WebGL 캔버스 전체)을 캡쳐하여 Blob을 생성합니다.
+   * 캡쳐 함수: XR 모드에서 보이는 최종 화면(WebGL 캔버스 전체)을 캡쳐하여 Blob을 생성합니다.
    */
   const captureImage = () => {
     const threeCanvas = document.querySelector('#three-canvas canvas') as HTMLCanvasElement | null;
@@ -229,23 +229,19 @@ export default function BasicApp() {
             }}
           >
             <XR store={xrStore}>
-              {/* PinchZoom은 XRDomOverlay 외부(형제 요소)에서 렌더링 */}
-              <PinchZoom />
-
-              {/* XRDomOverlay: UI용 컨테이너 */}
+              {/* XRDomOverlay 내부에 PinchZoom과 UI 컨테이너를 함께 렌더링 */}
               <XRDomOverlay
                 style={{
                   position: 'fixed',
                   inset: 0,
                   width: '100%',
                   height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: 'none', // 기본적으로 이벤트 투과
+                  pointerEvents: 'none', // 기본적으로 이벤트는 투과하도록 함
                 }}
               >
-                {/* UI 컨테이너: pointerEvents 'auto'로 설정 */}
+                {/* PinchZoom: 제스처 감지용 overlay (pointerEvents: 'none') */}
+                <PinchZoom />
+                {/* UI 컨테이너: pointerEvents: 'auto'로 설정하여 UI 이벤트가 작동하도록 함 */}
                 <div
                   style={{
                     pointerEvents: 'auto',
