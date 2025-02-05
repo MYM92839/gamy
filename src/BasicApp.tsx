@@ -609,7 +609,7 @@ export default function BasicApp() {
       .children[0]! as HTMLCanvasElement; // Three.js 캔버스
 
     const container = document.querySelector('[data-webxr_runtime]');
-    const t = container?.querySelector('[data-engine="three.js r157"')
+    const t = container?.querySelector('[data-engine="three.js r157"]')
     if (!container) {
       logDebug('captureARContent: data-webxr_runtime container not found.');
       return;
