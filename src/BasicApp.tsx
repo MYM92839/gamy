@@ -193,14 +193,14 @@ function ARHelper({ store }: any) {
     if (!init) setInit(true)
     return () => {
       const func = () => {
-        if(store.current){
+        if (store.current) {
           store.current.getState().session?.end()
           store.current.destroy()
           store.current = null
         }
 
       }
-   func()
+      func()
     }
   }, [])
 
@@ -211,40 +211,30 @@ function ARHelper({ store }: any) {
 function ARCanvas(props: any) {
   const [init, setInit] = useState(false);
 
-  // useEffect(() => {
-  //   let id: string | number | NodeJS.Timeout | undefined;
-  //   const func = async () => {
-  //     // VR 모드로 진입 (AR 대신 VR로 전환)
-  //     if (props.xrStoreRef.current) {
-  //       await props.xrStoreRef.current.enterAR()
-  //       props.setSessionStarted(true);
-  //     }
-  //   };
-  //   if (init) {
-  //     id = setTimeout(() => {
-  //       func();
-  //     }, 1000);
-  //   }
-  //   return () => {
-  //     clearTimeout(id);
-  //   };
-  // }, [init]);
-
-  const handleon = async () => {
+  useEffect(() => {
+    let id: string | number | NodeJS.Timeout | undefined;
+    const func = async () => {
+      // VR 모드로 진입 (AR 대신 VR로 전환)
+      if (props.xrStoreRef.current) {
+        await props.xrStoreRef.current.enterAR()
+        props.setSessionStarted(true);
+      }
+    };
     if (init) {
-      await props.xrStoreRef.current.enterAR()
-      props.setSessionStarted(true);
+      id = setTimeout(() => {
+        func();
+      }, 1000);
     }
+    return () => {
+      props.draw()
 
-  }
+
+      clearTimeout(id);
+    };
+  }, [init]);
+
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <button
-        style={{
-          position: 'fixed',
-          zIndex: 111111111
-        }}
-        onClick={handleon}>찌닝!!!!</button>
       <Canvas
         id="three-canvas"
         style={{
@@ -292,10 +282,11 @@ function ARCanvas(props: any) {
 // VR 모드에서 사용자의 카메라 피드를 배경으로 보여주기 위한 컴포넌트
 // getUserMedia를 사용하여 video 스트림을 받아 배경에 표시합니다.
 //
-function BackgroundVideo({ streamRef }: any) {
+function BackgroundVideo({ streamRef, setIsMount }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    let id: string | number | NodeJS.Timeout | undefined
     navigator.mediaDevices
       .getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
@@ -314,6 +305,11 @@ function BackgroundVideo({ streamRef }: any) {
             videoRef.current?.play().catch((err) =>
               console.error('Video play error:', err)
             );
+
+         id=   setTimeout(()=>{
+              setIsMount(true)
+
+            },1000)
           };
         }
       })
@@ -324,6 +320,9 @@ function BackgroundVideo({ streamRef }: any) {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track: any) => track.stop());
         streamRef.current = null
+      }
+      if(id){
+        clearTimeout(id)
       }
 
     }
@@ -358,12 +357,13 @@ export default function BasicApp() {
   const [mount, setMount] = useState(false) // TODO: TEST
   const [sessionStarted, setSessionStarted] = useState(false);
   const [modalIsOpen, setIsOpen] = useState(false);
-  const [foto] = useState<Blob | null>(null);
+  const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
   const [show, setShow] = useState(false);
   const streamRef = useRef<MediaStream | null>(null)
+  const [isMount, setIsMount] = useState(false)
 
-
+  const offCanvasRef = useRef<any>(null)
 
 
   const domWidth = 360;
@@ -373,108 +373,90 @@ export default function BasicApp() {
   const circleR = 100;
   const circleColor = 'blue'
 
-  // const captureImage = async () => {
-  //   const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
-  //   // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-  //   //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-  //   const threeCanvas: HTMLCanvasElement | null = document.querySelector('[data-webxr_runtime]')?.children[3] as HTMLCanvasElement;
-  //   const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
-  //   console.log("ININi", container, videoElement, threeCanvas)
 
-  //   if (!container || !videoElement || !threeCanvas) {
-  //     console.warn('Required elements not ready');
-  //     return;
-  //   }
+  const func1 = async () => {
+    const threeCanvas: HTMLCanvasElement | null = document.querySelector('[data-webxr_runtime]')?.children[3] as HTMLCanvasElement;
 
-  //   // 캔버스 크기 설정
-  //   const containerWidth = container.clientWidth;
-  //   const containerHeight = container.clientHeight;
-  //   const devicePixelRatio = window.devicePixelRatio || 1;
 
-  //   const offscreenCanvas = document.createElement('canvas');
-  //   offscreenCanvas.width = containerWidth * devicePixelRatio;
-  //   offscreenCanvas.height = containerHeight * devicePixelRatio;
+    const containerWidth = threeCanvas.clientWidth;
+    const containerHeight = threeCanvas.clientHeight;
+    const devicePixelRatio = window.devicePixelRatio || 1;
 
-  //   const context = offscreenCanvas.getContext('2d');
-  //   if (!context) {
-  //     console.error('Failed to create canvas context.');
-  //     return;
-  //   }
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = containerWidth * devicePixelRatio;
+    offscreenCanvas.height = containerHeight * devicePixelRatio;
 
-  //   // 고해상도 지원
-  //   context.scale(devicePixelRatio, devicePixelRatio);
+    offCanvasRef.current = offscreenCanvas
 
-  //   // Helper function to calculate draw parameters
-  //   const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
-  //     const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-  //     const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+    const context = offscreenCanvas.getContext('2d');
+    if (!context) {
+      console.error('Failed to create canvas context.');
+      return;
+    }
 
-  //     if (elementWidth === 0 || elementHeight === 0) return null;
+    // 고해상도 지원
+    context.scale(devicePixelRatio, devicePixelRatio);
 
-  //     const elementAspectRatio = elementWidth / elementHeight;
-  //     const containerAspectRatio = containerWidth / containerHeight;
+    // Helper function to calculate draw parameters
+    const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+      const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+      const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
 
-  //     let drawWidth = containerWidth;
-  //     let drawHeight = containerHeight;
-  //     let offsetX = 0;
-  //     let offsetY = 0;
+      if (elementWidth === 0 || elementHeight === 0) return null;
 
-  //     if (objectFit === 'cover') {
-  //       if (elementAspectRatio > containerAspectRatio) {
-  //         drawWidth = containerHeight * elementAspectRatio;
-  //         offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-  //       } else {
-  //         drawHeight = containerWidth / elementAspectRatio;
-  //         offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-  //       }
-  //     } else if (objectFit === 'contain') {
-  //       if (elementAspectRatio > containerAspectRatio) {
-  //         drawHeight = containerWidth / elementAspectRatio;
-  //         offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-  //       } else {
-  //         drawWidth = containerHeight * elementAspectRatio;
-  //         offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-  //       }
-  //     }
+      const elementAspectRatio = elementWidth / elementHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
 
-  //     return { drawWidth, drawHeight, offsetX, offsetY };
-  //   };
+      let drawWidth = containerWidth;
+      let drawHeight = containerHeight;
+      let offsetX = 0;
+      let offsetY = 0;
 
-  //   try {
-  //     // Step 1: 비디오를 캔버스에 그리기
-  //     const videoParams = calculateDrawParams(videoElement, 'cover');
-  //     if (videoParams) {
-  //       context.drawImage(
-  //         videoElement,
-  //         videoParams.offsetX,
-  //         videoParams.offsetY,
-  //         videoParams.drawWidth,
-  //         videoParams.drawHeight
-  //       );
-  //     }
+      if (objectFit === 'cover') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        } else {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        }
+      } else if (objectFit === 'contain') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        } else {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        }
+      }
 
-  //     // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
-  //     const threeParams = calculateDrawParams(threeCanvas, 'cover');
-  //     if (threeParams) {
-  //       context.drawImage(
-  //         threeCanvas,
-  //         threeParams.offsetX,
-  //         threeParams.offsetY,
-  //         threeParams.drawWidth,
-  //         threeParams.drawHeight
-  //       );
-  //     }
+      return { drawWidth, drawHeight, offsetX, offsetY };
+    };
 
-  //     // Step 3: 최종 이미지를 PNG로 저장
-  //     offscreenCanvas.toBlob((blob) => {
-  //       if (blob) {
-  //         setFoto(blob);
-  //       }
-  //     }, 'image/png');
-  //   } catch (error) {
-  //     console.error('Error capturing image:', error);
-  //   }
-  // };
+    try {
+      // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
+      const threeParams = calculateDrawParams(threeCanvas, 'cover');
+      if (threeParams) {
+        context.drawImage(
+          threeCanvas,
+          threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight
+        );
+      }
+
+      // Step 3: 최종 이미지를 PNG로 저장
+      offscreenCanvas.toBlob((blob) => {
+        if (blob) {
+          setFoto(blob);
+        }
+      }, 'image/png');
+    } catch (error) {
+      console.error('Error capturing image:', error);
+    }
+
+  }
 
   useEffect(() => {
     if (foto) {
@@ -550,7 +532,7 @@ export default function BasicApp() {
     }
 
     func()
-
+    onTest()
     return () => {
       if (id) clearTimeout(id)
     }
@@ -577,7 +559,7 @@ export default function BasicApp() {
 
     id = setTimeout(() => {
       setMount(true)
-    }, 1000)
+    }, 2000)
 
     return () => {
       if (id) clearTimeout(id)
@@ -619,29 +601,161 @@ export default function BasicApp() {
             circleY={circleY}
             circleR={circleR}
             circleColor={circleColor}
+            draw={func1}
+            canvasRef={offCanvasRef}
           />
           {/* UI 영역을 Portal을 이용해 별도 DOM (#overlay-root)에 렌더링 */}
           {/*  */}
         </>
       ) : <>
-        <BackgroundVideo streamRef={streamRef} />
-        <button
-          style={{
-            position: 'fixed',
-            bottom: '48px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'transparent',
-            border: 'none',
-            padding: '1rem',
-            zIndex: 1001,
-          }}
-          onClick={onTest}
-        >
-          <Capture />
-        </button>
+        <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} />
+        <ModalU
+          isMount={isMount}
+          modalIsOpen={modalIsOpen}
+          fotoUrl={fotoUrl}
+          setFoto={setFoto}
+          closeModal={onTest}
+          closeSaveModal={closeSaveModal}
+          canvasRef={offCanvasRef}
+        />
       </>
       }
     </>
   );
+}
+
+
+const ModalU = function ({ fotoUrl, closeModal, closeSaveModal, setFoto, canvasRef, isMount }: any) {
+
+  useEffect(() => {
+    const func = ()=>{
+    if (isMount) {
+      const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
+      // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+      //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+      const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+
+      if (!container || !videoElement) {
+        console.warn('Required elements not ready');
+        return;
+      }
+
+      // 캔버스 크기 설정
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      const devicePixelRatio = window.devicePixelRatio || 1;
+
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = containerWidth * devicePixelRatio;
+      offscreenCanvas.height = containerHeight * devicePixelRatio;
+
+      const context = offscreenCanvas.getContext('2d');
+      if (!context) {
+        console.error('Failed to create canvas context.');
+        return;
+      }
+
+      // 고해상도 지원
+      context.scale(devicePixelRatio, devicePixelRatio);
+
+      // Helper function to calculate draw parameters
+      const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+        const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+        const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+
+        if (elementWidth === 0 || elementHeight === 0) return null;
+
+        const elementAspectRatio = elementWidth / elementHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        let drawWidth = containerWidth;
+        let drawHeight = containerHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (objectFit === 'cover') {
+          if (elementAspectRatio > containerAspectRatio) {
+            drawWidth = containerHeight * elementAspectRatio;
+            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+          } else {
+            drawHeight = containerWidth / elementAspectRatio;
+            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+          }
+        } else if (objectFit === 'contain') {
+          if (elementAspectRatio > containerAspectRatio) {
+            drawHeight = containerWidth / elementAspectRatio;
+            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+          } else {
+            drawWidth = containerHeight * elementAspectRatio;
+            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+          }
+        }
+
+        return { drawWidth, drawHeight, offsetX, offsetY };
+      };
+
+      try {
+        // Step 1: 비디오를 캔버스에 그리기
+        const videoParams = calculateDrawParams(videoElement, 'cover');
+        if (videoParams) {
+          context.drawImage(
+            videoElement,
+            videoParams.offsetX,
+            videoParams.offsetY,
+            videoParams.drawWidth,
+            videoParams.drawHeight
+          );
+
+          if (canvasRef.current) {
+            context.drawImage(
+              canvasRef.current,
+              videoParams.offsetX,
+              videoParams.offsetY,
+              videoParams.drawWidth,
+              videoParams.drawHeight
+            )
+          }
+        }
+
+        // Step 3: 최종 이미지를 PNG로 저장
+        offscreenCanvas.toBlob((blob: any) => {
+          if (blob) {
+            setFoto(blob);
+          }
+        }, 'image/png');
+      } catch (error) {
+        console.error('Error capturing image:', error);
+      }
+    }}
+
+  let id
+
+  id=setTimeout(()=>{
+    func()
+  },1000)
+
+  return ()=>{
+    if(id)clearTimeout(id)
+  }
+  }, [isMount])
+
+  return (
+    <div style={{ ...customStyles, display: 'block', position: 'fixed' }}>
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {fotoUrl && (
+            <img style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={fotoUrl} alt="캡쳐 이미지" />
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={closeModal} style={{ flex: 1 }}>
+            다시찍기
+          </button>
+          <button onClick={closeSaveModal} style={{ flex: 1 }}>
+            저장하기
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
