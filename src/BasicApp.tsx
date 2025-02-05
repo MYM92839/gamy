@@ -244,7 +244,7 @@ export default function BasicApp() {
                   pointerEvents: 'none',
                 }}
               >
-                              <PinchZoom />
+                              {/* <PinchZoom /> */}
                {/* 모달 */}
                 <div
                   style={{
