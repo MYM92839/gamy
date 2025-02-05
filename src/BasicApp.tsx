@@ -524,7 +524,7 @@ export default function BasicApp() {
 
       id = setTimeout(() => {
         setMount(true)
-      }, 3000)
+      }, 1000)
     }
 
     func()
@@ -540,14 +540,20 @@ export default function BasicApp() {
 
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null
     }
-    streamRef.current = null
+
+    if (xrStoreRef.current) {
+      xrStoreRef.current.getState().session?.end()
+      xrStoreRef.current.destroy()
+      xrStoreRef.current = null
+    }
 
     xrStoreRef.current = createXRStore()
 
     id = setTimeout(() => {
       setMount(true)
-    }, 3000)
+    }, 1000)
 
     return () => {
       if (id) clearTimeout(id)
