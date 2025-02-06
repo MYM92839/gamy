@@ -75,7 +75,8 @@ function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): vo
 }
 
 /**
- * renderSceneForCapture: XR 세션 캡쳐를 위해 임시 카메라를 생성 및 보정한 후 렌더링
+ * renderSceneForCapture
+ * XR 세션 캡쳐를 위해 임시 카메라를 생성 및 보정한 후 렌더링한 이미지를 dataURL로 반환
  */
 function renderSceneForCapture(
   renderer: THREE.WebGLRenderer,
@@ -102,14 +103,14 @@ function renderSceneForCapture(
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
   tempCamera.matrixWorldInverse.copy(camera.matrixWorldInverse);
 
-  // 카메라 위치 및 회전 추출 후 보정
+  // 카메라 위치/회전 보정 (예시로 Y축 180도 회전)
   tempCamera.position.setFromMatrixPosition(camera.matrixWorld);
   tempCamera.quaternion.setFromRotationMatrix(camera.matrixWorld);
   const offsetQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
   tempCamera.quaternion.multiply(offsetQuaternion);
   tempCamera.rotation.order = 'YXZ';
 
-  // 저장된 카메라 행렬로 보정 적용
+  // 저장된 카메라 행렬 보정 적용
   tempCamera.matrixWorld.copy(savedCameraMatrix);
   tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
   tempCamera.updateProjectionMatrix();
@@ -144,7 +145,7 @@ function renderSceneForCapture(
   const gl = renderer.getContext();
   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-  // 픽셀 데이터를 수직 뒤집기
+  // 픽셀 데이터를 수직 뒤집기 (WebGL은 아래쪽부터 픽셀을 읽음)
   const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height);
   for (let row = 0; row < height; row++) {
     const sourceIndex = (height - row - 1) * width * 4;
@@ -199,6 +200,7 @@ function Scene({ visible, glRef }: SceneProps) {
           ref={groupRef}
           position={[0, 0, -10]}
           rotation={[0, -Math.PI / 4, 0]}
+          // 만약 three.js 씬이 너무 작게 보인다면 scale 값을 0.5에서 1.0으로 조정해보세요.
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
@@ -389,7 +391,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         left: 0,
         width: '100vw',
         height: '100vh',
-        objectFit: 'cover', // 필요에 따라 'contain' 등으로 조정 가능
+        objectFit: 'cover', // 비디오의 원본 비율대로 채우기
         zIndex: 0,
       }}
       autoPlay
@@ -400,11 +402,11 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   );
 }
 
-const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas, isMount }: any) {
+const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas, isMount}: any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
-    // 합성: 비디오와 three.js 오프스크린 캔버스를 동일한 calcCover 기준으로 그립니다.
+    // 합성: 비디오와 three.js offscreenCanvas를 같은 크기로 그립니다.
     const captureComposite = () => {
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
@@ -415,21 +417,19 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
       const ctx = compositeCanvas.getContext('2d');
       if (!ctx) return;
 
+      // devicePixelRatio 보정: 캔버스 컨텍스트에 scale 적용 (이후 좌표는 CSS 픽셀 기준)
       ctx.scale(dpr, dpr);
 
-      // 비디오 엘리먼트의 intrinsic 해상도를 기준으로 calcCover 계산
+      // 비디오는 calcCover로 그려서 원본 비율대로 채움
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
       const videoWidth = videoElement.videoWidth || containerWidth;
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
       ctx.drawImage(videoElement, videoParams.offsetX, videoParams.offsetY, videoParams.drawWidth, videoParams.drawHeight);
 
-      // three.js offscreen 캔버스도 동일하게 calcCover 사용
+      // three.js offscreenCanvas는 캔버스 전체 크기로 그립니다.
       if (offscreenCanvas) {
-        const threeCSSWidth = offscreenCanvas.width / dpr;
-        const threeCSSHeight = offscreenCanvas.height / dpr;
-        const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
-        ctx.drawImage(offscreenCanvas, threeParams.offsetX, threeParams.offsetY, threeParams.drawWidth, threeParams.drawHeight);
+        ctx.drawImage(offscreenCanvas, 0, 0, containerWidth, containerHeight);
       }
 
       compositeCanvas.toBlob((blob: Blob | null) => {
@@ -543,8 +543,7 @@ export default function BasicApp() {
 
   /**
    * captureARContent:
-   * - WebXR 세션 종료 시 offscreen 캔버스에 렌더링한 이미지를 그립니다.
-   * - 캡쳐 이미지의 스케일/크롭을 offscreenCanvas와 동일하게 맞춥니다.
+   * XR 세션 종료 시, offscreenCanvas에 렌더링한 이미지를 그대로 그리도록 수정
    */
   const captureARContent = ({
     gl,
@@ -575,9 +574,8 @@ export default function BasicApp() {
       ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
       const img = new Image();
       img.onload = () => {
-        // offscreenCanvas에 그릴 때도 calcCover를 사용하여 일관되게 맞춤
-        const params = calcCover(img.width, img.height, offscreenCanvas.width / dpr, offscreenCanvas.height / dpr);
-        ctx.drawImage(img, params.offsetX, params.offsetY, params.drawWidth, params.drawHeight);
+        // offscreenCanvas에 전체 영역(컨테이너 크기)로 그림
+        ctx.drawImage(img, 0, 0, offscreenCanvas.width / dpr, offscreenCanvas.height / dpr);
       };
       img.src = imgData;
     }

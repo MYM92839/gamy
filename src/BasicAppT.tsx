@@ -2,14 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-var */
 
-import { Canvas, createPortal, useThree } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import {
-  XR,
-  XRDomOverlay,
-  XROrigin,
   createXRStore,
   noEvents,
   PointerEvents,
+  XR,
+  XRDomOverlay,
+  XROrigin,
 } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
