@@ -3,7 +3,7 @@
 /* eslint-disable no-var */
 
 import { Canvas, useThree } from '@react-three/fiber';
-import { XR, XRDomOverlay, XROrigin, createXRStore } from '@react-three/xr';
+import { XR, XRDomOverlay, XROrigin, createXRStore, noEvents, PointerEvents } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Box } from './ArApp';
@@ -11,7 +11,7 @@ import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-
+import { OrbitHandles } from '@react-three/handle'
 // Types
 interface SavedObjectData {
   position: THREE.Vector3;
@@ -207,7 +207,7 @@ function Scene({ visible, glRef }: SceneProps) {
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box on onRenderEnd={() => {}} />}
+          {visible && <Box on onRenderEnd={() => { }} />}
         </group>
       </Suspense>
     </>
@@ -325,7 +325,9 @@ function ARCanvas(props: any) {
           setOffscreenCanvas(offscreen);
           logDebug('Offscreen canvas created in ARCanvas.');
         }}
-      >
+        events={noEvents}>
+        <PointerEvents />
+        <OrbitHandles />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
           <Scene visible={props.sessionStarted} glRef={glRef} />
