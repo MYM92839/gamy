@@ -327,7 +327,7 @@ function ARCanvas(props: any) {
         }}
         events={noEvents}>
         <PointerEvents />
-        <OrbitHandles zoom />
+        <OrbitHandles />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
           <Scene visible={props.sessionStarted} glRef={glRef} />
