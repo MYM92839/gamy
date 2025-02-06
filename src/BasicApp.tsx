@@ -75,8 +75,8 @@ function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): vo
 
 /**
  * 수정된 renderSceneForCapture
- * - 전달받은 renderer (Canvas 내부의 renderer)를 사용합니다.
- * - devicePixelRatio를 반영하고, Math.floor를 이용해 정수 크기로 설정합니다.
+ * - XR 캡쳐를 위해 임시 카메라(tempCamera)를 생성하여 WebXR 카메라의 행렬 및 좌표계 보정을 적용합니다.
+ * - devicePixelRatio를 반영해 정수 크기로 렌더 타겟을 설정합니다.
  */
 function renderSceneForCapture(
   renderer: THREE.WebGLRenderer,
@@ -88,11 +88,38 @@ function renderSceneForCapture(
 
   const containerWidth = container.clientWidth;
   const containerHeight = container.clientHeight;
-  // const devicePixelRatio = window.devicePixelRatio || 1;
-  const width = Math.floor(containerWidth);
-  const height = Math.floor(containerHeight);
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.floor(containerWidth * dpr);
+  const height = Math.floor(containerHeight * dpr);
 
-  // 저장된 오브젝트 정보를 씬에 반영
+  // --- 임시 카메라 생성 및 보정 시작 ---
+  const tempCamera = new THREE.PerspectiveCamera(
+    camera.fov,
+    containerWidth / containerHeight,
+    camera.near,
+    camera.far
+  );
+  // 기존 WebXR 카메라의 행렬값 복사
+  tempCamera.matrixWorld.copy(camera.matrixWorld);
+  tempCamera.projectionMatrix.copy(camera.projectionMatrix);
+  tempCamera.matrixWorldInverse.copy(camera.matrixWorldInverse);
+
+  // 현재 카메라 위치와 회전을 추출
+  tempCamera.position.setFromMatrixPosition(camera.matrixWorld);
+  tempCamera.quaternion.setFromRotationMatrix(camera.matrixWorld);
+
+  // XR과 Three.js 간 좌표계 차이를 보정하기 위해 Y축 기준 180도 회전 (Z축 반전)
+  const offsetQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+  tempCamera.quaternion.multiply(offsetQuaternion);
+  tempCamera.rotation.order = 'YXZ';
+
+  // 저장된 카메라 행렬로 최종 보정 (필요시)
+  tempCamera.matrixWorld.copy(savedCameraMatrix);
+  tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
+  tempCamera.updateProjectionMatrix();
+  // --- 임시 카메라 생성 및 보정 완료 ---
+
+  // 저장된 오브젝트 정보 복원
   scene.children.forEach((obj, index) => {
     if (savedObjects[index]) {
       obj.position.copy(savedObjects[index].position);
@@ -109,7 +136,8 @@ function renderSceneForCapture(
 
   renderer.setRenderTarget(renderTarget);
   renderer.clear(true, true, true);
-  renderer.render(scene, camera);
+  // XR 세션 보정을 적용한 tempCamera로 씬 렌더링
+  renderer.render(scene, tempCamera);
 
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = width;
@@ -121,10 +149,8 @@ function renderSceneForCapture(
   const gl = renderer.getContext();
   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-  // ImageData의 길이가 (4 * width * height)여야 하므로 width와 height를 정수로 보장
+  // 이미지 수직 뒤집기 (WebGL의 픽셀 데이터는 아래쪽부터 읽힘)
   const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height);
-
-  // 이미지 수직 뒤집기
   for (let row = 0; row < height; row++) {
     const sourceIndex = (height - row - 1) * width * 4;
     const destIndex = row * width * 4;
@@ -140,7 +166,6 @@ function renderSceneForCapture(
 // Components
 function Scene({ visible, glRef }: SceneProps) {
   const { gl, camera, scene } = useThree();
-  // 그룹에 ref를 추가하여 해당 객체의 바운딩 박스를 계산합니다.
   const groupRef = useRef<THREE.Group>(null);
 
   useEffect(() => {
@@ -149,22 +174,18 @@ function Scene({ visible, glRef }: SceneProps) {
     }
   }, [camera, gl, glRef, scene]);
 
-  // 그룹(여기서는 Box를 포함한 그룹)의 바운딩 박스를 이용해 카메라를 프레이밍합니다.
   useEffect(() => {
     if (visible && groupRef.current && camera) {
       const box = new THREE.Box3().setFromObject(groupRef.current);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
 
-      // 최대 크기(너비, 높이, 깊이)로 프레임에 맞출 거리 계산 (패딩 20% 적용)
       const maxDim = Math.max(size.x, size.y, size.z);
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
       let distance = maxDim / (2 * Math.tan(fov / 2));
-      distance *= 1.2; // 패딩 적용
+      distance *= 1.2;
 
-      // 현재 카메라 방향을 유지하면서 center로부터 distance 떨어지도록 설정합니다.
       const direction = new THREE.Vector3().subVectors(camera.position, center).normalize();
-      // 만약 direction이 0이면 기본적으로 z축 방향(-z) 사용
       if (direction.length() === 0) {
         direction.set(0, 0, 1);
       }
@@ -186,7 +207,7 @@ function Scene({ visible, glRef }: SceneProps) {
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box on onRenderEnd={() => { }} />}
+          {visible && <Box on onRenderEnd={() => {}} />}
         </group>
       </Suspense>
     </>
@@ -497,7 +518,6 @@ const DebugPanel = ({ logs }: { logs: string[] }) => (
 );
 
 // Main App Component
-
 export default function BasicApp() {
   const xrStoreRef = useRef<any>(null);
   const [mount, setMount] = useState(false);
@@ -681,7 +701,7 @@ export default function BasicApp() {
           )}
         </>
       )}
-      <DebugPanel logs={debugLogs} />
+      {/* <DebugPanel logs={debugLogs} /> */}
     </>
   );
 }
