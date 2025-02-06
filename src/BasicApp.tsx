@@ -471,30 +471,30 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
   );
 };
 
-const DebugPanel = ({ logs }: { logs: string[] }) => (
-  <div
-    style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      maxHeight: '40%',
-      overflowY: 'auto',
-      background: 'rgba(0,0,0,0.8)',
-      color: 'white',
-      fontSize: '12px',
-      padding: '8px',
-      zIndex: 11000,
-    }}
-  >
-    <div>
-      <strong>Debug Logs:</strong>
-    </div>
-    {logs.map((log, index) => (
-      <div key={index}>{log}</div>
-    ))}
-  </div>
-);
+// const DebugPanel = ({ logs }: { logs: string[] }) => (
+//   <div
+//     style={{
+//       position: 'fixed',
+//       top: 0,
+//       left: 0,
+//       width: '100%',
+//       maxHeight: '40%',
+//       overflowY: 'auto',
+//       background: 'rgba(0,0,0,0.8)',
+//       color: 'white',
+//       fontSize: '12px',
+//       padding: '8px',
+//       zIndex: 11000,
+//     }}
+//   >
+//     <div>
+//       <strong>Debug Logs:</strong>
+//     </div>
+//     {logs.map((log, index) => (
+//       <div key={index}>{log}</div>
+//     ))}
+//   </div>
+// );
 
 // Main App Component
 export default function BasicApp() {
@@ -507,7 +507,7 @@ export default function BasicApp() {
   const streamRef = useRef<MediaStream | null>(null);
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [, setDebugLogs] = useState<string[]>([]);
 
   const logDebug = (msg: any, ...optionalParams: any[]) => {
     console.log(msg, ...optionalParams);
