@@ -265,6 +265,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    console.log("INININION")
     navigator.mediaDevices
       .getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
@@ -281,6 +282,8 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
             videoRef.current?.play().catch((err) =>
               logDebug('Video play error: ' + err)
             );
+            console.log("INININION2")
+
             setIsMount(true);
             logDebug('Video onloadeddata triggered.');
           };
@@ -533,30 +536,30 @@ const shareOrDownloadImage = (blob: Blob, logDebug: (msg: string) => void): void
 /////////////////////////
 // DebugPanel 컴포넌트
 /////////////////////////
-// const DebugPanel = ({ logs }: { logs: string[] }) => {
-//   return (
-//     <div
-//       style={{
-//         position: 'fixed',
-//         bottom: 0,
-//         left: 0,
-//         width: '100%',
-//         maxHeight: '40%',
-//         overflowY: 'auto',
-//         background: 'rgba(0,0,0,0.8)',
-//         color: 'white',
-//         fontSize: '12px',
-//         padding: '8px',
-//         zIndex: 11000,
-//       }}
-//     >
-//       <div><strong>Debug Logs:</strong></div>
-//       {logs.map((log, index) => (
-//         <div key={index}>{log}</div>
-//       ))}
-//     </div>
-//   );
-// };
+const DebugPanel = ({ logs }: { logs: string[] }) => {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        maxHeight: '40%',
+        overflowY: 'auto',
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        fontSize: '12px',
+        padding: '8px',
+        zIndex: 11000,
+      }}
+    >
+      <div><strong>Debug Logs:</strong></div>
+      {logs.map((log, index) => (
+        <div key={index}>{log}</div>
+      ))}
+    </div>
+  );
+};
 
 /////////////////////////
 // BasicApp 컴포넌트
@@ -575,7 +578,7 @@ export default function BasicApp() {
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
 
   // 디버그 로그 상태
-  const [, setDebugLogs] = useState<string[]>([]);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const logDebug = (msg: string) => {
     console.log(msg);
     setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -605,6 +608,42 @@ export default function BasicApp() {
 
   // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 복사
   const captureARContent = () => {
+
+    const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+      const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+      const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+
+      if (elementWidth === 0 || elementHeight === 0) return null;
+
+      const elementAspectRatio = elementWidth / elementHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
+
+      let drawWidth = containerWidth;
+      let drawHeight = containerHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (objectFit === 'cover') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        } else {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        }
+      } else if (objectFit === 'contain') {
+        if (elementAspectRatio > containerAspectRatio) {
+          drawHeight = containerWidth / elementAspectRatio;
+          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+        } else {
+          drawWidth = containerHeight * elementAspectRatio;
+          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+        }
+      }
+
+      return { drawWidth, drawHeight, offsetX, offsetY };
+    };
+
     const threeCanvas1: any | null = document.querySelector('#three-canvas')?.children[0]
       .children[0] || (Array.from(document.querySelectorAll('canvas')) as HTMLCanvasElement[])[0];
 
@@ -633,7 +672,15 @@ export default function BasicApp() {
         return;
       }
       ctx.scale(dpr, dpr);
-      ctx.drawImage(threeCanvas, 0, 0, containerWidth, containerHeight);
+
+      const threeParams = calculateDrawParams(threeCanvas, 'cover');
+
+      if (threeParams)
+        ctx.drawImage(threeCanvas, threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight);
+
       logDebug('captureARContent: AR content captured to offscreen canvas.');
     } else {
       logDebug('captureARContent: offscreenCanvas is null.');
@@ -738,7 +785,7 @@ export default function BasicApp() {
       )}
       {/* <DebugCanvasList /> */}
 
-      {/* <DebugPanel logs={debugLogs} /> */}
+      <DebugPanel logs={debugLogs} />
     </>
   );
 }
