@@ -17,6 +17,7 @@ import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoRabbitT from './pages/PhotoRabbitT.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
 import BasicAppT from './BasicAppT.tsx';
+import PhotoRabbitTT from './pages/PhotoRabbitTT.tsx';
 
 const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
       {
         path: 'test',
         element: <PhotoRabbitT />
+      },
+      {
+        path: 'teste',
+        element: <PhotoRabbitTT />
       },
       {
         path: 'pl/:char',
