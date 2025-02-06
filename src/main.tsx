@@ -52,11 +52,11 @@ const router = createBrowserRouter([
         element: <PhotoRabbitT />
       },
       {
-        path: 'teste',
+        path: 'teste', // UI
         element: <PhotoRabbitTT />
       },
       {
-        path: 'testa',
+        path: 'testa', // RATIO
         element: <PhotoRabbitTTT />
       },
       {

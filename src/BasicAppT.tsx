@@ -2,13 +2,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-var */
 
-import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitHandles } from '@react-three/handle';
-import { createXRStore, noEvents, PointerEvents, XR } from '@react-three/xr';
+import { Canvas, createPortal, useThree } from '@react-three/fiber';
+import {
+  XR,
+  XRDomOverlay,
+  XROrigin,
+  createXRStore,
+  noEvents,
+  PointerEvents,
+} from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
+import Back from './assets/icons/Back';
+import Capture from './assets/icons/Capture';
+import Button from './components/Button';
+// react-use-gesture import (최신 버전은 '@use-gesture/react')
+import { useDrag } from '@use-gesture/react';
+
 // Types
 interface SavedObjectData {
   position: THREE.Vector3;
@@ -19,6 +31,22 @@ interface SavedObjectData {
 interface SceneProps {
   visible: boolean;
   glRef: any;
+}
+
+interface UIOverlayProps {
+  modalIsOpen: boolean;
+  openModal: () => void;
+  closeModal: () => void;
+  closeSaveModal: () => void;
+  show: boolean;
+  setShow: (v: boolean) => void;
+  domWidth: number;
+  domHeight: number;
+  circleX: number;
+  circleY: number;
+  circleR: number;
+  circleColor: string;
+  fotoUrl: string;
 }
 
 // Utils
@@ -195,6 +223,101 @@ function Scene({ visible, glRef }: SceneProps) {
   );
 }
 
+/**
+ * GestureHandler  
+ * XRDomOverlay 내에 제스처(드래그)를 처리하여 카메라 회전을 직접 업데이트합니다.
+ */
+function GestureHandler() {
+  const { camera } = useThree();
+  // useDrag: 드래그 이벤트에서 x, y 변화량을 받아 카메라 회전을 업데이트합니다.
+  const bind = useDrag(({ delta: [dx, dy] }) => {
+    // 단순 예시로, 드래그에 따라 카메라 회전을 업데이트합니다.
+    camera.rotation.y += dx * 0.005;
+    camera.rotation.x += dy * 0.005;
+    // 회전 값 제한 (예: x축은 -90도~90도)
+    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+    camera.updateProjectionMatrix();
+  });
+
+  return (
+    <div
+      {...bind()}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 9999,
+        touchAction: 'none', // 터치 제스처를 올바르게 처리하기 위해
+      }}
+    />
+  );
+}
+
+function UIOverlay({
+  openModal,
+  setShow,
+  domWidth,
+  domHeight,
+  circleX,
+  circleY,
+  circleR,
+  circleColor,
+}: UIOverlayProps) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10001, pointerEvents: 'auto' }}>
+      <button
+        style={{
+          position: 'fixed',
+          bottom: '65px',
+          left: '24px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 1001,
+        }}
+        onClick={() => window.history.back()}
+      >
+        <Back />
+      </button>
+      <button
+        style={{
+          position: 'fixed',
+          bottom: '48px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'transparent',
+          border: 'none',
+          padding: '1rem',
+          zIndex: 100001,
+        }}
+        onClick={openModal}
+      >
+        <Capture />
+      </button>
+      <div
+        style={{
+          position: 'fixed',
+          width: `${domWidth}px`,
+          height: `${domHeight}px`,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'transparent',
+          overflow: 'hidden',
+          zIndex: 10001,
+        }}
+      >
+        <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
+          <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
+        </svg>
+      </div>
+      <Button
+        onClick={() => setShow(true)}
+        title="토끼 부르기"
+        className="z-[1001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+      />
+    </div>
+  );
+}
+
 function ARCanvas(props: any) {
   const { setOffscreenCanvas, logDebug } = props;
   const [init, setInit] = useState(false);
@@ -219,6 +342,9 @@ function ARCanvas(props: any) {
     return () => clearTimeout(id);
   }, [init]);
 
+  const handleModal = () => {
+    props.openModal(glRef.current);
+  };
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
@@ -237,11 +363,33 @@ function ARCanvas(props: any) {
           setOffscreenCanvas(offscreen);
           logDebug('Offscreen canvas created in ARCanvas.');
         }}
-        events={noEvents}>
+        events={noEvents}
+      >
         <PointerEvents />
-        <OrbitHandles />
+        {/* OrbitHandles 대신 제스처 핸들러를 XRDomOverlay에서 처리 */}
         <XR store={props.xrStoreRef.current}>
+          <XROrigin position={[0, 0.5, 0]} />
           <Scene visible={props.sessionStarted} glRef={glRef} />
+          {/* XRDomOverlay 내에 UIOverlay와 GestureHandler를 함께 렌더링 */}
+          <XRDomOverlay>
+            <UIOverlay
+              modalIsOpen={props.modalIsOpen}
+              fotoUrl={''}
+              openModal={handleModal}
+              closeModal={props.closeModal}
+              closeSaveModal={props.closeSaveModal}
+              show={props.show}
+              setShow={props.setShow}
+              domWidth={props.domWidth}
+              domHeight={props.domHeight}
+              circleX={props.circleX}
+              circleY={props.circleY}
+              circleR={props.circleR}
+              circleColor={props.circleColor}
+            />
+            {/* 제스처 이벤트를 처리하는 컴포넌트 */}
+            <GestureHandler />
+          </XRDomOverlay>
         </XR>
       </Canvas>
     </div>
@@ -388,33 +536,8 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
   );
 };
 
-// const DebugPanel = ({ logs }: { logs: string[] }) => (
-//   <div
-//     style={{
-//       position: 'fixed',
-//       top: 0,
-//       left: 0,
-//       width: '100%',
-//       maxHeight: '40%',
-//       overflowY: 'auto',
-//       background: 'rgba(0,0,0,0.8)',
-//       color: 'white',
-//       fontSize: '12px',
-//       padding: '8px',
-//       zIndex: 11000,
-//     }}
-//   >
-//     <div>
-//       <strong>Debug Logs:</strong>
-//     </div>
-//     {logs.map((log, index) => (
-//       <div key={index}>{log}</div>
-//     ))}
-//   </div>
-// );
-
 // Main App Component
-export default function BasicAppT() {
+export default function BasicApp() {
   const xrStoreRef = useRef<any>(null);
   const [mount, setMount] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -451,7 +574,10 @@ export default function BasicAppT() {
   };
 
   const shareOrDownloadImage = (blob: Blob) => {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'capture.png', { type: blob.type })] })) {
+    if (
+      navigator.canShare &&
+      navigator.canShare({ files: [new File([blob], 'capture.png', { type: blob.type })] })
+    ) {
       const file = new File([blob], `capture-${new Date().getTime()}.png`, {
         type: 'image/png',
       });
