@@ -197,7 +197,7 @@ function Scene({ visible, glRef }: SceneProps) {
 
   return (
     <>
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={5} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
         <group
