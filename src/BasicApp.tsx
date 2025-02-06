@@ -186,7 +186,7 @@ function Scene({ visible, glRef }: SceneProps) {
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box on onRenderEnd={() => {}} />}
+          {visible && <Box on onRenderEnd={() => { }} />}
         </group>
       </Suspense>
     </>
@@ -471,32 +471,33 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
   );
 };
 
-// const DebugPanel = ({ logs }: { logs: string[] }) => (
-//   <div
-//     style={{
-//       position: 'fixed',
-//       top: 0,
-//       left: 0,
-//       width: '100%',
-//       maxHeight: '40%',
-//       overflowY: 'auto',
-//       background: 'rgba(0,0,0,0.8)',
-//       color: 'white',
-//       fontSize: '12px',
-//       padding: '8px',
-//       zIndex: 11000,
-//     }}
-//   >
-//     <div>
-//       <strong>Debug Logs:</strong>
-//     </div>
-//     {logs.map((log, index) => (
-//       <div key={index}>{log}</div>
-//     ))}
-//   </div>
-// );
+const DebugPanel = ({ logs }: { logs: string[] }) => (
+  <div
+    style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      maxHeight: '40%',
+      overflowY: 'auto',
+      background: 'rgba(0,0,0,0.8)',
+      color: 'white',
+      fontSize: '12px',
+      padding: '8px',
+      zIndex: 11000,
+    }}
+  >
+    <div>
+      <strong>Debug Logs:</strong>
+    </div>
+    {logs.map((log, index) => (
+      <div key={index}>{log}</div>
+    ))}
+  </div>
+);
 
 // Main App Component
+
 export default function BasicApp() {
   const xrStoreRef = useRef<any>(null);
   const [mount, setMount] = useState(false);
@@ -507,7 +508,7 @@ export default function BasicApp() {
   const streamRef = useRef<MediaStream | null>(null);
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
-  const [, setDebugLogs] = useState<string[]>([]);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
   const logDebug = (msg: any, ...optionalParams: any[]) => {
     console.log(msg, ...optionalParams);
@@ -680,7 +681,7 @@ export default function BasicApp() {
           )}
         </>
       )}
-      {/* <DebugPanel logs={debugLogs} /> */}
+      <DebugPanel logs={debugLogs} />
     </>
   );
 }
