@@ -605,8 +605,9 @@ export default function BasicApp() {
 
   // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 복사
   const captureARContent = () => {
-    const threeCanvas1: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-      .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+    const threeCanvas1: any | null = document.querySelector('#three-canvas')?.children[0]
+      .children[0] || (Array.from(document.querySelectorAll('canvas')) as HTMLCanvasElement[])[0];
+
 
     const container = document.querySelector('[data-webxr_runtime]');
     const t = container?.querySelector('[data-engine="three.js r157"]')
@@ -735,7 +736,7 @@ export default function BasicApp() {
           )}
         </>
       )}
-      <DebugCanvasList />
+      {/* <DebugCanvasList /> */}
 
       {/* <DebugPanel logs={debugLogs} /> */}
     </>
@@ -744,44 +745,44 @@ export default function BasicApp() {
 
 
 // DebugCanvasList 컴포넌트: 현재 DOM 내의 모든 canvas 목록을 표시
-const DebugCanvasList = () => {
-  const [canvasList, setCanvasList] = useState<HTMLCanvasElement[]>([]);
+// const DebugCanvasList = () => {
+//   const [canvasList, setCanvasList] = useState<HTMLCanvasElement[]>([]);
 
-  // 주기적으로 canvas 목록을 갱신하는 효과 (예, 2초마다)
-  useEffect(() => {
-    const updateCanvasList = () => {
-      const canvases = Array.from(document.querySelectorAll('canvas')) as HTMLCanvasElement[];
-      setCanvasList(canvases);
-    };
+//   // 주기적으로 canvas 목록을 갱신하는 효과 (예, 2초마다)
+//   useEffect(() => {
+//     const updateCanvasList = () => {
+//       const canvases = Array.from(document.querySelectorAll('canvas')) as HTMLCanvasElement[];
+//       setCanvasList(canvases);
+//     };
 
-    updateCanvasList();
-    const intervalId = setInterval(updateCanvasList, 2000); // 2초마다 업데이트
-    return () => clearInterval(intervalId);
-  }, []);
+//     updateCanvasList();
+//     const intervalId = setInterval(updateCanvasList, 2000); // 2초마다 업데이트
+//     return () => clearInterval(intervalId);
+//   }, []);
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        backgroundColor: 'rgba(0,0,0,0.85)',
-        color: 'white',
-        zIndex: 20000,
-        maxHeight: '40%',
-        overflowY: 'auto',
-        padding: '8px',
-        fontSize: '12px',
-      }}
-    >
-      <h3 style={{ margin: '0 0 4px 0' }}>Canvas List</h3>
-      {canvasList.length === 0 && <div>No canvases found.</div>}
-      {canvasList.map((canvas, index) => (
-        <div key={index} style={{ marginBottom: '4px' }}>
-          <strong>{index}.</strong> id: {canvas.id || 'none'} | data-engine: {canvas.getAttribute('data-engine') || 'none'} | width: {canvas.width}, height: {canvas.height}
-        </div>
-      ))}
-    </div>
-  );
-};
+//   return (
+//     <div
+//       style={{
+//         position: 'fixed',
+//         top: 0,
+//         left: 0,
+//         width: '100%',
+//         backgroundColor: 'rgba(0,0,0,0.85)',
+//         color: 'white',
+//         zIndex: 20000,
+//         maxHeight: '40%',
+//         overflowY: 'auto',
+//         padding: '8px',
+//         fontSize: '12px',
+//       }}
+//     >
+//       <h3 style={{ margin: '0 0 4px 0' }}>Canvas List</h3>
+//       {canvasList.length === 0 && <div>No canvases found.</div>}
+//       {canvasList.map((canvas, index) => (
+//         <div key={index} style={{ marginBottom: '4px' }}>
+//           <strong>{index}.</strong> id: {canvas.id || 'none'} | data-engine: {canvas.getAttribute('data-engine') || 'none'} | width: {canvas.width}, height: {canvas.height}
+//         </div>
+//       ))}
+//     </div>
+//   );
+// };
