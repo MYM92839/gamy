@@ -1,5 +1,5 @@
 // App.tsx
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin, createXRStore } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Modal from 'react-modal';
@@ -88,7 +88,7 @@ const UIOverlay = ({
 }: {
   modalIsOpen: boolean;
   fotoUrl: string; // 미사용
-  openModal: () => void;
+  openModal: (v:any) => void;
   closeModal: () => void;
   closeSaveModal: () => void;
   show: boolean;
@@ -100,6 +100,16 @@ const UIOverlay = ({
   circleR: number;
   circleColor: string;
 }) => {
+  const {gl} =useThree()
+
+
+  const handleM = ()=>{
+    if(gl){
+      console.log("XR",gl.domElement.toDataURL())
+
+openModal(gl)
+    }
+  }
   return (
     <div
       style={{
@@ -136,7 +146,7 @@ const UIOverlay = ({
               padding: '1rem',
               zIndex: 1001,
             }}
-            onClick={openModal}
+            onClick={handleM}
           >
             <Capture />
           </button>
@@ -541,7 +551,7 @@ const DebugPanel = ({ logs }: { logs: string[] }) => {
     <div
       style={{
         position: 'fixed',
-        bottom: 0,
+        top: 0,
         left: 0,
         width: '100%',
         maxHeight: '40%',
@@ -607,7 +617,7 @@ export default function BasicApp() {
   };
 
   // captureARContent: ARCanvas의 three.js 캔버스 내용을 offscreenCanvas에 복사
-  const captureARContent = () => {
+  const captureARContent = (gl:any) => {
 
     const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
       const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
@@ -644,7 +654,7 @@ export default function BasicApp() {
       return { drawWidth, drawHeight, offsetX, offsetY };
     };
 
-    const threeCanvas1: any | null = document.querySelector('#three-canvas')?.children[0]
+    const threeCanvas1: any | null =gl.domElement|| document.querySelector('#three-canvas')?.children[0]
       .children[0] || (Array.from(document.querySelectorAll('canvas')) as HTMLCanvasElement[])[0];
 
 
@@ -734,10 +744,10 @@ export default function BasicApp() {
             show={show}
             sessionStarted={sessionStarted}
             modalIsOpen={modalIsOpen}
-            openModal={() => {
+            openModal={(gl:any) => {
               // openModal 클릭 시:
-              // 1. XR 세션에서 three.js 캔버스 내용을 offscreen 캔버스에 복사
-              captureARContent();
+              // 1. XmR 세션에서 three.js 캔버스 내용을 offscreen 캔버스에 복사
+              captureARContent(gl);
               // 2. XR 세션 클린업 (기존 XR 세션 종료)
               if (xrStoreRef.current) {
                 xrStoreRef.current.getState().session?.end();
@@ -791,6 +801,10 @@ export default function BasicApp() {
 }
 
 
+
+function useXr() {
+  throw new Error('Function not implemented.');
+}
 // DebugCanvasList 컴포넌트: 현재 DOM 내의 모든 canvas 목록을 표시
 // const DebugCanvasList = () => {
 //   const [canvasList, setCanvasList] = useState<HTMLCanvasElement[]>([]);
