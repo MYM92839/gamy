@@ -660,7 +660,7 @@ export default function BasicApp() {
 
     const container = document.querySelector('[data-webxr_runtime]');
     const t = container?.querySelector('[data-engine="three.js r157"]')
-    if (!container) {
+    if (!container || !threeCanvas1) {
       logDebug('captureARContent: data-webxr_runtime container not found.');
       return;
     }
@@ -800,11 +800,6 @@ export default function BasicApp() {
   );
 }
 
-
-
-function useXr() {
-  throw new Error('Function not implemented.');
-}
 // DebugCanvasList 컴포넌트: 현재 DOM 내의 모든 canvas 목록을 표시
 // const DebugCanvasList = () => {
 //   const [canvasList, setCanvasList] = useState<HTMLCanvasElement[]>([]);
