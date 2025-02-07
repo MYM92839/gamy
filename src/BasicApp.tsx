@@ -172,6 +172,10 @@ function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
 
+  const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
+  const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
+  const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
+
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -185,7 +189,9 @@ function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
     if (visible && groupRef.current && camera) {
       // 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산된 rabbitPosition을 사용합니다.
       // (여기서는 단순히 그룹의 position을 rabbitPosition으로 설정)
+
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
+
       camera.updateProjectionMatrix();
     }
   }, [visible, camera, rabbitPosition]);
@@ -197,7 +203,7 @@ function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
       <Suspense fallback={null}>
         <group
           ref={groupRef}
-          position={rabbitPosition}
+          position={[rabbitPosition[0] + cx, rabbitPosition[1] + cy, rabbitPosition[2] + cz]}
           rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
