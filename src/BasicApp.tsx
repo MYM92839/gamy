@@ -282,7 +282,7 @@ function UIOverlay({
           <Button
             onClick={() => setShow(true)}
             title="토끼 부르기"
-            className="z-[10001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+            className="z-[9999999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
           />
         </>
       )}
