@@ -712,7 +712,7 @@ export default function BasicApp() {
               const cameraPos = gl.camera.position.clone();
               const direction = new THREE.Vector3();
               gl.camera.getWorldDirection(direction);
-              const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
+              const newRabbitPos = cameraPos.add(direction.multiplyScalar(30));
               setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
               logDebug('Rabbit position updated on button click:', newRabbitPos);
             }
