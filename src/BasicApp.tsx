@@ -23,6 +23,7 @@ interface SceneProps {
   visible: boolean;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
+  rabbitPosition: [number, number, number]; // 새로 추가한 토끼 위치 prop
 }
 
 interface UIOverlayProps {
@@ -106,13 +107,11 @@ function renderSceneForCapture(
 
   // ★ 보정 로직 적용 ★
   if (calibrationMatrix) {
-    // calibrationMatrix의 역행렬을 곱해 초기 캘리브레이션 기준으로 보정
     const calibratedMatrix = new THREE.Matrix4();
     calibratedMatrix.multiplyMatrices(calibrationMatrix.clone().invert(), camera.matrixWorld);
     tempCamera.matrixWorld.copy(calibratedMatrix);
     tempCamera.matrixWorldInverse.copy(calibratedMatrix).invert();
   } else {
-    // 보정 데이터가 없다면 기존 방식으로 처리 (예: savedCameraMatrix 사용)
     tempCamera.matrixWorld.copy(savedCameraMatrix);
     tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
   }
@@ -136,7 +135,6 @@ function renderSceneForCapture(
 
   renderer.setRenderTarget(renderTarget);
   renderer.clear(true, true, true);
-  // XR 세션 보정을 적용한 tempCamera로 씬 렌더링
   renderer.render(scene, tempCamera);
 
   const tempCanvas = document.createElement('canvas');
@@ -149,7 +147,6 @@ function renderSceneForCapture(
   const gl = renderer.getContext();
   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-  // 이미지 수직 뒤집기 (WebGL의 픽셀 데이터는 아래쪽부터 읽힘)
   const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height);
   for (let row = 0; row < height; row++) {
     const sourceIndex = (height - row - 1) * width * 4;
@@ -165,14 +162,12 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, calibrationMatrixRef }: SceneProps) {
+function Scene({ visible, glRef, calibrationMatrixRef, rabbitPosition }: SceneProps) {
+  // 기존 searchParams는 Box 컴포넌트의 추가 속성(예, sposition, oposition)용으로 남겨둡니다.
   const [searchParams] = useSearchParams();
   const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
   const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
   const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
-  const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
-  const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
-  const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
   const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
@@ -186,47 +181,20 @@ function Scene({ visible, glRef, calibrationMatrixRef }: SceneProps) {
     }
   }, [camera, gl, glRef, scene]);
 
-  // AR 세션이 안정된 첫 렌더 시점에 캘리브레이션 행렬 저장 (초기값으로 기록)
-  useEffect(() => {
-    if (visible && camera && !calibrationMatrixRef.current) {
-      calibrationMatrixRef.current = camera.matrixWorld.clone();
-      console.log('Calibration matrix set:', calibrationMatrixRef.current);
-    }
-  }, [visible, camera, calibrationMatrixRef]);
-
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      const box = new THREE.Box3().setFromObject(groupRef.current);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
-      let distance = maxDim / (2 * Math.tan(fov / 2));
-      distance *= 1.2;
-
-      const direction = new THREE.Vector3().subVectors(camera.position, center).normalize();
-      if (direction.length() === 0) {
-        direction.set(0, 0, 1);
-      }
-      camera.position.copy(center).add(direction.multiplyScalar(distance));
-      camera.lookAt(center);
+      // 이제 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산된 rabbitPosition을 사용합니다.
+      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
     }
-  }, [visible, camera]);
+  }, [visible, camera, rabbitPosition]);
 
   return (
     <>
       <ambientLight intensity={1.5} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <group
-          ref={groupRef}
-          position={[cx, cy, -10 + cz]}
-          rotation={[0, -Math.PI / 4, 0]}
-          scale={[0.5, 0.5, 0.5]}
-          visible={visible}
-        >
+        <group ref={groupRef} position={rabbitPosition} rotation={[0, -Math.PI / 4, 0]} scale={[0.5, 0.5, 0.5]} visible={visible}>
           {visible && <Box sposition={[sx, sy, sz]} oposition={[ox, oy, oz]} on onRenderEnd={() => {}} />}
         </group>
       </Suspense>
@@ -296,11 +264,7 @@ function UIOverlay({
               <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
             </svg>
           </div>
-          <Button
-            onClick={() => setShow(true)}
-            title="토끼 부르기"
-            className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
-          />
+          <Button onClick={() => setShow(true)} title="토끼 부르기" className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit" />
         </>
       )}
     </div>
@@ -346,14 +310,8 @@ function ARCanvas(props: any) {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
-              fill="currentColor"
-            />
-            <path
-              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
-              fill="currentFill"
-            />
+            <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor" />
+            <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill" />
           </svg>
           <span className="sr-only">Loading...</span>
         </div>
@@ -379,7 +337,12 @@ function ARCanvas(props: any) {
         <OrbitHandles />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
-          <Scene visible={props.show} glRef={glRef} calibrationMatrixRef={props.calibrationMatrixRef} />
+          <Scene
+            visible={props.show}
+            glRef={glRef}
+            calibrationMatrixRef={props.calibrationMatrixRef}
+            rabbitPosition={props.rabbitPosition}
+          />
           <XRDomOverlay>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
@@ -470,7 +433,6 @@ const ModalU = function ({
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
-    // 유저 카메라 화면과 three.js 캔버스를 합성
     const captureComposite = () => {
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
@@ -483,13 +445,11 @@ const ModalU = function ({
 
       ctx.scale(dpr, dpr);
 
-      // --- 유저 카메라 영상 그리기 (FOV 보정 적용) ---
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
       const videoWidth = videoElement.videoWidth || containerWidth;
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      // 기본 video FOV를 35°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
       const defaultVideoFov = 35;
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 0.95;
@@ -503,9 +463,7 @@ const ModalU = function ({
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
-      // -----------------------------------------------------
 
-      // --- three.js 씬 합성 (기존 계산대로) ---
       const threeCSSWidth = offscreenCanvas!.width / dpr;
       const threeCSSHeight = offscreenCanvas!.height / dpr;
       const scaleFactorThree = Math.max(containerWidth / threeCSSWidth, containerHeight / threeCSSHeight);
@@ -517,7 +475,6 @@ const ModalU = function ({
       ctx.filter = 'brightness(2)';
       ctx.drawImage(offscreenCanvas!, offsetX, offsetY, drawWidth, drawHeight);
       ctx.filter = 'none';
-      // -----------------------------------------------------
 
       compositeCanvas.toBlob((blob: Blob | null) => {
         if (blob) {
@@ -606,8 +563,11 @@ export default function BasicApp() {
   const [, setDebugLogs] = useState<string[]>([]);
   const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
 
-  // 추가: 센서 오차 보정을 위한 초기 캘리브레이션 행렬 저장
+  // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
+
+  // 토끼(오브젝트) 배치를 위한 상태: 버튼 클릭 시 현재 카메라 기준 3미터 앞쪽 좌표
+  const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
 
   const logDebug = (msg: any, ...optionalParams: any[]) => {
     console.log(msg, ...optionalParams);
@@ -656,11 +616,10 @@ export default function BasicApp() {
   };
 
   /**
-   * 수정된 captureARContent:
-   * - 전달받은 gl, scene, camera를 사용하여 renderSceneForCapture를 호출합니다.
-   * - offscreenCanvas의 크기를 container의 dpr을 고려해 정수 값으로 설정합니다.
-   * - 동시에 XR 카메라의 fov 값을 state에 저장해 ModalU의 비디오 보정에 사용합니다.
-   * - 추가: calibrationMatrixRef를 이용하여 센서 오차 보정 적용
+   * captureARContent:
+   * - gl, scene, camera를 사용하여 캡쳐 이미지를 생성합니다.
+   * - offscreenCanvas의 크기는 devicePixelRatio를 반영합니다.
+   * - calibrationMatrixRef를 이용한 보정은 그대로 유지됩니다.
    */
   const captureARContent = ({
     gl,
@@ -672,7 +631,6 @@ export default function BasicApp() {
     scene: THREE.Scene;
   }) => {
     onXRSessionEnd(scene, camera);
-    // XR 카메라의 fov 값을 업데이트
     setCameraFov(camera.fov);
     const imgData = renderSceneForCapture(gl, scene, camera, calibrationMatrixRef.current);
     const threeCanvas = document.querySelector('#three-canvas');
@@ -744,10 +702,14 @@ export default function BasicApp() {
           sessionStarted={sessionStarted}
           modalIsOpen={modalIsOpen}
           openModal={(gl: any) => {
-            // ★ 수정된 부분: "토끼 부르기" 버튼 클릭 시점에 캘리브레이션 행렬을 현재 카메라의 matrixWorld로 업데이트
             if (gl && gl.camera) {
-              calibrationMatrixRef.current = gl.camera.matrixWorld.clone();
-              logDebug('Calibration matrix updated on button click:', calibrationMatrixRef.current);
+              // 버튼 클릭 시점에 현재 카메라 위치와 방향을 기반으로 토끼(오브젝트)의 위치를 계산 (3미터 앞)
+              const cameraPos = gl.camera.position.clone();
+              const direction = new THREE.Vector3();
+              gl.camera.getWorldDirection(direction);
+              const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
+              setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
+              logDebug('Rabbit position updated on button click:', newRabbitPos);
             }
             captureARContent(gl);
             if (xrStoreRef.current) {
@@ -773,7 +735,8 @@ export default function BasicApp() {
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
           cameraFov={cameraFov}
-          calibrationMatrixRef={calibrationMatrixRef} // 추가: calibrationMatrixRef 전달
+          calibrationMatrixRef={calibrationMatrixRef}
+          rabbitPosition={rabbitPosition}
         />
       ) : sessionStarted ? (
         <>
