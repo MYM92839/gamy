@@ -22,6 +22,7 @@ interface SavedObjectData {
 interface SceneProps {
   visible: boolean;
   glRef: any;
+  calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
 }
 
 interface UIOverlayProps {
@@ -78,11 +79,13 @@ function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): vo
  * renderSceneForCapture
  * - XR 캡쳐를 위해 임시 카메라(tempCamera)를 생성하여 WebXR 카메라의 행렬 및 좌표계 보정을 적용합니다.
  * - devicePixelRatio를 반영해 정수 크기로 렌더 타겟을 설정합니다.
+ * - 추가: calibrationMatrix가 제공되면, 이를 기반으로 센서 오차 및 초기 캘리브레이션 보정을 진행합니다.
  */
 function renderSceneForCapture(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
-  camera: THREE.PerspectiveCamera
+  camera: THREE.PerspectiveCamera,
+  calibrationMatrix?: THREE.Matrix4 | null
 ): string {
   const container = document.querySelector('#three-canvas');
   if (!container) return '';
@@ -95,21 +98,24 @@ function renderSceneForCapture(
 
   // --- 임시 카메라 생성 및 보정 시작 ---
   const tempCamera = new THREE.PerspectiveCamera(camera.fov, containerWidth / containerHeight, camera.near, camera.far);
-  tempCamera.matrixWorld.copy(camera.matrixWorld);
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
-  tempCamera.matrixWorldInverse.copy(camera.matrixWorldInverse);
 
-  tempCamera.position.setFromMatrixPosition(camera.matrixWorld);
-  tempCamera.quaternion.setFromRotationMatrix(camera.matrixWorld);
-
-  // XR과 Three.js 간 좌표계 차이를 보정 (Y축 기준 180도 회전)
+  // XR과 Three.js 간 좌표계 차이를 보정 (예: Y축 기준 180도 회전)
   const offsetQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-  tempCamera.quaternion.multiply(offsetQuaternion);
-  tempCamera.rotation.order = 'YXZ';
+  tempCamera.quaternion.copy(camera.quaternion).multiply(offsetQuaternion);
 
-  // 저장된 카메라 행렬로 최종 보정 (필요시)
-  tempCamera.matrixWorld.copy(savedCameraMatrix);
-  tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
+  // ★ 보정 로직 적용 ★
+  if (calibrationMatrix) {
+    // calibrationMatrix의 역행렬을 곱해 초기 캘리브레이션 기준으로 보정
+    const calibratedMatrix = new THREE.Matrix4();
+    calibratedMatrix.multiplyMatrices(calibrationMatrix.clone().invert(), camera.matrixWorld);
+    tempCamera.matrixWorld.copy(calibratedMatrix);
+    tempCamera.matrixWorldInverse.copy(calibratedMatrix).invert();
+  } else {
+    // 보정 데이터가 없다면 기존 방식으로 처리 (예: savedCameraMatrix 사용)
+    tempCamera.matrixWorld.copy(savedCameraMatrix);
+    tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
+  }
   tempCamera.updateProjectionMatrix();
   // --- 임시 카메라 생성 및 보정 완료 ---
 
@@ -159,7 +165,7 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef }: SceneProps) {
+function Scene({ visible, glRef, calibrationMatrixRef }: SceneProps) {
   const [searchParams] = useSearchParams();
   const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
   const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
@@ -179,6 +185,14 @@ function Scene({ visible, glRef }: SceneProps) {
       glRef.current = { gl, camera, scene };
     }
   }, [camera, gl, glRef, scene]);
+
+  // AR 세션이 안정된 첫 렌더 시점에 캘리브레이션 행렬 저장
+  useEffect(() => {
+    if (visible && camera && !calibrationMatrixRef.current) {
+      calibrationMatrixRef.current = camera.matrixWorld.clone();
+      console.log('Calibration matrix set:', calibrationMatrixRef.current);
+    }
+  }, [visible, camera, calibrationMatrixRef]);
 
   useEffect(() => {
     if (visible && groupRef.current && camera) {
@@ -344,7 +358,11 @@ function ARCanvas(props: any) {
         <OrbitHandles />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
-          <Scene visible={props.sessionStarted && props.show} glRef={glRef} />
+          <Scene
+            visible={props.sessionStarted && props.show}
+            glRef={glRef}
+            calibrationMatrixRef={props.calibrationMatrixRef}
+          />
           <XRDomOverlay>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
@@ -360,7 +378,7 @@ function ARCanvas(props: any) {
               circleY={props.circleY}
               circleR={props.circleR}
               circleColor={props.circleColor}
-              cameraFov={props.cameraFov} // ModalU로 전달 (아래 ModalU에서 사용)
+              cameraFov={props.cameraFov}
             />
           </XRDomOverlay>
         </XR>
@@ -430,7 +448,7 @@ const ModalU = function ({
   setFoto,
   offscreenCanvas,
   isMount,
-  cameraFov, // 추가: XR 카메라의 fov (예상 기본 60°와 비교)
+  cameraFov,
 }: UIOverlayProps & any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
@@ -454,8 +472,8 @@ const ModalU = function ({
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      // 기본 video FOV를 60°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
-      const defaultVideoFov = 45; // 기본값 변경
+      // 기본 video FOV를 45°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
+      const defaultVideoFov = 45;
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 0.95;
       const fovScale =
@@ -467,9 +485,9 @@ const ModalU = function ({
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
-      ctx.filter = 'brightness(2)'; // 1.2 배 밝기로 조정 (원하는 값으로 변경)
+      ctx.filter = 'brightness(2)';
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
-      ctx.filter = 'none'; // 이후 필터 초기화
+      ctx.filter = 'none';
       // -----------------------------------------------------
 
       // --- three.js 씬 합성 (기존 계산대로) ---
@@ -549,6 +567,9 @@ export default function BasicApp() {
   const [, setDebugLogs] = useState<string[]>([]);
   const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
 
+  // 추가: 센서 오차 보정을 위한 초기 캘리브레이션 행렬 저장
+  const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
+
   const logDebug = (msg: any, ...optionalParams: any[]) => {
     console.log(msg, ...optionalParams);
     setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -600,6 +621,7 @@ export default function BasicApp() {
    * - 전달받은 gl, scene, camera를 사용하여 renderSceneForCapture를 호출합니다.
    * - offscreenCanvas의 크기를 container의 dpr을 고려해 정수 값으로 설정합니다.
    * - 동시에 XR 카메라의 fov 값을 state에 저장해 ModalU의 비디오 보정에 사용합니다.
+   * - 추가: calibrationMatrixRef를 이용하여 센서 오차 보정 적용
    */
   const captureARContent = ({
     gl,
@@ -613,7 +635,7 @@ export default function BasicApp() {
     onXRSessionEnd(scene, camera);
     // XR 카메라의 fov 값을 업데이트
     setCameraFov(camera.fov);
-    const imgData = renderSceneForCapture(gl, scene, camera);
+    const imgData = renderSceneForCapture(gl, scene, camera, calibrationMatrixRef.current);
     const threeCanvas = document.querySelector('#three-canvas');
 
     if (threeCanvas && offscreenCanvas) {
@@ -706,7 +728,8 @@ export default function BasicApp() {
           circleColor={circleColor}
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
-          cameraFov={cameraFov} // ModalU에 XR 카메라 fov 전달
+          cameraFov={cameraFov}
+          calibrationMatrixRef={calibrationMatrixRef} // 추가: calibrationMatrixRef 전달
         />
       ) : (
         <>
@@ -723,7 +746,7 @@ export default function BasicApp() {
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
               logDebug={logDebug}
-              cameraFov={cameraFov} // ModalU에 전달
+              cameraFov={cameraFov}
             />
           )}
         </>
