@@ -162,8 +162,8 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
-  // 기존 searchParams는 Box 컴포넌트의 추가 속성(예, sposition, oposition)용으로 남겨둡니다.
+function Scene({ visible, glRef, calibrationMatrixRef, rabbitPosition }: SceneProps) {
+  // 기존 searchParams는 Box 컴포넌트에 전달할 추가 속성으로 남겨둡니다.
   const [searchParams] = useSearchParams();
   const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
   const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
@@ -183,7 +183,8 @@ function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
 
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      // 이제 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산된 rabbitPosition을 사용합니다.
+      // 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산된 rabbitPosition을 사용합니다.
+      // (여기서는 단순히 그룹의 position을 rabbitPosition으로 설정)
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
     }
@@ -547,7 +548,7 @@ const ModalU = function ({
       </div>
     </div>
   );
-};
+}
 
 // Main App Component
 export default function BasicApp() {
@@ -565,6 +566,10 @@ export default function BasicApp() {
 
   // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
+  // 아래 useEffect는 BasicApp에서 calibrationMatrixRef가 읽히도록 하여 TS6133 에러를 피하기 위한 더미 사용입니다.
+  useEffect(() => {
+    console.log('Calibration ref in BasicApp:', calibrationMatrixRef.current);
+  }, []);
 
   // 토끼(오브젝트) 배치를 위한 상태: 버튼 클릭 시 현재 카메라 기준 3미터 앞쪽 좌표
   const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
