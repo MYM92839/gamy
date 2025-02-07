@@ -222,7 +222,7 @@ function UIOverlay({
   domHeight,
   circleX,
   circleY,
-  show,
+  // show,
   circleR,
   circleColor,
 }: UIOverlayProps) {
