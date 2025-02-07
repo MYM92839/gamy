@@ -486,14 +486,15 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
         padding: '8px',
         zIndex: 10000,
       }}
+      className='overflow-y-hidden'
     >
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }} className='max-h-screen'>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {fotoUrl && (
-            <img style={{ width: '100%', height: '100%', objectFit: 'cover' }} src={fotoUrl} alt="캡처 이미지" />
+            <img style={{ width: '100%', height: 'auto', objectFit: 'cover' }} src={fotoUrl} alt="캡처 이미지" />
           )}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px' }} className='h-max p-4'>
           <button onClick={closeModal} style={{ flex: 1 }}>
             다시 찍기
           </button>
