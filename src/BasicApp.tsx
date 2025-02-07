@@ -1,6 +1,5 @@
 /* eslint-disable prefer-const */
 
-
 import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin, createXRStore, noEvents, PointerEvents } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -685,7 +684,10 @@ export default function BasicApp() {
             setMount(false);
             setIsOpen(true);
           }}
-          closeModal={() => setIsOpen(false)}
+          closeModal={() => {
+            setIsOpen(false);
+            setShow(false);
+          }}
           closeSaveModal={handleCloseSaveModal}
           setShow={setShow}
           domWidth={domWidth}
