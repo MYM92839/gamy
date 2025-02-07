@@ -162,7 +162,7 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, calibrationMatrixRef, rabbitPosition }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
   // 기존 searchParams는 Box 컴포넌트에 전달할 추가 속성으로 남겨둡니다.
   const [searchParams] = useSearchParams();
   const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
