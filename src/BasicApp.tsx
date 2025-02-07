@@ -455,7 +455,7 @@ const ModalU = function ({
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
       // 기본 video FOV를 60°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
-      const defaultVideoFov = 60;
+      const defaultVideoFov = 45; // 기본값 변경
       const effectiveFov = cameraFov || defaultVideoFov;
       const fovScale =
         Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
