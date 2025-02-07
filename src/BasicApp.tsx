@@ -254,7 +254,7 @@ function UIOverlay({
           left: '24px',
           background: 'transparent',
           border: 'none',
-          zIndex: 1001,
+          zIndex: 1000001,
         }}
         onClick={() => {
           window.location.href = 'https://gamy-six.vercel.app/test';
@@ -358,11 +358,7 @@ function ARCanvas(props: any) {
         <OrbitHandles />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
-          <Scene
-            visible={props.sessionStarted && props.show}
-            glRef={glRef}
-            calibrationMatrixRef={props.calibrationMatrixRef}
-          />
+          <Scene visible={props.show} glRef={glRef} calibrationMatrixRef={props.calibrationMatrixRef} />
           <XRDomOverlay>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
@@ -741,6 +737,7 @@ export default function BasicApp() {
               setFoto={setFoto}
               closeModal={() => {
                 setIsOpen(false);
+                setShow(false);
                 onTest();
               }}
               closeSaveModal={handleCloseSaveModal}
