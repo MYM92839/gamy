@@ -203,7 +203,7 @@ function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
       <Suspense fallback={null}>
         <group
           ref={groupRef}
-          position={[rabbitPosition[0] + cx, rabbitPosition[1] + cy - 1, rabbitPosition[2] + cz + 11]}
+          position={[rabbitPosition[0] + cx, rabbitPosition[1] + cy - 1, rabbitPosition[2] + cz - 11]}
           rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
