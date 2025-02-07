@@ -1,6 +1,5 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-var */
 
 import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin, createXRStore, noEvents, PointerEvents } from '@react-three/xr';
@@ -11,7 +10,8 @@ import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-import { OrbitHandles } from '@react-three/handle'
+import { OrbitHandles } from '@react-three/handle';
+import { useSearchParams } from 'react-router-dom';
 // Types
 interface SavedObjectData {
   position: THREE.Vector3;
@@ -93,12 +93,7 @@ function renderSceneForCapture(
   const height = Math.floor(containerHeight * dpr);
 
   // --- 임시 카메라 생성 및 보정 시작 ---
-  const tempCamera = new THREE.PerspectiveCamera(
-    camera.fov,
-    containerWidth / containerHeight,
-    camera.near,
-    camera.far
-  );
+  const tempCamera = new THREE.PerspectiveCamera(camera.fov, containerWidth / containerHeight, camera.near, camera.far);
   // 기존 WebXR 카메라의 행렬값 복사
   tempCamera.matrixWorld.copy(camera.matrixWorld);
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
@@ -165,6 +160,17 @@ function renderSceneForCapture(
 
 // Components
 function Scene({ visible, glRef }: SceneProps) {
+  const [searchParams] = useSearchParams();
+  const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
+  const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
+  const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
+  const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
+  const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
+  const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
+  const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
+  const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
+  const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
+
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -202,12 +208,12 @@ function Scene({ visible, glRef }: SceneProps) {
       <Suspense fallback={null}>
         <group
           ref={groupRef}
-          position={[0, 0, -10]}
+          position={[0 + cx, 0 + cy, -10 + cz]}
           rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box on onRenderEnd={() => { }} />}
+          {visible && <Box sposition={[sx, sy, sz]} oposition={[ox, oy, oz]} on onRenderEnd={() => {}} />}
         </group>
       </Suspense>
     </>
@@ -221,6 +227,7 @@ function UIOverlay({
   domHeight,
   circleX,
   circleY,
+  show,
   circleR,
   circleColor,
 }: UIOverlayProps) {
@@ -254,28 +261,32 @@ function UIOverlay({
       >
         <Capture />
       </button>
-      <div
-        style={{
-          position: 'fixed',
-          width: `${domWidth}px`,
-          height: `${domHeight}px`,
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          background: 'transparent',
-          overflow: 'hidden',
-          zIndex: 10001,
-        }}
-      >
-        <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
-          <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
-        </svg>
-      </div>
-      <Button
-        onClick={() => setShow(true)}
-        title="토끼 부르기"
-        className="z-[1001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
-      />
+      {!show && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              width: `${domWidth}px`,
+              height: `${domHeight}px`,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'transparent',
+              overflow: 'hidden',
+              zIndex: 10001,
+            }}
+          >
+            <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
+              <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
+            </svg>
+          </div>
+          <Button
+            onClick={() => setShow(true)}
+            title="토끼 부르기"
+            className="z-[10001] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -325,12 +336,13 @@ function ARCanvas(props: any) {
           setOffscreenCanvas(offscreen);
           logDebug('Offscreen canvas created in ARCanvas.');
         }}
-        events={noEvents}>
+        events={noEvents}
+      >
         <PointerEvents />
         <OrbitHandles />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
-          <Scene visible={props.sessionStarted} glRef={glRef} />
+          <Scene visible={props.sessionStarted && props.show} glRef={glRef} />
           <XRDomOverlay>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}

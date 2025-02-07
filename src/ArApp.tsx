@@ -65,20 +65,20 @@ type GLTFResult = GLTF & {
 
 type GLTFResult2 = GLTF & {
   nodes: {
-    side_body: THREE.Mesh
-    side_arm_01: THREE.Mesh
-    hammer_2: THREE.Mesh
-    side_arm_02: THREE.Mesh
-    side_head: THREE.Mesh
-    side_ear_01: THREE.Mesh
-    side_ear_02: THREE.Mesh
-    side_leg: THREE.Mesh
-    side_leg_2: THREE.Mesh
-    side_tail: THREE.Mesh
-    side_foot: THREE.Mesh
-    side_foot_2: THREE.Mesh
-    cramp: THREE.Mesh
-    hammer: THREE.Mesh
+    side_body: THREE.Mesh;
+    side_arm_01: THREE.Mesh;
+    hammer_2: THREE.Mesh;
+    side_arm_02: THREE.Mesh;
+    side_head: THREE.Mesh;
+    side_ear_01: THREE.Mesh;
+    side_ear_02: THREE.Mesh;
+    side_leg: THREE.Mesh;
+    side_leg_2: THREE.Mesh;
+    side_tail: THREE.Mesh;
+    side_foot: THREE.Mesh;
+    side_foot_2: THREE.Mesh;
+    cramp: THREE.Mesh;
+    hammer: THREE.Mesh;
   };
   materials: {
     hammer: THREE.MeshPhysicalMaterial;
@@ -136,16 +136,16 @@ export function Tree({
   useEffect(() => {
     let id: string | number | NodeJS.Timeout | undefined;
     if (actions && on && actions.walk) {
-      actions.walk.setLoop(THREE.LoopOnce, 1)
-      actions.walk.clampWhenFinished = true
-      actions.walk?.reset().play()
+      actions.walk.setLoop(THREE.LoopOnce, 1);
+      actions.walk.clampWhenFinished = true;
+      actions.walk?.reset().play();
       id = setTimeout(() => {
         setMask(false);
       }, 2000);
       mixer.addEventListener('finished', () => {
-        actions.idle?.setLoop(THREE.LoopRepeat, Infinity)
-        actions.idle?.reset().play()
-      })
+        actions.idle?.setLoop(THREE.LoopRepeat, Infinity);
+        actions.idle?.reset().play();
+      });
     }
     return () => {
       if (id) clearTimeout(id);
@@ -242,11 +242,23 @@ export function Tree({
   );
 }
 
-export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
+export function Box({
+  onRenderEnd,
+  on,
+  oposition,
+  sposition,
+  ...props
+}: JSX.IntrinsicElements['group'] & {
+  onRenderEnd: () => void;
+  on: boolean;
+  oposition: number[];
+  sposition: number[];
+}) {
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
   const [{ nodes, materials, animations }, { nodes: snodes, materials: smaterials, animations: sanimations }] = useGLTF(
-    ['/moon_f.glb', '/moon1.glb'], '/draco/'
+    ['/moon_f.glb', '/moon1.glb'],
+    '/draco/'
   ) as [GLTFResult, GLTFResult2];
   const { actions, mixer } = useAnimations(animations, modelRef);
   const { actions: sactions, mixer: smixer } = useAnimations(sanimations, shadowRef);
@@ -284,18 +296,20 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
 
   return (
     <group {...props} position={[0, 0, 0]} rotation={[0, Math.PI / 4, 0]} dispose={null}>
-      <group name="Scene"
-        ref={shadowRef}
-        dispose={null}
+      <group name="Scene" ref={shadowRef} dispose={null}>
+        <group
+          position={[0 + sposition[0], 3 + sposition[1], -3 + sposition[2]]}
+          rotation={[Math.PI / 2, 0, 0]}
+          scale={0.01}
         >
-        <group position={[0, 3, -3]} rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <mesh
             name="side_body"
             castShadow
             receiveShadow
             geometry={snodes.side_body.geometry}
             material={smaterials.side_body}
-            position={[130.714, 0, 232.759]}>
+            position={[130.714, 0, 232.759]}
+          >
             <mesh
               name="side_arm_01"
               castShadow
@@ -303,7 +317,8 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
               geometry={snodes.side_arm_01.geometry}
               material={smaterials.side_arm_01}
               position={[-23.36, 0, -187.798]}
-              rotation={[0, 0.217, 0]}>
+              rotation={[0, 0.217, 0]}
+            >
               <mesh
                 name="hammer_2"
                 castShadow
@@ -329,7 +344,8 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
               receiveShadow
               geometry={snodes.side_head.geometry}
               material={smaterials.side_head}
-              position={[-32.802, 0, -208.305]}>
+              position={[-32.802, 0, -208.305]}
+            >
               <mesh
                 name="side_ear_01"
                 castShadow
@@ -396,7 +412,7 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
           receiveShadow
           geometry={snodes.cramp.geometry}
           material={smaterials.cramp}
-          position={[-0.78, 0.004, -3]}
+          position={[-0.78 + sposition[0], 0.004 + sposition[1], -3 + sposition[2]]}
           rotation={[Math.PI / 2, 0, 0]}
           scale={0.01}
         />
@@ -406,17 +422,17 @@ export function Box({ onRenderEnd, on, ...props }: JSX.IntrinsicElements['group'
           receiveShadow
           geometry={snodes.hammer.geometry}
           material={smaterials.hammer}
-          position={[-0.09, 2.498, -3]}
+          position={[-0.09 + sposition[0], 2.498 + sposition[1], -3 + sposition[2]]}
           scale={0}
         />
-        </group>
+      </group>
       {/*  ////// */}
       <group
         name="Scene"
         ref={modelRef}
         visible={true}
         scale={[0.15, 0.15, 0.15]}
-        position={[-0.45, -2, -1]}
+        position={[-0.45 + oposition[0], -2 + oposition[1], -1 + oposition[2]]}
         rotation={[0, 0, 0]}
       >
         <group name="Group001">
