@@ -485,9 +485,7 @@ const ModalU = function ({
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
-      ctx.filter = 'brightness(2)';
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
-      ctx.filter = 'none';
       // -----------------------------------------------------
 
       // --- three.js 씬 합성 (기존 계산대로) ---
@@ -499,7 +497,9 @@ const ModalU = function ({
       const offsetX = (containerWidth - drawWidth) / 2;
       const offsetY = (containerHeight - drawHeight) / 2;
 
+      ctx.filter = 'brightness(1.5)';
       ctx.drawImage(offscreenCanvas!, offsetX, offsetY, drawWidth, drawHeight);
+      ctx.filter = 'none';
       // -----------------------------------------------------
 
       compositeCanvas.toBlob((blob: Blob | null) => {
