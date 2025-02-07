@@ -230,9 +230,10 @@ function UIOverlay({
   circleR,
   circleColor,
 }: UIOverlayProps) {
+  console.log('??');
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10001, pointerEvents: 'auto' }}>
-      <Link
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'auto' }}>
+      <button
         style={{
           position: 'fixed',
           bottom: '65px',
@@ -241,10 +242,12 @@ function UIOverlay({
           border: 'none',
           zIndex: 1001,
         }}
-        to={'/test'}
+        onClick={() => {
+          window.location.href = 'http://localhost:5173/test';
+        }}
       >
         <Back />
-      </Link>
+      </button>
       <button
         style={{
           position: 'fixed',
@@ -272,7 +275,7 @@ function UIOverlay({
               transform: 'translate(-50%, -50%)',
               background: 'transparent',
               overflow: 'hidden',
-              zIndex: 10001,
+              zIndex: 9999999,
             }}
           >
             <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
