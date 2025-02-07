@@ -54,8 +54,8 @@ function getPlaneDOMCenter(
   pos.project(camera);
   const halfVw = videoWidth / 2;
   const halfVh = videoHeight / 2;
-  const videoX = (pos.x * halfVw) + halfVw;
-  const videoY = (-pos.y * halfVh) + halfVh;
+  const videoX = pos.x * halfVw + halfVw;
+  const videoY = -pos.y * halfVh + halfVh;
   const scaleX = domWidth / videoWidth;
   const scaleY = domHeight / videoHeight;
   return { x: videoX * scaleX, y: videoY * scaleY };
@@ -164,7 +164,7 @@ function CameraTracker({
   useEffect(() => {
     if (alvaAR) {
       applyPose.current = AlvaARConnectorTHREE.Initialize(THREE);
-      console.log("✅ AlvaAR SLAM Initialized");
+      console.log('✅ AlvaAR SLAM Initialized');
     }
   }, [alvaAR]);
 
@@ -271,7 +271,7 @@ function CameraTracker({
     if (!planeFound && requestFinalizePlane) {
       finalPlaneMatrix.current.copy(candidatePlaneMatrix.current);
       setPlaneFound(true);
-      console.log("🎉 planeFound => place object");
+      console.log('🎉 planeFound => place object');
     }
 
     // 오브젝트 배치: 평면 확정 후, 초기 후보와 현재 후보의 오프셋을 적용하여 최종 배치
@@ -281,7 +281,7 @@ function CameraTracker({
       const offset = new THREE.Vector3();
       if (initialCandidatePos.current) {
         offset.subVectors(candidatePos, initialCandidatePos.current);
-        console.log("Calculated offset:", offset.toArray());
+        console.log('Calculated offset:', offset.toArray());
       }
       candidatePos.add(offset);
       candidatePos.y -= objectFootOffset;
@@ -297,7 +297,7 @@ function CameraTracker({
       objectRef.current.scale.setScalar(scale);
       setObjectPosition(finalObjectPosition.current.clone());
       setObjectPlaced(true);
-      console.log("✅ Object placed at final position:", finalObjectPosition.current.toArray());
+      console.log('✅ Object placed at final position:', finalObjectPosition.current.toArray());
     }
 
     if (planeRef.current) {
@@ -305,7 +305,7 @@ function CameraTracker({
     }
   });
 
-  const isMoons = (char === 'moons');
+  const isMoons = char === 'moons';
   return (
     <>
       <mesh ref={planeRef} visible={false}>
@@ -314,7 +314,11 @@ function CameraTracker({
       </mesh>
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on sposition={[0, 0, 0]} oposition={[0, 0, 0]} />}
+          {isMoons ? (
+            <Box onRenderEnd={() => {}} on sposition={[0, 0, 0]} oposition={[0, 0, 0]} />
+          ) : (
+            <Tree onRenderEnd={() => {}} on />
+          )}
         </group>
       )}
     </>
@@ -352,7 +356,7 @@ export default function NftAppT() {
           zIndex: 9999,
           background: 'transparent',
           border: 'none',
-          padding: '1rem'
+          padding: '1rem',
         }}
         onClick={() => window.history.back()}
       >
@@ -368,7 +372,7 @@ export default function NftAppT() {
           padding: '10px',
           borderRadius: '8px',
           color: 'white',
-          fontSize: '14px'
+          fontSize: '14px',
         }}
       >
         <p>
@@ -404,11 +408,7 @@ export default function NftAppT() {
             zIndex: 9998,
           }}
         >
-          <svg
-            width={domWidth}
-            height={domHeight}
-            style={{ position: 'absolute', top: 0, left: 0 }}
-          >
+          <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
             <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
           </svg>
         </div>
@@ -426,7 +426,7 @@ export default function NftAppT() {
               color: 'white',
               padding: '10px',
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
             }}
           >
             <p>빨간 원 안에 달조형물을 맞춰주세요.</p>
@@ -445,7 +445,7 @@ export default function NftAppT() {
                 backgroundColor: 'darkblue',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px'
+                borderRadius: '8px',
               }}
               onClick={() => setRequestFinalizePlane(true)}
             >
@@ -465,7 +465,7 @@ export default function NftAppT() {
             padding: '10px',
             borderRadius: '8px',
             fontSize: '14px',
-            zIndex: 9999
+            zIndex: 9999,
           }}
         >
           <p>토끼가 소환되었습니다!</p>

@@ -121,8 +121,8 @@ const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { origin
         r.setFromRotationMatrix(m);
         t.set(pose[12], pose[13], pose[14]);
 
-        (objectRef.current.quaternion !== null) && objectRef.current.quaternion.set(r.x, -r.y, -r.z, r.w);
-        (objectRef.current.position !== null) && objectRef.current.position.set(-t.x, t.y, t.z);
+        // (objectRef.current.quaternion !== null) && objectRef.current.quaternion.set(r.x, -r.y, -r.z, r.w);
+        // (objectRef.current.position !== null) && objectRef.current.position.set(-t.x, t.y, t.z);
 
         // applyPose로 오브젝트 위치 업데이트
         // applyPose.current(pose, objectRef.current.quaternion, objectRef.current.position);
