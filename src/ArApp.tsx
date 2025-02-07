@@ -7,7 +7,7 @@ import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import { Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
-import Modal from 'react-modal';
+// import Modal from 'react-modal';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
 import { ARAnchor, ARView } from './libs/react-three-mind.js';
@@ -93,26 +93,26 @@ type GLTFResult2 = GLTF & {
   };
 };
 
-const customStyles = {
-  overlay: {
-    zIndex: 999,
-  },
-  content: {
-    top: '50%',
-    left: '50%',
-    right: 'auto',
-    bottom: 'auto',
-    marginRight: '-50%',
-    borderRadius: '16px',
-    width: '100dvw',
-    height: '100dvh',
-    padding: '8px',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 999,
-  },
-};
+// const customStyles = {
+//   overlay: {
+//     zIndex: 999,
+//   },
+//   content: {
+//     top: '50%',
+//     left: '50%',
+//     right: 'auto',
+//     bottom: 'auto',
+//     marginRight: '-50%',
+//     borderRadius: '16px',
+//     width: '100dvw',
+//     height: '100dvh',
+//     padding: '8px',
+//     transform: 'translate(-50%, -50%)',
+//     zIndex: 999,
+//   },
+// };
 
-Modal.setAppElement('#root');
+// Modal.setAppElement('#root');
 
 const CircularMask = () => (
   <group scale={[1, 1, 1]} position={[0, 0.48, 0]}>
@@ -529,8 +529,8 @@ export function Box({
 export default function ArApp() {
   const { char } = useParams();
   const [modalIsOpen, setIsOpen] = useState(false);
-  const [foto, setFoto] = useState<Blob | null>(null);
-  const [fotoUrl, setFotoUrl] = useState<string>('');
+  const [foto] = useState<Blob | null>(null);
+  const [, setFotoUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [on, setOn] = useState(false);
   const [settings, setSettings] = useState({
@@ -543,139 +543,125 @@ export default function ArApp() {
     captureImage();
   }
 
-  function closeModal() {
-    setIsOpen(false);
-  }
+  // function closeModal() {
+  //   setIsOpen(false);
+  // }
 
-  function closeSaveModal() {
-    if (foto) shareOrDownloadImage(foto);
-    setIsOpen(false);
-  }
+  // function closeSaveModal() {
+  //   if (foto) shareOrDownloadImage(foto);
+  //   setIsOpen(false);
+  // }
 
-  const shareOrDownloadImage = (blob: Blob): void => {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'test.png', { type: blob.type })] })) {
-      const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
-        type: 'image/png',
-      });
+  // const shareOrDownloadImage = (blob: Blob): void => {
+  //   if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'test.png', { type: blob.type })] })) {
+  //     const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
+  //       type: 'image/png',
+  //     });
 
-      navigator
-        .share({
-          files: [file],
-          title: 'My Captured Image',
-          text: 'Check out this captured photo!',
-        })
-        .catch((error) => {
-          console.error('Sharing failed:', error);
-        });
-    } else {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `camera-frame-${new Date().getTime()}.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-  };
+  //     navigator
+  //       .share({
+  //         files: [file],
+  //         title: 'My Captured Image',
+  //         text: 'Check out this captured photo!',
+  //       })
+  //       .catch((error) => {
+  //         console.error('Sharing failed:', error);
+  //       });
+  //   } else {
+  //     const url = URL.createObjectURL(blob);
+  //     const link = document.createElement('a');
+  //     link.download = `camera-frame-${new Date().getTime()}.png`;
+  //     link.href = url;
+  //     link.click();
+  //     URL.revokeObjectURL(url);
+  //   }
+  // };
 
   const captureImage = async () => {
-    const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
-    const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
-      .children[0]! as HTMLCanvasElement; // Three.js 캔버스
-    const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
-
-    if (!container || !videoElement || !threeCanvas) {
-      console.warn('Required elements not ready');
-      return;
-    }
-
-    // 캔버스 크기 설정
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    const devicePixelRatio = window.devicePixelRatio || 1;
-
-    const offscreenCanvas = document.createElement('canvas');
-    offscreenCanvas.width = containerWidth * devicePixelRatio;
-    offscreenCanvas.height = containerHeight * devicePixelRatio;
-
-    const context = offscreenCanvas.getContext('2d');
-    if (!context) {
-      console.error('Failed to create canvas context.');
-      return;
-    }
-
-    // 고해상도 지원
-    context.scale(devicePixelRatio, devicePixelRatio);
-
-    // Helper function to calculate draw parameters
-    const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
-      const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
-      const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
-
-      if (elementWidth === 0 || elementHeight === 0) return null;
-
-      const elementAspectRatio = elementWidth / elementHeight;
-      const containerAspectRatio = containerWidth / containerHeight;
-
-      let drawWidth = containerWidth;
-      let drawHeight = containerHeight;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (objectFit === 'cover') {
-        if (elementAspectRatio > containerAspectRatio) {
-          drawWidth = containerHeight * elementAspectRatio;
-          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-        } else {
-          drawHeight = containerWidth / elementAspectRatio;
-          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-        }
-      } else if (objectFit === 'contain') {
-        if (elementAspectRatio > containerAspectRatio) {
-          drawHeight = containerWidth / elementAspectRatio;
-          offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-        } else {
-          drawWidth = containerHeight * elementAspectRatio;
-          offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-        }
-      }
-
-      return { drawWidth, drawHeight, offsetX, offsetY };
-    };
-
-    try {
-      // Step 1: 비디오를 캔버스에 그리기
-      const videoParams = calculateDrawParams(videoElement, 'cover');
-      if (videoParams) {
-        context.drawImage(
-          videoElement,
-          videoParams.offsetX,
-          videoParams.offsetY,
-          videoParams.drawWidth,
-          videoParams.drawHeight
-        );
-      }
-
-      // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
-      const threeParams = calculateDrawParams(threeCanvas, 'cover');
-      if (threeParams) {
-        context.drawImage(
-          threeCanvas,
-          threeParams.offsetX,
-          threeParams.offsetY,
-          threeParams.drawWidth,
-          threeParams.drawHeight
-        );
-      }
-
-      // Step 3: 최종 이미지를 PNG로 저장
-      offscreenCanvas.toBlob((blob) => {
-        if (blob) {
-          setFoto(blob);
-        }
-      }, 'image/png');
-    } catch (error) {
-      console.error('Error capturing image:', error);
-    }
+    // const videoElement: HTMLVideoElement | null = document.querySelector('#three-video'); // 비디오 요소
+    // const threeCanvas: HTMLCanvasElement | null = document.querySelector('#three-canvas')?.children[0]
+    //   .children[0]! as HTMLCanvasElement; // Three.js 캔버스
+    // const container = videoElement?.parentElement || null; // 최상위 렌더링 컨테이너
+    // if (!container || !videoElement || !threeCanvas) {
+    //   console.warn('Required elements not ready');
+    //   return;
+    // }
+    // // 캔버스 크기 설정
+    // const containerWidth = container.clientWidth;
+    // const containerHeight = container.clientHeight;
+    // const devicePixelRatio = window.devicePixelRatio || 1;
+    // const offscreenCanvas = document.createElement('canvas');
+    // offscreenCanvas.width = containerWidth * devicePixelRatio;
+    // offscreenCanvas.height = containerHeight * devicePixelRatio;
+    // const context = offscreenCanvas.getContext('2d');
+    // if (!context) {
+    //   console.error('Failed to create canvas context.');
+    //   return;
+    // }
+    // // 고해상도 지원
+    // context.scale(devicePixelRatio, devicePixelRatio);
+    // // Helper function to calculate draw parameters
+    // const calculateDrawParams = (element: HTMLVideoElement | HTMLCanvasElement, objectFit: 'cover' | 'contain') => {
+    //   const elementWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.width;
+    //   const elementHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.height;
+    //   if (elementWidth === 0 || elementHeight === 0) return null;
+    //   const elementAspectRatio = elementWidth / elementHeight;
+    //   const containerAspectRatio = containerWidth / containerHeight;
+    //   let drawWidth = containerWidth;
+    //   let drawHeight = containerHeight;
+    //   let offsetX = 0;
+    //   let offsetY = 0;
+    //   if (objectFit === 'cover') {
+    //     if (elementAspectRatio > containerAspectRatio) {
+    //       drawWidth = containerHeight * elementAspectRatio;
+    //       offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+    //     } else {
+    //       drawHeight = containerWidth / elementAspectRatio;
+    //       offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+    //     }
+    //   } else if (objectFit === 'contain') {
+    //     if (elementAspectRatio > containerAspectRatio) {
+    //       drawHeight = containerWidth / elementAspectRatio;
+    //       offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
+    //     } else {
+    //       drawWidth = containerHeight * elementAspectRatio;
+    //       offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
+    //     }
+    //   }
+    //   return { drawWidth, drawHeight, offsetX, offsetY };
+    // };
+    // try {
+    //   // Step 1: 비디오를 캔버스에 그리기
+    //   const videoParams = calculateDrawParams(videoElement, 'cover');
+    //   if (videoParams) {
+    //     context.drawImage(
+    //       videoElement,
+    //       videoParams.offsetX,
+    //       videoParams.offsetY,
+    //       videoParams.drawWidth,
+    //       videoParams.drawHeight
+    //     );
+    //   }
+    //   // Step 2: Three.js WebGL 캔버스를 캔버스에 그리기
+    //   const threeParams = calculateDrawParams(threeCanvas, 'cover');
+    //   if (threeParams) {
+    //     context.drawImage(
+    //       threeCanvas,
+    //       threeParams.offsetX,
+    //       threeParams.offsetY,
+    //       threeParams.drawWidth,
+    //       threeParams.drawHeight
+    //     );
+    //   }
+    //   // Step 3: 최종 이미지를 PNG로 저장
+    //   offscreenCanvas.toBlob((blob) => {
+    //     if (blob) {
+    //       setFoto(blob);
+    //     }
+    //   }, 'image/png');
+    // } catch (error) {
+    //   console.error('Error capturing image:', error);
+    // }
   };
 
   useEffect(() => {
@@ -725,7 +711,7 @@ export default function ArApp() {
   }, []);
   return (
     <>
-      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
+      {/* <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-hidden z-[999] isolate">
             {fotoUrl && <img className="flex-1 object-contain z-[999]" src={fotoUrl} />}
@@ -739,7 +725,7 @@ export default function ArApp() {
             </button>
           </div>
         </div>
-      </Modal>
+      </Modal> */}
       {!modalIsOpen && (
         <>
           <button
@@ -833,7 +819,7 @@ export default function ArApp() {
               //setOn(false);
             }}
           >
-            <Box onRenderEnd={handleLoading} on={on} />
+            <Box onRenderEnd={handleLoading} on={on} oposition={[0, 0, 0]} sposition={[0, 0, 0]} />
           </ARAnchor>
         )}
         {/* <Box onRenderEnd={handleLoading} on={on} /> */}
