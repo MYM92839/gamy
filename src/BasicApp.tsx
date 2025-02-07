@@ -254,7 +254,7 @@ function UIOverlay({
           left: '24px',
           background: 'transparent',
           border: 'none',
-          zIndex: 1000001,
+          zIndex: 100000,
         }}
         onClick={() => {
           window.location.href = 'https://gamy-six.vercel.app/test';
@@ -289,7 +289,7 @@ function UIOverlay({
               transform: 'translate(-50%, -50%)',
               background: 'transparent',
               overflow: 'hidden',
-              zIndex: 9999999,
+              zIndex: 99999,
             }}
           >
             <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
@@ -299,7 +299,7 @@ function UIOverlay({
           <Button
             onClick={() => setShow(true)}
             title="토끼 부르기"
-            className="z-[99999999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+            className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
           />
         </>
       )}
