@@ -1,16 +1,15 @@
 /* eslint-disable prefer-const */
 
 import { Canvas, useThree } from '@react-three/fiber';
-import { XR, XRDomOverlay, XROrigin, createXRStore, noEvents, PointerEvents } from '@react-three/xr';
+import { OrbitHandles } from '@react-three/handle';
+import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
-import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-import { OrbitHandles } from '@react-three/handle';
-import { useSearchParams } from 'react-router-dom';
 // Types
 interface SavedObjectData {
   position: THREE.Vector3;
@@ -232,19 +231,6 @@ function UIOverlay({
 }: UIOverlayProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10001, pointerEvents: 'auto' }}>
-      <button
-        style={{
-          position: 'fixed',
-          bottom: '65px',
-          left: '24px',
-          background: 'transparent',
-          border: 'none',
-          zIndex: 1001,
-        }}
-        onClick={() => window.history.back()}
-      >
-        <Back />
-      </button>
       <button
         style={{
           position: 'fixed',
