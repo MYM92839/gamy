@@ -243,7 +243,7 @@ function UIOverlay({
           zIndex: 1001,
         }}
         onClick={() => {
-          window.location.href = 'http://localhost:5173/test';
+          window.location.href = 'https://gamy-six.vercel.app/test';
         }}
       >
         <Back />
