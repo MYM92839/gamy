@@ -473,9 +473,9 @@ const ModalU = function ({
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
       // 기본 video FOV를 45°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
-      const defaultVideoFov = 40;
+      const defaultVideoFov = 35;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 0.9;
+      const addedFactor = 0.95;
       const fovScale =
         (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
@@ -497,7 +497,7 @@ const ModalU = function ({
       const offsetX = (containerWidth - drawWidth) / 2;
       const offsetY = (containerHeight - drawHeight) / 2;
 
-      ctx.filter = 'brightness(1.5)';
+      ctx.filter = 'brightness(2)';
       ctx.drawImage(offscreenCanvas!, offsetX, offsetY, drawWidth, drawHeight);
       ctx.filter = 'none';
       // -----------------------------------------------------
