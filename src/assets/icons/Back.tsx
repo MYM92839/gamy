@@ -7,7 +7,7 @@ function Back({ style }: { style?: any }) {
       <path d="M24.6364 16L17 24M17 24L24.6364 32M17 24H32" stroke="white" strokeWidth="1.5" strokeLinecap="round" stroke-linejoin="round" />
       <defs>
         <filter id="filter0_b_58_103" x="-30" y="-30" width="108" height="108" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-          <feFlood flood-opacity="0" result="BackgroundImageFix" />
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
           <feGaussianBlur in="BackgroundImageFix" stdDeviation="15" />
           <feComposite in2="SourceAlpha" operator="in" result="effect1_backgroundBlur_58_103" />
           <feBlend mode="normal" in="SourceGraphic" in2="effect1_backgroundBlur_58_103" result="shape" />

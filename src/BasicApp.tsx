@@ -186,7 +186,7 @@ function Scene({ visible, glRef, calibrationMatrixRef }: SceneProps) {
     }
   }, [camera, gl, glRef, scene]);
 
-  // AR 세션이 안정된 첫 렌더 시점에 캘리브레이션 행렬 저장
+  // AR 세션이 안정된 첫 렌더 시점에 캘리브레이션 행렬 저장 (초기값으로 기록)
   useEffect(() => {
     if (visible && camera && !calibrationMatrixRef.current) {
       calibrationMatrixRef.current = camera.matrixWorld.clone();
@@ -489,7 +489,7 @@ const ModalU = function ({
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      // 기본 video FOV를 45°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
+      // 기본 video FOV를 35°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
       const defaultVideoFov = 35;
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 0.95;
@@ -744,6 +744,11 @@ export default function BasicApp() {
           sessionStarted={sessionStarted}
           modalIsOpen={modalIsOpen}
           openModal={(gl: any) => {
+            // ★ 수정된 부분: "토끼 부르기" 버튼 클릭 시점에 캘리브레이션 행렬을 현재 카메라의 matrixWorld로 업데이트
+            if (gl && gl.camera) {
+              calibrationMatrixRef.current = gl.camera.matrixWorld.clone();
+              logDebug('Calibration matrix updated on button click:', calibrationMatrixRef.current);
+            }
             captureARContent(gl);
             if (xrStoreRef.current) {
               xrStoreRef.current.getState().session?.end();
