@@ -1,16 +1,9 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-var */
+ 
 
 import { Canvas, useThree } from '@react-three/fiber';
-import {
-  createXRStore,
-  noEvents,
-  PointerEvents,
-  XR,
-  XRDomOverlay,
-  XROrigin,
-} from '@react-three/xr';
+import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Box } from './ArApp';
@@ -102,12 +95,7 @@ function renderSceneForCapture(
   const height = Math.floor(containerHeight * dpr);
 
   // --- 임시 카메라 생성 및 보정 시작 ---
-  const tempCamera = new THREE.PerspectiveCamera(
-    camera.fov,
-    containerWidth / containerHeight,
-    camera.near,
-    camera.far
-  );
+  const tempCamera = new THREE.PerspectiveCamera(camera.fov, containerWidth / containerHeight, camera.near, camera.far);
   // 기존 WebXR 카메라의 행렬값 복사
   tempCamera.matrixWorld.copy(camera.matrixWorld);
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
@@ -216,7 +204,7 @@ function Scene({ visible, glRef }: SceneProps) {
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box on onRenderEnd={() => { }} />}
+          {visible && <Box on onRenderEnd={() => {}} sposition={[0, 0, 0]} oposition={[0, 0, 0]} />}
         </group>
       </Suspense>
     </>
@@ -224,7 +212,7 @@ function Scene({ visible, glRef }: SceneProps) {
 }
 
 /**
- * GestureHandler  
+ * GestureHandler
  * XRDomOverlay 내에 제스처(드래그)를 처리하여 카메라 회전을 직접 업데이트합니다.
  */
 function GestureHandler() {
@@ -574,10 +562,7 @@ export default function BasicApp() {
   };
 
   const shareOrDownloadImage = (blob: Blob) => {
-    if (
-      navigator.canShare &&
-      navigator.canShare({ files: [new File([blob], 'capture.png', { type: blob.type })] })
-    ) {
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'capture.png', { type: blob.type })] })) {
       const file = new File([blob], `capture-${new Date().getTime()}.png`, {
         type: 'image/png',
       });

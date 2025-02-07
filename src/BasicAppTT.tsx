@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-var */
+
 
 import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XRDomOverlay, XROrigin, createXRStore, noEvents, PointerEvents } from '@react-three/xr';
@@ -204,7 +204,7 @@ function Scene({ visible, glRef }: SceneProps) {
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box on onRenderEnd={() => { }} />}
+          {visible && <Box on onRenderEnd={() => { }} sposition={[0, 0, 0]} oposition={[0, 0, 0]} />}
         </group>
       </Suspense>
     </>

@@ -330,7 +330,7 @@ function CameraTracker({
       </mesh>
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on />}
+          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on sposition={[0, 0, 0]} oposition={[0, 0, 0]} />}
         </group>
       )}
     </>

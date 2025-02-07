@@ -166,7 +166,7 @@ const CameraTracker = ({ originRef, setAniStarted, setCameraPosition }: { origin
     //   <meshStandardMaterial color={objectColor} />
     // </mesh>
     objectVisible && (<group ref={objectRef} scale={scale} position={[x, y, z]} visible={true}>
-      <Box onRenderEnd={() => { }} on={true} />
+      <Box onRenderEnd={() => { }} on={true} sposition={[0, 0, 0]} oposition={[0, 0, 0]} />
     </group>)
     //)
   );

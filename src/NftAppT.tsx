@@ -278,7 +278,7 @@ function CameraTracker({
     if (planeFound && !objectPlaced && objectRef.current) {
       finalPlaneMatrix.current.decompose(candidatePos, candidateQuat, candidateScale);
       // 오프셋 계산: 초기 후보와 현재 후보의 차이
-      let offset = new THREE.Vector3();
+      const offset = new THREE.Vector3();
       if (initialCandidatePos.current) {
         offset.subVectors(candidatePos, initialCandidatePos.current);
         console.log("Calculated offset:", offset.toArray());
@@ -314,7 +314,7 @@ function CameraTracker({
       </mesh>
       {planeFound && (
         <group ref={objectRef}>
-          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on />}
+          {isMoons ? <Box onRenderEnd={() => { }} on /> : <Tree onRenderEnd={() => { }} on sposition={[0, 0, 0]} oposition={[0, 0, 0]} />}
         </group>
       )}
     </>
