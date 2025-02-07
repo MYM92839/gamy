@@ -10,7 +10,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
 import { OrbitHandles } from '@react-three/handle';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 // Types
 interface SavedObjectData {
@@ -38,6 +38,7 @@ interface UIOverlayProps {
   circleR: number;
   circleColor: string;
   fotoUrl: string;
+  cameraFov: number; // 추가: XR 카메라의 fov
 }
 
 // Utils
@@ -106,6 +107,7 @@ function renderSceneForCapture(
   tempCamera.quaternion.multiply(offsetQuaternion);
   tempCamera.rotation.order = 'YXZ';
 
+  // 저장된 카메라 행렬로 최종 보정 (필요시)
   tempCamera.matrixWorld.copy(savedCameraMatrix);
   tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
   tempCamera.updateProjectionMatrix();
@@ -128,6 +130,7 @@ function renderSceneForCapture(
 
   renderer.setRenderTarget(renderTarget);
   renderer.clear(true, true, true);
+  // XR 세션 보정을 적용한 tempCamera로 씬 렌더링
   renderer.render(scene, tempCamera);
 
   const tempCanvas = document.createElement('canvas');
@@ -140,7 +143,7 @@ function renderSceneForCapture(
   const gl = renderer.getContext();
   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-  // 수직 뒤집기 (WebGL 픽셀 데이터는 아래쪽부터 읽힘)
+  // 이미지 수직 뒤집기 (WebGL의 픽셀 데이터는 아래쪽부터 읽힘)
   const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height);
   for (let row = 0; row < height; row++) {
     const sourceIndex = (height - row - 1) * width * 4;
@@ -229,7 +232,7 @@ function UIOverlay({
 }: UIOverlayProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10001, pointerEvents: 'auto' }}>
-      <button
+      <Link
         style={{
           position: 'fixed',
           bottom: '65px',
@@ -238,10 +241,10 @@ function UIOverlay({
           border: 'none',
           zIndex: 1001,
         }}
-        onClick={() => window.history.back()}
+        to={'/test'}
       >
         <Back />
-      </button>
+      </Link>
       <button
         style={{
           position: 'fixed',
@@ -354,6 +357,7 @@ function ARCanvas(props: any) {
               circleY={props.circleY}
               circleR={props.circleR}
               circleColor={props.circleColor}
+              cameraFov={props.cameraFov} // ModalU로 전달 (아래 ModalU에서 사용)
             />
           </XRDomOverlay>
         </XR>
@@ -414,8 +418,8 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
 
 /**
  * ModalU 컴포넌트 (합성)
- * - 기존 offscreenCanvas(three.js 씬)은 그대로 사용하고,
- * - 유저 카메라 영상은 XR 세션처럼 FOV 보정 효과를 적용합니다.
+ * - 유저 카메라 화면과 three.js 캔버스를 합성합니다.
+ * - 여기서 유저 카메라 영상에만 FOV 보정 효과를 적용합니다.
  */
 const ModalU = function ({
   closeModal,
@@ -423,11 +427,13 @@ const ModalU = function ({
   setFoto,
   offscreenCanvas,
   isMount,
-  cameraFov, // 추가: XR 세션의 카메라 FOV 값
-}: any) {
+  logDebug,
+  cameraFov, // 추가: XR 카메라의 fov (예상 기본 60°와 비교)
+}: UIOverlayProps & { cameraFov: number }) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
+    // 유저 카메라 화면과 three.js 캔버스를 합성
     const captureComposite = () => {
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
@@ -440,25 +446,31 @@ const ModalU = function ({
 
       ctx.scale(dpr, dpr);
 
-      // --- 유저 카메라 영상 (video stream) 보정 ---
+      // --- 유저 카메라 영상 그리기 (FOV 보정 적용) ---
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
       const videoWidth = videoElement.videoWidth || containerWidth;
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      // 기본 video FOV를 60°로 가정하고, XR 카메라의 FOV (cameraFov)가 있다면 보정 적용
+      // 기본 video FOV를 60°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
       const defaultVideoFov = 60;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const scaleFactor = Math.tan((effectiveFov / 2) * Math.PI / 180) / Math.tan((defaultVideoFov / 2) * Math.PI / 180);
-      const newDrawWidth = videoParams.drawWidth * scaleFactor;
-      const newDrawHeight = videoParams.drawHeight * scaleFactor;
-      const newOffsetX = (containerWidth - newDrawWidth) / 2;
-      const newOffsetY = (containerHeight - newDrawHeight) / 2;
+      const fovScale = Math.tan((effectiveFov / 2) * Math.PI / 180) / Math.tan((defaultVideoFov / 2) * Math.PI / 180);
+      const adjustedDrawWidth = videoParams.drawWidth * fovScale;
+      const adjustedDrawHeight = videoParams.drawHeight * fovScale;
+      const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
+      const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
-      ctx.drawImage(videoElement, newOffsetX, newOffsetY, newDrawWidth, newDrawHeight);
-      // ---------------------------------------------
+      ctx.drawImage(
+        videoElement,
+        adjustedOffsetX,
+        adjustedOffsetY,
+        adjustedDrawWidth,
+        adjustedDrawHeight
+      );
+      // -----------------------------------------------------
 
-      // --- three.js 씬 (offscreenCanvas) 합성: 기존 계산대로 ---
+      // --- three.js 씬 합성 (기존 계산대로) ---
       const threeCSSWidth = offscreenCanvas!.width / dpr;
       const threeCSSHeight = offscreenCanvas!.height / dpr;
       const scaleFactorThree = Math.max(containerWidth / threeCSSWidth, containerHeight / threeCSSHeight);
@@ -466,8 +478,9 @@ const ModalU = function ({
       const drawHeight = threeCSSHeight * scaleFactorThree;
       const offsetX = (containerWidth - drawWidth) / 2;
       const offsetY = (containerHeight - drawHeight) / 2;
+
       ctx.drawImage(offscreenCanvas!, offsetX, offsetY, drawWidth, drawHeight);
-      // ----------------------------------------------------
+      // -----------------------------------------------------
 
       compositeCanvas.toBlob((blob: Blob | null) => {
         if (blob) {
@@ -532,7 +545,7 @@ export default function BasicApp() {
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
   const [, setDebugLogs] = useState<string[]>([]);
-  const [cameraFov, setCameraFov] = useState<number>(60); // 추가: XR 카메라의 fov 값을 저장
+  const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
 
   const logDebug = (msg: any, ...optionalParams: any[]) => {
     console.log(msg, ...optionalParams);
@@ -581,10 +594,10 @@ export default function BasicApp() {
   };
 
   /**
-   * captureARContent:
+   * 수정된 captureARContent:
    * - 전달받은 gl, scene, camera를 사용하여 renderSceneForCapture를 호출합니다.
    * - offscreenCanvas의 크기를 container의 dpr을 고려해 정수 값으로 설정합니다.
-   * - 동시에, XR 세션의 카메라 fov 값을 저장해 ModalU의 video stream 보정에 사용합니다.
+   * - 동시에 XR 카메라의 fov 값을 state에 저장해 ModalU의 비디오 보정에 사용합니다.
    */
   const captureARContent = ({
     gl,
@@ -596,6 +609,7 @@ export default function BasicApp() {
     scene: THREE.Scene;
   }) => {
     onXRSessionEnd(scene, camera);
+    // XR 카메라의 fov 값을 업데이트
     setCameraFov(camera.fov);
     const imgData = renderSceneForCapture(gl, scene, camera);
     const threeCanvas = document.querySelector('#three-canvas');
@@ -690,6 +704,7 @@ export default function BasicApp() {
           circleColor={circleColor}
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
+          cameraFov={cameraFov} // ModalU에 XR 카메라 fov 전달
         />
       ) : (
         <>
@@ -706,7 +721,7 @@ export default function BasicApp() {
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
               logDebug={logDebug}
-              cameraFov={cameraFov}
+              cameraFov={cameraFov} // ModalU에 전달
             />
           )}
         </>
