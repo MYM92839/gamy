@@ -457,7 +457,7 @@ const ModalU = function ({
       // 기본 video FOV를 60°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
       const defaultVideoFov = 45; // 기본값 변경
       const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 0.9;
+      const addedFactor = 0.95;
       const fovScale =
         (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
@@ -467,7 +467,7 @@ const ModalU = function ({
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
-      ctx.filter = 'brightness(1.2)'; // 1.2 배 밝기로 조정 (원하는 값으로 변경)
+      ctx.filter = 'brightness(2)'; // 1.2 배 밝기로 조정 (원하는 값으로 변경)
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
       ctx.filter = 'none'; // 이후 필터 초기화
       // -----------------------------------------------------
