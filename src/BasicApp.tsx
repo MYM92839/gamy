@@ -38,7 +38,7 @@ interface UIOverlayProps {
   circleR: number;
   circleColor: string;
   fotoUrl: string;
-  cameraFov: number; // 추가: XR 카메라의 fov
+  cameraFov: number; // XR 카메라의 fov
 }
 
 // Utils
@@ -158,6 +158,7 @@ function renderSceneForCapture(
 }
 
 // Components
+
 function Scene({ visible, glRef }: SceneProps) {
   const [searchParams] = useSearchParams();
   const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
@@ -230,7 +231,6 @@ function UIOverlay({
   circleR,
   circleColor,
 }: UIOverlayProps) {
-  console.log('??');
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'auto' }}>
       <button
@@ -458,7 +458,8 @@ const ModalU = function ({
       const defaultVideoFov = 60;
       const effectiveFov = cameraFov || defaultVideoFov;
       const fovScale =
-        Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180);
+        Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
+        Math.tan(((defaultVideoFov / 2) * Math.PI) / 180);
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
