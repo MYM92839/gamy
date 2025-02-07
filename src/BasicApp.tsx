@@ -217,7 +217,7 @@ function Scene({ visible, glRef, calibrationMatrixRef }: SceneProps) {
 
   return (
     <>
-      <ambientLight intensity={3} />
+      <ambientLight intensity={1} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
         <group
@@ -475,7 +475,7 @@ const ModalU = function ({
       // 기본 video FOV를 45°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
       const defaultVideoFov = 45;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 0.95;
+      const addedFactor = 0.9;
       const fovScale =
         (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
