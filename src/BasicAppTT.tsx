@@ -427,9 +427,8 @@ const ModalU = function ({
   setFoto,
   offscreenCanvas,
   isMount,
-  logDebug,
   cameraFov, // 추가: XR 카메라의 fov (예상 기본 60°와 비교)
-}: UIOverlayProps & { cameraFov: number }) {
+}: UIOverlayProps & any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
@@ -455,19 +454,14 @@ const ModalU = function ({
       // 기본 video FOV를 60°로 가정, 실제 XR 카메라 fov(cameraFov)와 비교하여 스케일 계산
       const defaultVideoFov = 60;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const fovScale = Math.tan((effectiveFov / 2) * Math.PI / 180) / Math.tan((defaultVideoFov / 2) * Math.PI / 180);
+      const fovScale =
+        Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180);
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
-      ctx.drawImage(
-        videoElement,
-        adjustedOffsetX,
-        adjustedOffsetY,
-        adjustedDrawWidth,
-        adjustedDrawHeight
-      );
+      ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
       // -----------------------------------------------------
 
       // --- three.js 씬 합성 (기존 계산대로) ---
