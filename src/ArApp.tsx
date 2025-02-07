@@ -432,7 +432,7 @@ export function Box({
         ref={modelRef}
         visible={true}
         scale={[0.15, 0.15, 0.15]}
-        position={[-0.45 + oposition[0], -2 + oposition[1], -1 + oposition[2]]}
+        position={[-0.45 + oposition[0], -1.5 + oposition[1], -1 + oposition[2]]}
         rotation={[0, 0, 0]}
       >
         <group name="Group001">
