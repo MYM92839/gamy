@@ -75,6 +75,14 @@ function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destH
 let savedObjects: SavedObjectData[] = [];
 let savedCameraMatrix = new THREE.Matrix4();
 
+/** ★ 추가: FOV 추출 유틸 함수 */
+function extractFovFromProjectionMatrix(mat: Float32Array | number[]) {
+  // col-major 기준, mat[5] == 1 / tan(fov/2)
+  const m11 = mat[5];
+  const verticalFovRad = 2 * Math.atan(1 / m11);
+  return (verticalFovRad * 180) / Math.PI; // degrees
+}
+
 // XR 세션 종료 시 오브젝트+카메라 행렬 저장
 function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
   savedObjects = scene.children.map((obj) => ({
@@ -335,11 +343,7 @@ function CameraUpdater({
 */
 function ARCanvasCore(props: any) {
   const {
-    // props 중에서,
-    // setOffscreenCanvas,
-    // logDebug,
     latestCameraTransformRef,
-    // ... 등등
   } = props;
 
   // LEVA 세팅
@@ -610,7 +614,8 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
+          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
@@ -725,7 +730,9 @@ export default function BasicApp() {
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
 
-  const [cameraFov] = useState<number>(60);
+  /** ★ 수정: cameraFov를 “상태”로 선언 (초기값 60) */
+  const [cameraFov, setCameraFov] = useState<number>(60);
+
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
 
   // 토끼 배치
@@ -794,7 +801,6 @@ export default function BasicApp() {
   // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
     if (!glRefObj) return;
-    // glRefObj = { gl, camera, scene }
 
     if (latestCameraTransform.current) {
       let pos = { x: 0, y: 0, z: 0 };
@@ -818,15 +824,24 @@ export default function BasicApp() {
     }
   };
 
-  // 캡처 및 세션 종료
+  /** ★ 수정: openModalHandler에서 XRFrame으로부터 FOV 추출 후 setCameraFov(newFov) */
   const openModalHandler = (gl: any) => {
-    // 토끼 포즈
     correctPose(gl);
 
-    // 3D 씬 캡처
+    // XRFrame → projectionMatrix → FOV 추출
+    const xrFrame = gl.gl.xr.getFrame?.();
+    const refSpace = gl.gl.xr.getReferenceSpace?.();
+    if (xrFrame && refSpace) {
+      const pose = xrFrame.getViewerPose(refSpace);
+      if (pose && pose.views.length > 0) {
+        const newFov = extractFovFromProjectionMatrix(pose.views[0].projectionMatrix);
+        setCameraFov(newFov);
+        logDebug('Captured FOV from XRFrame:', newFov);
+      }
+    }
+
     captureARContent(gl);
 
-    // 세션 종료
     if (xrStoreRef.current) {
       xrStoreRef.current.getState().session?.end();
       xrStoreRef.current.destroy();
@@ -834,7 +849,6 @@ export default function BasicApp() {
     }
     setMount(false);
 
-    // 모달 열기
     setIsOpen(true);
   };
 
@@ -928,6 +942,7 @@ export default function BasicApp() {
           circleColor={circleColor}
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
+          /** 수정: cameraFov → 상태값 전달 */
           cameraFov={cameraFov}
           calibrationMatrixRef={calibrationMatrixRef}
           rabbitPosition={rabbitPosition}
