@@ -24,7 +24,6 @@ interface SceneProps {
   sposition: any;
   cposition: any;
   visible: boolean;
-  addRef: any;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
   rabbitPosition: [number, number, number]; // 토끼 위치
@@ -36,7 +35,6 @@ interface UIOverlayProps {
   closeModal: () => void;
   closeSaveModal: () => void;
   show: boolean;
-  correctPose: () => void;
   setShow: (v: boolean) => void;
   domWidth: number;
   domHeight: number;
@@ -166,7 +164,7 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addRef }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -183,7 +181,6 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
     if (gl) {
       // 최초 렌더 시에도 gl, camera, scene 정보를 저장
       glRef.current = { gl, camera, scene };
-      addRef();
     }
   }, [camera, gl, glRef, scene]);
 
@@ -223,7 +220,6 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
 function UIOverlay({
   openModal,
-  correctPose,
   setShow,
   domWidth,
   domHeight,
@@ -282,10 +278,7 @@ function UIOverlay({
         </svg>
       </div>
       <Button
-        onClick={() => {
-          correctPose();
-          setShow(true);
-        }}
+        onClick={() => setShow(true)}
         title="토끼 부르기"
         className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
@@ -397,7 +390,6 @@ function ARCanvas(props: any) {
           <Scene
             visible={props.show}
             glRef={glRef}
-            addRef={handleModal}
             calibrationMatrixRef={props.calibrationMatrixRef}
             rabbitPosition={props.rabbitPosition}
             sposition={sposition}
@@ -405,14 +397,10 @@ function ARCanvas(props: any) {
             cposition={cposition}
           />
           <XRDomOverlay>
-            <div className="fixed top-0 right-0 z-[99999999]">
-              <Leva collapsed={false} />
-            </div>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
               fotoUrl={''}
               openModal={handleModal}
-              correctPose={props.correctPose}
               closeModal={props.closeModal}
               closeSaveModal={props.closeSaveModal}
               show={props.show}
@@ -425,6 +413,9 @@ function ARCanvas(props: any) {
               circleColor={props.circleColor}
               cameraFov={props.cameraFov}
             />
+            <div className='fixed top-0 bottom-0 z-[99999999]'>
+              <Leva collapsed={false} />
+            </div>
           </XRDomOverlay>
         </XR>
       </Canvas>
@@ -626,6 +617,7 @@ export default function BasicApp() {
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
   const [, setDebugLogs] = useState<string[]>([]);
   const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
+
   // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
   useEffect(() => {
@@ -671,25 +663,13 @@ export default function BasicApp() {
     initializeMedia();
   }, []);
 
-  const onTest = () => {
-    if (xrStoreRef.current) {
-      xrStoreRef.current.getState().session?.end();
-      xrStoreRef.current.destroy();
-      xrStoreRef.current = null;
-    }
-    xrStoreRef.current = createXRStore();
-    setTimeout(() => {
-      setMount(true);
-    }, 2000);
-  };
   /**
    * openModalHandler
    * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
    * - 그 시점의 최신 glRef.current.camera 를 기준으로 토끼 위치(3m 앞)를 계산합니다.
    * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
    */
-
-  const correctPose = (gl: any) => {
+  const openModalHandler = (gl: any) => {
     if (gl && gl.camera) {
       // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
       const cameraPos = gl.camera.position.clone();
@@ -699,10 +679,6 @@ export default function BasicApp() {
       setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
       logDebug('Rabbit position updated on button click:', newRabbitPos);
     }
-  };
-  const openModalHandler = (gl: any) => {
-    correctPose(gl);
-
     // 캡쳐 및 보정을 수행
     captureARContent(gl);
     // 세션 종료 및 XRStore 파괴 → 다음 진입 시 새로운 기준 적용
@@ -798,7 +774,6 @@ export default function BasicApp() {
             setIsOpen(false);
             setShow(false);
           }}
-          correctPose={correctPose}
           closeSaveModal={handleCloseSaveModal}
           setShow={setShow}
           domWidth={domWidth}
