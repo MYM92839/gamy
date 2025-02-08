@@ -802,8 +802,13 @@ export default function BasicApp() {
     correctPose();
 
     // XRFrame / referenceSpace가 있으면 그때 projectionMatrix → FOV 추출
-    const xrFrame = gl.xr.getFrame?.();
-    const refSpace = gl.xr.getReferenceSpace?.();
+    const xrFrame = gl.gl.xr.getFrame?.();
+    const refSpace = gl.gl.xr.getReferenceSpace?.();
+
+    if (!xrFrame || !refSpace) {
+      alert('WARN' + xrFrame + refSpace);
+      return;
+    }
     if (xrFrame && refSpace) {
       const pose = xrFrame.getViewerPose(refSpace);
       if (pose && pose.views.length > 0) {
