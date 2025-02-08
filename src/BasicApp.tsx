@@ -8,8 +8,7 @@ import {
   PointerEvents,
   XR,
   XRDomOverlay,
-  XROrigin,
-  useXR, // <-- 추가
+  XROrigin
 } from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -77,11 +76,12 @@ function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destH
   return { drawWidth, drawHeight, offsetX, offsetY };
 }
 
-// Scene Management
+// ------------------------------------------------
+// 원래 코드: 저장용 전역 & XR 세션 종료 시 객체 복원
+// ------------------------------------------------
 let savedObjects: SavedObjectData[] = [];
 let savedCameraMatrix = new THREE.Matrix4();
 
-// XR 세션 종료 시 현재 오브젝트와 카메라 행렬 저장
 function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
   savedObjects = scene.children.map((obj) => ({
     position: obj.position.clone(),
@@ -93,7 +93,7 @@ function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): vo
 
 /**
  * renderSceneForCapture
- * - XR 캡쳐를 위해 임시 카메라(tempCamera)를 생성하여 WebXR 카메라의 행렬 및 좌표계 보정을 적용합니다.
+ * - XR 캡쳐(Three.js 오브젝트만)용 임시 카메라.
  */
 function renderSceneForCapture(
   renderer: THREE.WebGLRenderer,
@@ -110,16 +110,15 @@ function renderSceneForCapture(
   const width = Math.floor(containerWidth * dpr);
   const height = Math.floor(containerHeight * dpr);
 
-  // --- 임시 카메라 생성 및 보정 시작 ---
-  // camera.fov가 아니라 "XR에서 추출한 fov"를 쓰고 싶다면, 필요 시 인자로 바꿔도 됨.
+  // 임시 카메라
   const tempCamera = new THREE.PerspectiveCamera(camera.fov, containerWidth / containerHeight, camera.near, camera.far);
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
 
-  // XR과 Three.js 간 좌표계 차이를 보정 (예: Y축 기준 180도 회전)
+  // XR과 Three.js 간 좌표계 차이(예: Y축 180도) 보정
   const offsetQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
   tempCamera.quaternion.copy(camera.quaternion).multiply(offsetQuaternion);
 
-  // ★ 보정 로직 적용 ★
+  // calibrationMatrix 적용 (있으면)
   if (calibrationMatrix) {
     const calibratedMatrix = new THREE.Matrix4();
     calibratedMatrix.multiplyMatrices(calibrationMatrix.clone().invert(), camera.matrixWorld);
@@ -130,9 +129,8 @@ function renderSceneForCapture(
     tempCamera.matrixWorldInverse.copy(savedCameraMatrix).invert();
   }
   tempCamera.updateProjectionMatrix();
-  // --- 임시 카메라 생성 및 보정 완료 ---
 
-  // 저장된 오브젝트 정보 복원
+  // 기존 오브젝트 상태 복원
   scene.children.forEach((obj, index) => {
     if (savedObjects[index]) {
       obj.position.copy(savedObjects[index].position);
@@ -141,6 +139,7 @@ function renderSceneForCapture(
     }
   });
 
+  // RenderTarget 이용해서 씬만 렌더
   const renderTarget = new THREE.WebGLRenderTarget(width, height, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
@@ -151,13 +150,13 @@ function renderSceneForCapture(
   renderer.clear(true, true, true);
   renderer.render(scene, tempCamera);
 
+  // 픽셀 추출 후 canvas.toDataURL
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = width;
   tempCanvas.height = height;
   const tempCtx = tempCanvas.getContext('2d');
   if (!tempCtx) return '';
 
-  // 품질 향상을 위한 smoothing 옵션 적용
   tempCtx.imageSmoothingEnabled = true;
   tempCtx.imageSmoothingQuality = 'high';
 
@@ -172,30 +171,29 @@ function renderSceneForCapture(
     imageData.data.set(pixels.subarray(sourceIndex, sourceIndex + width * 4), destIndex);
   }
   tempCtx.putImageData(imageData, 0, 0);
+
   renderer.setRenderTarget(null);
   renderTarget.dispose();
 
   return tempCanvas.toDataURL('image/png');
 }
 
-// ====================================================================
-// 추가 1: projectionMatrix에서 FOV 추출 함수 (column-major 가정)
-// ====================================================================
+/**
+ * ★ (중요) WebXR projectionMatrix → FOV 추출
+ */
 function extractFovFromProjectionMatrix(mat: Float32Array | number[]) {
-  // mat[5] == m[1][1] in column-major, which is ~1/tan(fov/2)
   const m11 = mat[5];
   const verticalFovRad = 2 * Math.atan(1 / m11);
-  return (verticalFovRad * 180) / Math.PI; // degrees
+  return (verticalFovRad * 180) / Math.PI;
 }
-// ====================================================================
 
-// Components
-
+// ------------------------------------------------------
+// Scene: 실제 3D 오브젝트 보여주는 컴포넌트 (기존과 동일)
+// ------------------------------------------------------
 function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
-  // 매 프레임 glRef 업데이트 → 최신 카메라 포즈 반영
   useFrame(() => {
     if (glRef.current) {
       glRef.current.camera = camera;
@@ -206,7 +204,6 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
   useEffect(() => {
     if (gl) {
-      // 최초 렌더 시에도 gl, camera, scene 정보를 저장
       glRef.current = { gl, camera, scene };
       addGl(glRef.current);
     }
@@ -214,11 +211,9 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      // 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산한 rabbitPosition 사용
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
       if (groupRef.current && glRef.current && glRef.current.camera) {
-        // 오브젝트가 카메라 위치를 바라보도록 설정합니다.
         groupRef.current.lookAt(glRef.current.camera.position);
 
         const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
@@ -255,6 +250,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
   );
 }
 
+/** UIOverlay: 화면 위 버튼/레이어 */
 function UIOverlay({
   openModal,
   setShow,
@@ -332,34 +328,9 @@ function UIOverlay({
   );
 }
 
-// ---------------------------------------
-// 추가 2: XRFrame에서 projectionMatrix를 읽어 FOV를 추출하는 컴포넌트
-// ---------------------------------------
-function XRFovUpdater({ setCameraFov }: { setCameraFov: React.Dispatch<React.SetStateAction<number>> }) {
-  const { gl } = useThree();
-  const { session } = useXR(); // react-three/xr 제공
-
-  useFrame(() => {
-    if (!session || !gl.xr.getReferenceSpace()) return;
-    const xrFrame = gl.xr.getFrame?.();
-    if (!xrFrame) return;
-
-    const pose = xrFrame.getViewerPose(gl.xr.getReferenceSpace()!);
-    if (!pose || pose.views.length === 0) return;
-
-    // 보통 AR은 단안(왼쪽/오른쪽) 2개 또는 1개가 있을 수 있으니 0번째만 사용
-    const view = pose.views[0];
-    if (!view) return;
-
-    // 이제 projectionMatrix에서 FOV 추출
-    const newFov = extractFovFromProjectionMatrix(view.projectionMatrix);
-    setCameraFov(newFov);
-  });
-
-  return null;
-}
-// ---------------------------------------
-
+/**
+ * CameraUpdater: 매 프레임 카메라 변환값을 최신 ref에 복사
+ */
 function CameraUpdater({
   latestCameraTransformRef,
 }: {
@@ -373,11 +344,16 @@ function CameraUpdater({
   return null;
 }
 
+/**
+ * ARCanvas
+ * - XRSession 시작 & Three.js Canvas 생성
+ */
 function ARCanvas(props: any) {
   const { setOffscreenCanvas, logDebug, latestCameraTransformRef } = props;
   const [init, setInit] = useState(false);
   const glRef = useRef(null);
-  // localStorage에 저장된 값을 불러와 초기값으로 사용
+
+  // localStorage -> 레버 초깃값
   const initialValues = useMemo(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('levaValues');
@@ -385,7 +361,7 @@ function ARCanvas(props: any) {
         try {
           return JSON.parse(saved);
         } catch (error) {
-          console.error('저장된 값을 파싱하는데 실패했습니다:', error);
+          console.error('저장된 값을 파싱:', error);
         }
       }
     }
@@ -396,6 +372,7 @@ function ARCanvas(props: any) {
       sscale: 0.5,
     };
   }, []);
+
   const { oposition, sposition, cposition } = useControls({
     oposition: { value: initialValues.oposition, step: 0.1 },
     sposition: { value: initialValues.sposition, step: 0.1 },
@@ -410,6 +387,7 @@ function ARCanvas(props: any) {
     localStorage.setItem('levaValues', JSON.stringify(data));
   }, [oposition, sposition, cposition, sscale]);
 
+  // XR 세션 자동 진입
   useEffect(() => {
     let id: ReturnType<typeof setTimeout>;
     const func = async () => {
@@ -419,7 +397,7 @@ function ARCanvas(props: any) {
           props.setSessionStarted(true);
           logDebug('XR session started.');
         } catch (err) {
-          logDebug('XR session failed to start: ' + err);
+          logDebug('XR session failed to start:', err);
         }
       }
     };
@@ -460,14 +438,15 @@ function ARCanvas(props: any) {
         id="three-canvas"
         style={{ width: '100vw', height: '100vh', background: 'transparent' }}
         gl={{ alpha: true, preserveDrawingBuffer: true }}
-        // 여기서 camera.fov=30 은 최초 기본값일 뿐,
-        // 아래 XRFovUpdater가 XRView로부터 매 프레임 새로 추출하여 업데이트하게 됨.
+        // 최초 camera fov 지정 (XR 시작 후 내부적으로 override될 수 있음)
         camera={{ fov: 30 }}
         onCreated={(state) => {
           state.gl.setPixelRatio(window.devicePixelRatio);
           state.gl.setSize(window.innerWidth, window.innerHeight);
           setInit(true);
           logDebug('Canvas created, init set to true.');
+
+          // offscreen 캔버스
           const offscreen = document.createElement('canvas');
           offscreen.width = Math.floor(window.innerWidth * window.devicePixelRatio);
           offscreen.height = Math.floor(window.innerHeight * window.devicePixelRatio);
@@ -480,23 +459,12 @@ function ARCanvas(props: any) {
         <OrbitHandles />
         <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
 
-        {/* --------------------
-            추가 3: XR FOV 추출해서 props.cameraFov에 반영
-           -------------------- */}
+        {/*
+          XR 설정: 일반적으로 immersive-ar 세션을 자동으로 열고
+          착용자(카메라) 위치 추적
+        */}
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
-
-          {/* FOV를 props.setCameraFov 에 전달하는 컴포넌트 */}
-          <XRFovUpdater
-            setCameraFov={
-              props.logDebug
-                ? (fov) => {
-                    props.logDebug(`XR FOV updated: ${(fov as number).toFixed(2)}`);
-                    props.setCameraFov(fov);
-                  }
-                : props.setCameraFov
-            }
-          />
 
           <Scene
             visible={props.show}
@@ -541,6 +509,9 @@ function ARCanvas(props: any) {
   );
 }
 
+/**
+ * BackgroundVideo: 유저 카메라 영상 (getUserMedia) 배경
+ */
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -596,8 +567,8 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
 }
 
 /**
- * ModalU 컴포넌트 (합성)
- * - 유저 카메라 영상과 three.js 캔버스를 합성합니다.
+ * ModalU: 합성 결과 보여주는 모달
+ * - 배경 비디오 + offscreenCanvas(three.js 씬) 합성
  */
 const ModalU = function ({
   closeModal,
@@ -624,17 +595,19 @@ const ModalU = function ({
       ctx.imageSmoothingQuality = 'high';
       ctx.scale(dpr, dpr);
 
+      // 배경 비디오
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
       const videoWidth = videoElement.videoWidth || containerWidth;
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      // 여기서 cameraFov는 XR에서 얻은 실시간 FOV가 될 수 있음
+      // 이때 XR 카메라 fov를 반영 (cameraFov)
       const defaultVideoFov = 25;
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
+          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
@@ -642,10 +615,10 @@ const ModalU = function ({
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
-      // 배경 비디오
+      // 그리기
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
 
-      // three.js offscreen
+      // Three.js offscreen
       const threeCSSWidth = offscreenCanvas!.width / dpr;
       const threeCSSHeight = offscreenCanvas!.height / dpr;
       const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
@@ -673,6 +646,7 @@ const ModalU = function ({
     };
 
     if (isMount) {
+      // 2초 뒤 합성
       const timeoutId = setTimeout(captureComposite, 2000);
       return () => clearTimeout(timeoutId);
     }
@@ -733,7 +707,9 @@ const ModalU = function ({
   );
 };
 
-// Main App Component
+/**
+ * BasicApp: 최종 메인
+ */
 export default function BasicApp() {
   const xrStoreRef = useRef<any>(null);
   const [mount, setMount] = useState(false);
@@ -745,15 +721,14 @@ export default function BasicApp() {
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
   const [, setDebugLogs] = useState<string[]>([]);
-  const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
+  const [cameraFov, setCameraFov] = useState<number>(60);
 
-  // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
   useEffect(() => {
     console.log('Calibration ref in BasicApp:', calibrationMatrixRef.current);
   }, []);
 
-  // 토끼(오브젝트) 배치를 위한 상태
+  // 토끼 배치를 위한
   const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
 
   const logDebug = (msg: any, ...optionalParams: any[]) => {
@@ -768,12 +743,12 @@ export default function BasicApp() {
   const circleR = 100;
   const circleColor = 'blue';
 
-  // 새로운 ref: 최신 카메라 변환 값을 저장 (위치 및 쿼터니언)
   const latestCameraTransform = useRef({
     position: new THREE.Vector3(),
     quaternion: new THREE.Quaternion(),
   });
 
+  // 페이지 로드 시 media test → xrStore 생성
   useEffect(() => {
     const initializeMedia = async () => {
       try {
@@ -808,45 +783,60 @@ export default function BasicApp() {
     }, 2000);
   };
 
-  // 수정된 correctPose 함수
+  // 토끼 배치
   const correctPose = () => {
     if (latestCameraTransform.current) {
       let pos = { x: 0, y: 0, z: 0 };
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('levaValues');
-        if (saved) {
-          try {
-            const s = JSON.parse(saved);
-            pos = s.oposition;
-          } catch (error) {
-            console.error('저장된 값을 파싱 실패:', error);
-          }
+      const saved = localStorage.getItem('levaValues');
+      if (saved) {
+        try {
+          const s = JSON.parse(saved);
+          pos = s.oposition;
+        } catch (error) {
+          console.error('levaValues parse error:', error);
         }
       }
-
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
       const offset = new THREE.Vector3(0, 0, -11);
-      const invQuat = cameraQuat.clone();
-      offset.applyQuaternion(invQuat);
+      offset.applyQuaternion(cameraQuat.clone());
       const newPosition = cameraPos.add(offset);
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
       logDebug('Rabbit position updated:', newPosition);
     }
   };
 
+  // ★ (중요) "캡처" 버튼 클릭 시, 여기서 XRFrame → FOV 추출
   const openModalHandler = (gl: any) => {
     correctPose();
+
+    // XRFrame / referenceSpace가 있으면 그때 projectionMatrix → FOV 추출
+    const xrFrame = gl.xr.getFrame?.();
+    const refSpace = gl.xr.getReferenceSpace?.();
+    if (xrFrame && refSpace) {
+      const pose = xrFrame.getViewerPose(refSpace);
+      if (pose && pose.views.length > 0) {
+        const newFov = extractFovFromProjectionMatrix(pose.views[0].projectionMatrix);
+        setCameraFov(newFov); // 이 값이 ModalU에서 사용됨
+        logDebug('Captured FOV:', newFov);
+      }
+    }
+
+    // capture (three.js 씬)
     captureARContent(gl);
+
+    // XR 세션 종료
     if (xrStoreRef.current) {
       xrStoreRef.current.getState().session?.end();
       xrStoreRef.current.destroy();
       xrStoreRef.current = null;
     }
+
     setMount(false);
     setIsOpen(true);
   };
 
+  // 실제 3D 렌더 스냅샷
   const captureARContent = ({
     gl,
     scene,
@@ -857,19 +847,16 @@ export default function BasicApp() {
     scene: THREE.Scene;
   }) => {
     onXRSessionEnd(scene, camera);
-    // 여기서 setCameraFov(camera.fov)를 했지만,
-    // 위 XRFovUpdater로부터 이미 실시간 XR FOV를 받고 있으니, 상황 맞춰 조절해도 됨.
-    setCameraFov(camera.fov);
-
     const imgData = renderSceneForCapture(gl, scene, camera, calibrationMatrixRef.current);
-    const threeCanvas = document.querySelector('#three-canvas');
 
+    const threeCanvas = document.querySelector('#three-canvas');
     if (threeCanvas && offscreenCanvas) {
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
       const dpr = window.devicePixelRatio || 1;
       offscreenCanvas.width = Math.floor(containerWidth * dpr);
       offscreenCanvas.height = Math.floor(containerHeight * dpr);
+
       const ctx = offscreenCanvas.getContext('2d');
       if (!ctx) {
         logDebug('captureARContent: offscreen canvas context failed.');
@@ -877,6 +864,7 @@ export default function BasicApp() {
       }
       ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
+      // 캡처된 3D 씬 이미지 그리기
       const img = new Image();
       img.onload = () => {
         const params = calcCover(img.width, img.height, offscreenCanvas.width, offscreenCanvas.height);
@@ -886,9 +874,15 @@ export default function BasicApp() {
     }
   };
 
+  // 모달 "저장하기" 클릭 시
   const handleCloseSaveModal = () => {
     if (foto) {
-      if (navigator.canShare && navigator.canShare({ files: [new File([foto], 'capture.png', { type: foto.type })] })) {
+      if (
+        navigator.canShare &&
+        navigator.canShare({
+          files: [new File([foto], 'capture.png', { type: foto.type })],
+        })
+      ) {
         const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: 'image/png' });
         navigator
           .share({ files: [file], title: 'My Captured Image', text: 'Check out this captured photo!' })
@@ -905,6 +899,7 @@ export default function BasicApp() {
     setIsOpen(false);
   };
 
+  // iOS ARKit 미지원 시 대체
   if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
     return <NftAppT3 />;
   }
@@ -933,7 +928,7 @@ export default function BasicApp() {
           circleColor={circleColor}
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
-          cameraFov={cameraFov} // <- 실시간 갱신되는 값
+          cameraFov={cameraFov}
           calibrationMatrixRef={calibrationMatrixRef}
           rabbitPosition={rabbitPosition}
           latestCameraTransformRef={latestCameraTransform}
@@ -954,7 +949,7 @@ export default function BasicApp() {
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
               logDebug={logDebug}
-              cameraFov={cameraFov} // 합성 시 사용
+              cameraFov={cameraFov}
             />
           )}
         </>
