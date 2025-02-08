@@ -195,6 +195,13 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       if (groupRef.current && glRef.current && glRef.current.camera) {
         // 오브젝트가 카메라 위치를 바라보도록 설정합니다.
         groupRef.current.lookAt(glRef.current.camera.position);
+
+        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+        // 곱셈 순서에 주의합니다.
+        // 아래처럼 현재 quaternion에 추가 회전(offsetQuat)을 오른쪽으로 곱하면,
+        // 현재 회전 후 로컬 좌표계 기준 추가 회전이 적용됩니다.
+        groupRef.current.quaternion.multiply(offsetQuat);
       }
     }
   }, [visible, camera, rabbitPosition]);
