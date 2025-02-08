@@ -3,8 +3,8 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitHandles } from '@react-three/handle';
 import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Leva, useControls } from 'leva';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Box } from './ArApp';
 import NftAppT3 from './NftAppT3';
@@ -20,6 +20,9 @@ interface SavedObjectData {
 }
 
 interface SceneProps {
+  oposition: any;
+  sposition: any;
+  cposition: any;
   visible: boolean;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
@@ -162,19 +165,19 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition }: SceneProps) {
   // 기존 searchParams는 Box 컴포넌트에 전달할 추가 속성으로 남겨둡니다.
-  const [searchParams] = useSearchParams();
-  const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
-  const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
-  const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
-  const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
-  const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
-  const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
+  // const [searchParams] = useSearchParams();
+  // const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
+  // const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
+  // const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
+  // const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
+  // const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
+  // const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
 
-  const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
-  const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
-  const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
+  // const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
+  // const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
+  // const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
 
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
@@ -203,12 +206,19 @@ function Scene({ visible, glRef, rabbitPosition }: SceneProps) {
       <Suspense fallback={null}>
         <group
           ref={groupRef}
-          position={[rabbitPosition[0] + cx, rabbitPosition[1] + cy - 1, rabbitPosition[2] + cz - 11]}
+          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
           rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
-          {visible && <Box sposition={[sx, sy, sz]} oposition={[ox, oy, oz]} on onRenderEnd={() => {}} />}
+          {visible && (
+            <Box
+              sposition={[sposition.x, sposition.y, sposition.z]}
+              oposition={[oposition.x, oposition.y, oposition.z]}
+              on
+              onRenderEnd={() => {}}
+            />
+          )}
         </group>
       </Suspense>
     </>
@@ -313,6 +323,37 @@ function ARCanvas(props: any) {
   const { setOffscreenCanvas, logDebug } = props;
   const [init, setInit] = useState(false);
   const glRef = useRef(null);
+  // localStorage에 저장된 값을 불러와 초기값으로 사용 (만약 값이 없으면 기본값 사용)
+  const initialValues = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('levaValues');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (error) {
+          console.error('저장된 값을 파싱하는데 실패했습니다:', error);
+        }
+      }
+    }
+    return {
+      oposition: { x: 0, y: 0, z: 0 },
+      sposition: { x: 0, y: 0, z: 0 },
+      cposition: { x: 0, y: 0, z: 0 },
+    };
+  }, []);
+  const { oposition, sposition, cposition } = useControls({
+    oposition: { value: initialValues.oposition, step: 0.1 },
+    sposition: { value: initialValues.sposition, step: 0.1 },
+    cposition: { value: initialValues.cposition, step: 0.1 },
+  });
+
+  useEffect(() => {
+    // 모든 컨트롤 값을 하나의 객체로 합침
+    const data = { oposition, sposition, cposition };
+
+    // localStorage에 JSON 문자열 형태로 저장 (예: 'levaValues'라는 키로)
+    localStorage.setItem('levaValues', JSON.stringify(data));
+  }, [oposition, sposition, cposition]);
 
   useEffect(() => {
     let id: ReturnType<typeof setTimeout>;
@@ -386,8 +427,13 @@ function ARCanvas(props: any) {
             glRef={glRef}
             calibrationMatrixRef={props.calibrationMatrixRef}
             rabbitPosition={props.rabbitPosition}
+            sposition={sposition}
+            oposition={oposition}
+            cposition={cposition}
           />
           <XRDomOverlay>
+            <Leva collapsed={false} />
+
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
               fotoUrl={''}
