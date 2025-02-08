@@ -293,8 +293,18 @@ function UIOverlay({
   );
 }
 
+// 새로운 컴포넌트: 최신 카메라 변환값을 매 프레임 업데이트
+function CameraUpdater({ latestCameraTransformRef }: { latestCameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion; }> }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    latestCameraTransformRef.current.position.copy(camera.position);
+    latestCameraTransformRef.current.quaternion.copy(camera.quaternion);
+  });
+  return null;
+}
+
 function ARCanvas(props: any) {
-  const { setOffscreenCanvas, logDebug } = props;
+  const { setOffscreenCanvas, logDebug, latestCameraTransformRef } = props;
   const [init, setInit] = useState(false);
   const glRef = useRef(null);
   // localStorage에 저장된 값을 불러와 초기값으로 사용 (없으면 기본값)
@@ -392,6 +402,7 @@ function ARCanvas(props: any) {
       >
         <PointerEvents />
         <OrbitHandles />
+        <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
           <Scene
@@ -522,7 +533,8 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 0.95;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
+          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
@@ -652,6 +664,12 @@ export default function BasicApp() {
   const circleR = 100;
   const circleColor = 'blue';
 
+  // 새로운 ref: 최신 카메라 변환 값을 저장 (위치 및 쿼터니언)
+  const latestCameraTransform = useRef({
+    position: new THREE.Vector3(),
+    quaternion: new THREE.Quaternion(),
+  });
+
   // 기존 자동진입 로직 (페이지 접속 시 XR 세션 시작)
   useEffect(() => {
     const initializeMedia = async () => {
@@ -688,22 +706,11 @@ export default function BasicApp() {
     }, 2000);
   };
 
-  // const correctPose = (gl: any) => {
-  //   if (gl && gl.camera) {
-  //     // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
-  //     const cameraPos = gl.camera.position.clone();
-  //     const direction = new THREE.Vector3();
-  //     gl.camera.getWorldDirection(direction);
-  //     const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
-  //     setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
-  //     logDebug('Rabbit position updated on button click:', newRabbitPos);
-  //   }
-  // };
-
+  // 수정된 correctPose 함수: 최신 카메라 transform(latestCameraTransform)을 사용
   const correctPose = (gl: any) => {
-    if (gl && gl.camera) {
-      // 추가 오프셋 값이 localStorage에 저장되어 있다면 불러오기 (없으면 기본값 사용)
+    if (latestCameraTransform.current) {
       let pos = { x: 0, y: 0, z: 0 };
+
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('levaValues');
         if (saved) {
@@ -716,20 +723,15 @@ export default function BasicApp() {
         }
       }
 
-      // 카메라의 최신 행렬 업데이트
-      gl.camera.updateMatrixWorld(true);
-
-      // 머리 좌표계에서의 오프셋을 정의합니다. 여기서는 (0,0,3)을 사용합니다.
+      // 최신 카메라 transform 값 사용 (useFrame에서 업데이트됨)
+      const cameraPos = latestCameraTransform.current.position.clone();
+      const cameraQuat = latestCameraTransform.current.quaternion.clone();
+      // 머리 좌표계에서의 오프셋 (전방 +Z를 사용)
       const offset = new THREE.Vector3(pos.x, pos.y, 3 + pos.z);
-
-      // 원하는 동작: 카메라가 회전하면 오프셋이 사용자의 머리 좌표계에서는 고정되도록 하기 위해,
-      // 카메라의 쿼터니언의 역(인버스)을 적용합니다.
-      const invQuat = gl.camera.quaternion.clone().invert();
+      // 카메라의 쿼터니언의 역(인버스)을 적용하여 머리 좌표계의 오프셋을 구함
+      const invQuat = cameraQuat.clone().invert();
       offset.applyQuaternion(invQuat);
-
-      // 최종 오브젝트(토끼) 위치는 카메라 위치에 이 오프셋을 더한 값
-      const newPosition = gl.camera.position.clone().add(offset);
-
+      const newPosition = cameraPos.add(offset);
       setRabbitPosition([newPosition.x, newPosition.y, newPosition.z]);
       logDebug('Rabbit position updated:', newPosition);
     }
@@ -738,8 +740,8 @@ export default function BasicApp() {
   /**
    * openModalHandler
    * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
-   * - 그 시점의 최신 glRef.current.camera 를 기준으로 토끼 위치(3m 앞)를 계산합니다.
-   * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
+   * - 그 시점의 최신 카메라 transform(latestCameraTransform)을 기준으로 토끼 위치(3m 앞)를 계산합니다.
+   * - 캡쳐 후 onXRSessionEnd로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
    */
   const openModalHandler = (gl: any) => {
     correctPose(gl);
@@ -821,29 +823,6 @@ export default function BasicApp() {
     setIsOpen(false);
   };
 
-  useEffect(() => {
-    const initializeMedia = async () => {
-      try {
-        const constraints = {
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        stream.getTracks().forEach((track) => track.stop());
-        xrStoreRef.current = createXRStore();
-      } catch (err) {
-        logDebug('UserMedia test failed: ' + err);
-      }
-    };
-
-    initializeMedia();
-    onTest();
-  }, []);
-
   if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
     return <NftAppT3 />;
   }
@@ -875,6 +854,7 @@ export default function BasicApp() {
           cameraFov={cameraFov}
           calibrationMatrixRef={calibrationMatrixRef}
           rabbitPosition={rabbitPosition}
+          latestCameraTransformRef={latestCameraTransform}
         />
       ) : sessionStarted ? (
         <>
