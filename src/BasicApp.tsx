@@ -23,6 +23,7 @@ interface SceneProps {
   oposition: any;
   sposition: any;
   cposition: any;
+  addGl: any;
   visible: boolean;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
@@ -30,6 +31,7 @@ interface SceneProps {
 }
 
 interface UIOverlayProps {
+  correctPose: any;
   modalIsOpen: boolean;
   openModal: () => void;
   closeModal: () => void;
@@ -164,7 +166,7 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -181,6 +183,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
     if (gl) {
       // 최초 렌더 시에도 gl, camera, scene 정보를 저장
       glRef.current = { gl, camera, scene };
+      addGl(glRef.current);
     }
   }, [camera, gl, glRef, scene]);
 
@@ -226,6 +229,7 @@ function UIOverlay({
   circleX,
   circleY,
   circleR,
+  correctPose,
   circleColor,
 }: UIOverlayProps) {
   return (
@@ -278,7 +282,10 @@ function UIOverlay({
         </svg>
       </div>
       <Button
-        onClick={() => setShow(true)}
+        onClick={() => {
+          correctPose();
+          setShow(true);
+        }}
         title="토끼 부르기"
         className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
@@ -390,6 +397,9 @@ function ARCanvas(props: any) {
           <Scene
             visible={props.show}
             glRef={glRef}
+            addGl={(gl: any) => {
+              glRef.current = gl;
+            }}
             calibrationMatrixRef={props.calibrationMatrixRef}
             rabbitPosition={props.rabbitPosition}
             sposition={sposition}
@@ -400,6 +410,9 @@ function ARCanvas(props: any) {
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
               fotoUrl={''}
+              correctPose={() => {
+                props.correctPose(glRef.current);
+              }}
               openModal={handleModal}
               closeModal={props.closeModal}
               closeSaveModal={props.closeSaveModal}
@@ -413,7 +426,7 @@ function ARCanvas(props: any) {
               circleColor={props.circleColor}
               cameraFov={props.cameraFov}
             />
-            <div className='fixed top-0 bottom-0 z-[99999999]'>
+            <div className="fixed top-0 bottom-0 z-[99999999]">
               <Leva collapsed={false} />
             </div>
           </XRDomOverlay>
@@ -675,14 +688,7 @@ export default function BasicApp() {
     }, 2000);
   };
 
-
-  /**
-   * openModalHandler
-   * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
-   * - 그 시점의 최신 glRef.current.camera 를 기준으로 토끼 위치(3m 앞)를 계산합니다.
-   * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
-   */
-  const openModalHandler = (gl: any) => {
+  const correctPose = (gl: any) => {
     if (gl && gl.camera) {
       // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
       const cameraPos = gl.camera.position.clone();
@@ -692,6 +698,16 @@ export default function BasicApp() {
       setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
       logDebug('Rabbit position updated on button click:', newRabbitPos);
     }
+  };
+
+  /**
+   * openModalHandler
+   * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
+   * - 그 시점의 최신 glRef.current.camera 를 기준으로 토끼 위치(3m 앞)를 계산합니다.
+   * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
+   */
+  const openModalHandler = (gl: any) => {
+    correctPose(gl);
     // 캡쳐 및 보정을 수행
     captureARContent(gl);
     // 세션 종료 및 XRStore 파괴 → 다음 진입 시 새로운 기준 적용
@@ -793,7 +809,6 @@ export default function BasicApp() {
     onTest();
   }, []);
 
-
   if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
     return <NftAppT3 />;
   }
@@ -813,6 +828,7 @@ export default function BasicApp() {
           }}
           closeSaveModal={handleCloseSaveModal}
           setShow={setShow}
+          correctPose={correctPose}
           domWidth={domWidth}
           domHeight={domHeight}
           circleX={circleX}
