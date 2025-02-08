@@ -688,15 +688,53 @@ export default function BasicApp() {
     }, 2000);
   };
 
+  // const correctPose = (gl: any) => {
+  //   if (gl && gl.camera) {
+  //     // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
+  //     const cameraPos = gl.camera.position.clone();
+  //     const direction = new THREE.Vector3();
+  //     gl.camera.getWorldDirection(direction);
+  //     const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
+  //     setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
+  //     logDebug('Rabbit position updated on button click:', newRabbitPos);
+  //   }
+  // };
+
   const correctPose = (gl: any) => {
     if (gl && gl.camera) {
-      // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
-      const cameraPos = gl.camera.position.clone();
-      const direction = new THREE.Vector3();
-      gl.camera.getWorldDirection(direction);
-      const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
-      setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
-      logDebug('Rabbit position updated on button click:', newRabbitPos);
+      let pos = { x: 0, y: 0, z: 0 };
+
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('levaValues');
+        if (saved) {
+          try {
+            const s = JSON.parse(saved);
+            pos = s.oposition;
+          } catch (error) {
+            console.error('저장된 값을 파싱하는데 실패했습니다:', error);
+          }
+        }
+      }
+
+      // 카메라의 최신 행렬 업데이트
+      gl.camera.updateMatrixWorld(true);
+
+      // 카메라 로컬 좌표계에서 3미터 앞쪽 오프셋
+      const offset = new THREE.Vector3(0 + pos.x, 0 + pos.y, 3 + pos.z);
+
+      // 카메라의 회전(쿼터니언)을 적용하면, 예를 들어 카메라 회전이 0,0,0이면 그대로 (0,0,3)이 되고,
+      // 카메라를 왼쪽으로 90도 돌리면 offset이 (-3,0,0)으로 회전됩니다.
+      offset.applyQuaternion(gl.camera.quaternion);
+
+      // 최종 오브젝트(토끼) 위치는 카메라 위치에 오프셋을 더한 값
+      const newPosition = gl.camera.position.clone().add(offset);
+
+      // 필요에 따라, 오브젝트(또는 그룹)가 카메라를 바라보도록 lookAt을 호출할 수도 있습니다.
+      // 예를 들어: rabbitGroupRef.current.lookAt(gl.camera.position);
+
+      // 계산된 위치를 state에 업데이트
+      setRabbitPosition([newPosition.x, newPosition.y, newPosition.z]);
+      logDebug('Rabbit position updated:', newPosition);
     }
   };
 
