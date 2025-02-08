@@ -397,6 +397,9 @@ function ARCanvas(props: any) {
             cposition={cposition}
           />
           <XRDomOverlay>
+            <div className="fixed top-0 right-0 z-[99999999]">
+              <Leva collapsed={false} />
+            </div>
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
               fotoUrl={''}
@@ -413,9 +416,6 @@ function ARCanvas(props: any) {
               circleColor={props.circleColor}
               cameraFov={props.cameraFov}
             />
-            <div className='fixed top-0 bottom-0 z-[99999999]'>
-              <Leva collapsed={false} />
-            </div>
           </XRDomOverlay>
         </XR>
       </Canvas>
