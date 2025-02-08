@@ -633,7 +633,7 @@ const ModalU = function ({
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
 
       // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
-      const manualShiftY = -30; // 예: -30px 하면 위로 30px 올림
+      const manualShiftY = -50; // 예: -30px 하면 위로 30px 올림
 
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기
