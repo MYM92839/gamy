@@ -691,9 +691,8 @@ export default function BasicApp() {
    * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
    */
 
-  const correctPose = () => {
-    if (glRef && glRef.current) {
-      const gl = glRef.current;
+  const correctPose = (gl: any) => {
+    if (gl && gl.camera) {
       // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
       const cameraPos = gl.camera.position.clone();
       const direction = new THREE.Vector3();
@@ -704,7 +703,7 @@ export default function BasicApp() {
     }
   };
   const openModalHandler = (gl: any) => {
-    correctPose();
+    correctPose(gl);
 
     // 캡쳐 및 보정을 수행
     captureARContent(gl);
