@@ -148,6 +148,10 @@ function renderSceneForCapture(
   const tempCtx = tempCanvas.getContext('2d');
   if (!tempCtx) return '';
 
+  // 품질 향상을 위한 smoothing 옵션 적용
+  tempCtx.imageSmoothingEnabled = true;
+  tempCtx.imageSmoothingQuality = 'high';
+
   const pixels = new Uint8Array(width * height * 4);
   const gl = renderer.getContext();
   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
@@ -550,6 +554,10 @@ const ModalU = function ({
       const ctx = compositeCanvas.getContext('2d');
       if (!ctx) return;
 
+      // 고화질 보간 옵션 적용
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
       ctx.scale(dpr, dpr);
 
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
@@ -573,14 +581,11 @@ const ModalU = function ({
 
       const threeCSSWidth = offscreenCanvas!.width / dpr;
       const threeCSSHeight = offscreenCanvas!.height / dpr;
-      const scaleFactorThree = Math.max(containerWidth / threeCSSWidth, containerHeight / threeCSSHeight);
-      const drawWidth = threeCSSWidth * scaleFactorThree;
-      const drawHeight = threeCSSHeight * scaleFactorThree;
-      const offsetX = (containerWidth - drawWidth) / 2;
-      const offsetY = (containerHeight - drawHeight) / 2;
+      // calcCover를 사용하여 비디오와 동일한 방식으로 offscreenCanvas의 크기와 오프셋 계산
+      const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
 
       ctx.filter = 'brightness(2)';
-      ctx.drawImage(offscreenCanvas!, offsetX, offsetY, drawWidth, drawHeight);
+      ctx.drawImage(offscreenCanvas!, threeParams.offsetX, threeParams.offsetY, threeParams.drawWidth, threeParams.drawHeight);
       ctx.filter = 'none';
 
       compositeCanvas.toBlob((blob: Blob | null) => {
