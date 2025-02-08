@@ -236,6 +236,7 @@ function UIOverlay({
   correctPose,
   circleColor,
 }: UIOverlayProps) {
+  const [init, setInit] = useState(false);
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'auto' }}>
       <button
@@ -287,12 +288,15 @@ function UIOverlay({
       </div>
       <Button
         onClick={() => {
+          if (!init) setInit(true);
+          correctPose();
+
           setShow(false);
           setTimeout(() => {
             setShow(true);
           }, 0);
         }}
-        title="토끼 부르기"
+        title={init ? '토끼 다시 부르기' : '토끼 부르기'}
         className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
     </div>
