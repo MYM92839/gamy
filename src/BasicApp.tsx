@@ -702,8 +702,8 @@ export default function BasicApp() {
 
   const correctPose = (gl: any) => {
     if (gl && gl.camera) {
+      // 추가 오프셋 값이 localStorage에 저장되어 있다면 불러오기 (없으면 기본값 사용)
       let pos = { x: 0, y: 0, z: 0 };
-
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('levaValues');
         if (saved) {
@@ -719,20 +719,17 @@ export default function BasicApp() {
       // 카메라의 최신 행렬 업데이트
       gl.camera.updateMatrixWorld(true);
 
-      // 카메라 로컬 좌표계에서 3미터 앞쪽 오프셋
-      const offset = new THREE.Vector3(0 + pos.x, 0 + pos.y, -3 + pos.z);
+      // 머리 좌표계에서의 오프셋을 정의합니다. 여기서는 (0,0,3)을 사용합니다.
+      const offset = new THREE.Vector3(pos.x, pos.y, 3 + pos.z);
 
-      // 카메라의 회전(쿼터니언)을 적용하면, 예를 들어 카메라 회전이 0,0,0이면 그대로 (0,0,3)이 되고,
-      // 카메라를 왼쪽으로 90도 돌리면 offset이 (-3,0,0)으로 회전됩니다.
-      offset.applyQuaternion(gl.camera.quaternion);
+      // 원하는 동작: 카메라가 회전하면 오프셋이 사용자의 머리 좌표계에서는 고정되도록 하기 위해,
+      // 카메라의 쿼터니언의 역(인버스)을 적용합니다.
+      const invQuat = gl.camera.quaternion.clone().invert();
+      offset.applyQuaternion(invQuat);
 
-      // 최종 오브젝트(토끼) 위치는 카메라 위치에 오프셋을 더한 값
+      // 최종 오브젝트(토끼) 위치는 카메라 위치에 이 오프셋을 더한 값
       const newPosition = gl.camera.position.clone().add(offset);
 
-      // 필요에 따라, 오브젝트(또는 그룹)가 카메라를 바라보도록 lookAt을 호출할 수도 있습니다.
-      // 예를 들어: rabbitGroupRef.current.lookAt(gl.camera.position);
-
-      // 계산된 위치를 state에 업데이트
       setRabbitPosition([newPosition.x, newPosition.y, newPosition.z]);
       logDebug('Rabbit position updated:', newPosition);
     }
