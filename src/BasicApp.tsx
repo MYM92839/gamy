@@ -223,7 +223,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
             <Box
               sposition={[sposition.x, sposition.y, sposition.z]}
               oposition={[oposition.x, oposition.y, oposition.z]}
-              scale={scale}
+              sscale={scale}
               on
               onRenderEnd={() => {}}
             />

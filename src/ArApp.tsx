@@ -247,13 +247,14 @@ export function Box({
   on,
   oposition,
   sposition,
-  scale,
+  sscale,
   ...props
 }: JSX.IntrinsicElements['group'] & {
   onRenderEnd: () => void;
   on: boolean;
   oposition: number[];
   sposition: number[];
+  sscale: number;
 }) {
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
@@ -297,7 +298,7 @@ export function Box({
 
   return (
     <group {...props} position={[0, 0, 0]} rotation={[0, Math.PI / 4, 0]} dispose={null}>
-      <group name="Scene" ref={shadowRef} dispose={null} position={sposition as [number, number, number]} scale={scale}>
+      <group name="Scene" ref={shadowRef} dispose={null} position={sposition as [number, number, number]}>
         <group position={[0, 3, -3]} rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <mesh
             name="side_body"
@@ -428,7 +429,7 @@ export function Box({
         name="Scene"
         ref={modelRef}
         visible={true}
-        scale={[0.15, 0.15, 0.15]}
+        scale={[0.15 * sscale, 0.15 * sscale, 0.15 * sscale]}
         position={[-0.45 + oposition[0], -1.5 + oposition[1], -1 + oposition[2]]}
         rotation={[0, 0, 0]}
       >
