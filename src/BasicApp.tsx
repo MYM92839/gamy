@@ -625,13 +625,19 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
+          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
+
+      // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
+      const manualShiftY = -30; // 예: -30px 하면 위로 30px 올림
+
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
-      const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
+      // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기
+      const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2 + manualShiftY;
 
       // 배경 비디오
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
@@ -642,10 +648,12 @@ const ModalU = function ({
       const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
 
       ctx.filter = 'brightness(2)';
+
+      // 3D도 동일하게 manualShiftY 적용
       ctx.drawImage(
         offscreenCanvas!,
         threeParams.offsetX,
-        threeParams.offsetY,
+        threeParams.offsetY + manualShiftY,
         threeParams.drawWidth,
         threeParams.drawHeight
       );
@@ -949,7 +957,7 @@ export default function BasicApp() {
           circleX={circleX}
           circleY={circleY}
           circleR={circleR}
-          circleColor={circleColor}
+          circleColor="blue"
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
           /** 수정: cameraFov → 상태값 전달 */
