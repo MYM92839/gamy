@@ -192,6 +192,10 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       // 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산한 rabbitPosition 사용
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
+      if (groupRef.current && glRef.current && glRef.current.camera) {
+        // 오브젝트가 카메라 위치를 바라보도록 설정합니다.
+        groupRef.current.lookAt(glRef.current.camera.position);
+      }
     }
   }, [visible, camera, rabbitPosition]);
 
