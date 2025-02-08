@@ -362,7 +362,7 @@ function ARCanvas(props: any) {
     // 컨트롤 값 localStorage에 저장
     const data = { oposition, sposition, cposition };
     localStorage.setItem('levaValues', JSON.stringify(data));
-  }, [oposition, sposition, cposition]);
+  }, [oposition, sposition, cposition, sscale]);
 
   useEffect(() => {
     let id: ReturnType<typeof setTimeout>;
