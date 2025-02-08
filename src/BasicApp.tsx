@@ -288,6 +288,8 @@ function UIOverlay({
       <Button
         onClick={() => {
           correctPose();
+          setShow(false);
+
           setShow(true);
         }}
         title="토끼 부르기"
