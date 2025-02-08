@@ -824,7 +824,6 @@ export default function BasicApp() {
               closeModal={() => {
                 setIsOpen(false);
                 setShow(false);
-                onTest();
                 // 필요시 XR 세션 재진입 로직 추가 가능
               }}
               closeSaveModal={handleCloseSaveModal}
