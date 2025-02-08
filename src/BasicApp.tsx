@@ -663,6 +663,19 @@ export default function BasicApp() {
     initializeMedia();
   }, []);
 
+  const onTest = () => {
+    if (xrStoreRef.current) {
+      xrStoreRef.current.getState().session?.end();
+      xrStoreRef.current.destroy();
+      xrStoreRef.current = null;
+    }
+    xrStoreRef.current = createXRStore();
+    setTimeout(() => {
+      setMount(true);
+    }, 2000);
+  };
+
+
   /**
    * openModalHandler
    * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
@@ -757,6 +770,30 @@ export default function BasicApp() {
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    const initializeMedia = async () => {
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream.getTracks().forEach((track) => track.stop());
+        xrStoreRef.current = createXRStore();
+      } catch (err) {
+        logDebug('UserMedia test failed: ' + err);
+      }
+    };
+
+    initializeMedia();
+    onTest();
+  }, []);
+
+
   if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
     return <NftAppT3 />;
   }
@@ -799,6 +836,7 @@ export default function BasicApp() {
               closeModal={() => {
                 setIsOpen(false);
                 setShow(false);
+                onTest();
                 // 필요시 XR 세션 재진입 로직 추가 가능
               }}
               closeSaveModal={handleCloseSaveModal}
