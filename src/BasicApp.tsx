@@ -418,7 +418,7 @@ function ARCanvas(props: any) {
         id="three-canvas"
         style={{ width: '100vw', height: '100vh', background: 'transparent' }}
         gl={{ alpha: true, preserveDrawingBuffer: true }}
-        camera={{ fov: 30}}
+        camera={{ fov: 30 }}
         onCreated={(state) => {
           state.gl.setPixelRatio(window.devicePixelRatio);
           state.gl.setSize(window.innerWidth, window.innerHeight);
@@ -570,9 +570,9 @@ const ModalU = function ({
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      const defaultVideoFov = 30;
+      const defaultVideoFov = 25;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 0.9;
+      const addedFactor = 1;
       const fovScale =
         (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
