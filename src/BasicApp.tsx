@@ -732,7 +732,7 @@ export default function BasicApp() {
       // 머리 좌표계에서의 오프셋 (전방 +Z를 사용)
       const offset = new THREE.Vector3(0, 0, -11);
       // 카메라의 쿼터니언의 역(인버스)을 적용하여 머리 좌표계의 오프셋을 구함
-      const invQuat = cameraQuat.clone().invert();
+      const invQuat = cameraQuat.clone();
       offset.applyQuaternion(invQuat);
       const newPosition = cameraPos.add(offset);
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
