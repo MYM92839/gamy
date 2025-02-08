@@ -704,7 +704,6 @@ export default function BasicApp() {
     }
   };
   const openModalHandler = (gl: any) => {
-    glRef.current = gl;
     correctPose();
 
     // 캡쳐 및 보정을 수행
