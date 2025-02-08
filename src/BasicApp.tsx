@@ -720,7 +720,7 @@ export default function BasicApp() {
       gl.camera.updateMatrixWorld(true);
 
       // 카메라 로컬 좌표계에서 3미터 앞쪽 오프셋
-      const offset = new THREE.Vector3(0 + pos.x, 0 + pos.y, 3 + pos.z);
+      const offset = new THREE.Vector3(0 + pos.x, 0 + pos.y, -3 + pos.z);
 
       // 카메라의 회전(쿼터니언)을 적용하면, 예를 들어 카메라 회전이 0,0,0이면 그대로 (0,0,3)이 되고,
       // 카메라를 왼쪽으로 90도 돌리면 offset이 (-3,0,0)으로 회전됩니다.
