@@ -349,11 +349,11 @@ function ARCanvas(props: any) {
       scale: 0.5,
     };
   }, []);
-  const { oposition, sposition, cposition, scale } = useControls({
+  const { oposition, sposition, cposition, sscale } = useControls({
     oposition: { value: initialValues.oposition, step: 0.1 },
     sposition: { value: initialValues.sposition, step: 0.1 },
     cposition: { value: initialValues.cposition, step: 0.1 },
-    scale: { value: initialValues.scale, step: 0.1 },
+    sscale: { value: initialValues.scale },
   });
 
   useEffect(() => {
@@ -441,7 +441,7 @@ function ARCanvas(props: any) {
             sposition={sposition}
             oposition={oposition}
             cposition={cposition}
-            scale={scale}
+            scale={sscale}
           />
           <XRDomOverlay>
             <UIOverlay
