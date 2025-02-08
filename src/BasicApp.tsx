@@ -555,7 +555,7 @@ const ModalU = function ({
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      const defaultVideoFov = 35;
+      const defaultVideoFov = 30;
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 0.9;
       const fovScale =
