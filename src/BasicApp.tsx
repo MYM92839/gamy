@@ -14,6 +14,7 @@ import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
+import { usePinch } from '@use-gesture/react';
 
 /* ---------------- 타입 정의들 ----------------- */
 interface SavedObjectData {
@@ -253,10 +254,14 @@ function UIOverlay({
   circleY,
   circleR,
   correctPose,
-  circleColor,
 }: UIOverlayProps) {
   const [init, setInit] = useState(false);
+  const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
 
+  // 핀치 제스처로 반지름을 조정
+  const bind = usePinch((state) => {
+    setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
+  });
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
@@ -291,6 +296,7 @@ function UIOverlay({
         <Capture />
       </button>
       <div
+        {...bind()} // 핀치 제스처 바인딩
         style={{
           position: 'fixed',
           top: '50%',
@@ -301,7 +307,15 @@ function UIOverlay({
         }}
       >
         <svg width={domWidth} height={domHeight}>
-          <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
+          <circle
+            cx={circleX}
+            cy={circleY}
+            r={radius} // 반지름을 상태로 업데이트
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeDasharray="4, 4" // 점선으로 만들기 위한 설정
+          />
         </svg>
       </div>
 
@@ -342,9 +356,7 @@ function CameraUpdater({
   -----------------------------
 */
 function ARCanvasCore(props: any) {
-  const {
-    latestCameraTransformRef,
-  } = props;
+  const { latestCameraTransformRef } = props;
 
   // LEVA 세팅
   const initialValues = useMemo(() => {
@@ -614,8 +626,7 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
-          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;

@@ -428,8 +428,8 @@ export function Box({
         name="Scene"
         ref={modelRef}
         visible={true}
-        scale={sscale ? [0.15 * sscale, 0.15 * sscale, 0.15 * sscale] : [0.15, 0.15, 0.15]}
-        position={[-0.45 + oposition[0], -1.5 + oposition[1], -1 + oposition[2]]}
+        scale={sscale ? [15 * sscale, 15 * sscale, 15 * sscale] : [15, 15, 15]}
+        position={oposition as [number, number, number]}
         rotation={[0, 0, 0]}
       >
         <group name="Group" rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
