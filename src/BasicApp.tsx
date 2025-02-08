@@ -818,7 +818,7 @@ export default function BasicApp() {
       if (saved) {
         try {
           const s = JSON.parse(saved);
-          pos = s.oposition;
+          pos = s.cposition;
         } catch (error) {
           console.error('levaValues parse fail:', error);
         }

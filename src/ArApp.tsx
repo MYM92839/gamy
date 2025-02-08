@@ -425,7 +425,7 @@ export function Box({
       </group>
       {/*  ////// */}
       <group
-        name="Scene"
+        name="Scene2"
         ref={modelRef}
         visible={true}
         scale={sscale ? [15 * sscale, 15 * sscale, 15 * sscale] : [15, 15, 15]}
