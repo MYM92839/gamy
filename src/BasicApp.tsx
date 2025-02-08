@@ -707,7 +707,7 @@ export default function BasicApp() {
   };
 
   // 수정된 correctPose 함수: 최신 카메라 transform(latestCameraTransform)을 사용
-  const correctPose = (gl: any) => {
+  const correctPose = () => {
     if (latestCameraTransform.current) {
       let pos = { x: 0, y: 0, z: 0 };
 
