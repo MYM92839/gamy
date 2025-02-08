@@ -335,7 +335,7 @@ function CameraUpdater({
 */
 function ARCanvasCore(props: any) {
   const {
-    // // props 중에서,
+    // props 중에서,
     // setOffscreenCanvas,
     // logDebug,
     latestCameraTransformRef,
