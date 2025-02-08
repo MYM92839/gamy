@@ -1,8 +1,15 @@
 /* eslint-disable prefer-const */
 
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitHandles } from '@react-three/handle';
-import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
+import {
+  createXRStore,
+  noEvents,
+  PointerEvents,
+  XR,
+  XRDomOverlay,
+  XROrigin,
+} from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -26,7 +33,7 @@ interface SceneProps {
   visible: boolean;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
-  rabbitPosition: [number, number, number]; // 새로 추가한 토끼 위치 prop
+  rabbitPosition: [number, number, number]; // 토끼 위치
 }
 
 interface UIOverlayProps {
@@ -47,7 +54,12 @@ interface UIOverlayProps {
 }
 
 // Utils
-function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destHeight: number) {
+function calcCover(
+  srcWidth: number,
+  srcHeight: number,
+  destWidth: number,
+  destHeight: number
+) {
   const srcAspect = srcWidth / srcHeight;
   const destAspect = destWidth / destHeight;
   let drawWidth, drawHeight, offsetX, offsetY;
@@ -70,6 +82,7 @@ function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destH
 let savedObjects: SavedObjectData[] = [];
 let savedCameraMatrix = new THREE.Matrix4();
 
+// XR 세션 종료 시 현재 오브젝트와 카메라 행렬 저장
 function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
   savedObjects = scene.children.map((obj) => ({
     position: obj.position.clone(),
@@ -82,8 +95,6 @@ function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): vo
 /**
  * renderSceneForCapture
  * - XR 캡쳐를 위해 임시 카메라(tempCamera)를 생성하여 WebXR 카메라의 행렬 및 좌표계 보정을 적용합니다.
- * - devicePixelRatio를 반영해 정수 크기로 렌더 타겟을 설정합니다.
- * - 추가: calibrationMatrix가 제공되면, 이를 기반으로 센서 오차 및 초기 캘리브레이션 보정을 진행합니다.
  */
 function renderSceneForCapture(
   renderer: THREE.WebGLRenderer,
@@ -166,35 +177,29 @@ function renderSceneForCapture(
 // Components
 
 function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition }: SceneProps) {
-  // 기존 searchParams는 Box 컴포넌트에 전달할 추가 속성으로 남겨둡니다.
-  // const [searchParams] = useSearchParams();
-  // const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
-  // const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
-  // const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
-  // const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
-  // const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
-  // const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
-
-  // const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
-  // const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
-  // const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
-
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
+  // 매 프레임 glRef 업데이트 → 최신 카메라 포즈 반영
+  useFrame(() => {
+    if (glRef.current) {
+      glRef.current.camera = camera;
+      glRef.current.scene = scene;
+      glRef.current.gl = gl;
+    }
+  });
+
   useEffect(() => {
     if (gl) {
+      // 최초 렌더 시에도 gl, camera, scene 정보를 저장
       glRef.current = { gl, camera, scene };
     }
   }, [camera, gl, glRef, scene]);
 
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      // 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산된 rabbitPosition을 사용합니다.
-      // (여기서는 단순히 그룹의 position을 rabbitPosition으로 설정)
-
+      // 토끼 오브젝트의 그룹 위치는 BasicApp에서 계산한 rabbitPosition 사용
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
-
       camera.updateProjectionMatrix();
     }
   }, [visible, camera, rabbitPosition]);
@@ -206,7 +211,11 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       <Suspense fallback={null}>
         <group
           ref={groupRef}
-          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
+          position={[
+            rabbitPosition[0] + cposition.x,
+            rabbitPosition[1] + cposition.y,
+            rabbitPosition[2] + cposition.z,
+          ]}
           rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
@@ -232,7 +241,6 @@ function UIOverlay({
   domHeight,
   circleX,
   circleY,
-  // show,
   circleR,
   circleColor,
 }: UIOverlayProps) {
@@ -268,53 +276,28 @@ function UIOverlay({
       >
         <Capture />
       </button>
-      {/* {!show && (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              width: `${domWidth}px`,
-              height: `${domHeight}px`,
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'transparent',
-              overflow: 'hidden',
-              zIndex: 99999,
-            }}
-          >
-            <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
-              <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
-            </svg>
-          </div>
-          <Button onClick={() => setShow(true)} title="토끼 부르기" className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit" />
-        </>
-      )} */}
-
-      <>
-        <div
-          style={{
-            position: 'fixed',
-            width: `${domWidth}px`,
-            height: `${domHeight}px`,
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: 'transparent',
-            overflow: 'hidden',
-            zIndex: 99999,
-          }}
-        >
-          <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
-            <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
-          </svg>
-        </div>
-        <Button
-          onClick={() => setShow(true)}
-          title="토끼 부르기"
-          className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
-        />
-      </>
+      <div
+        style={{
+          position: 'fixed',
+          width: `${domWidth}px`,
+          height: `${domHeight}px`,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'transparent',
+          overflow: 'hidden',
+          zIndex: 99999,
+        }}
+      >
+        <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
+          <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
+        </svg>
+      </div>
+      <Button
+        onClick={() => setShow(true)}
+        title="토끼 부르기"
+        className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+      />
     </div>
   );
 }
@@ -323,7 +306,7 @@ function ARCanvas(props: any) {
   const { setOffscreenCanvas, logDebug } = props;
   const [init, setInit] = useState(false);
   const glRef = useRef(null);
-  // localStorage에 저장된 값을 불러와 초기값으로 사용 (만약 값이 없으면 기본값 사용)
+  // localStorage에 저장된 값을 불러와 초기값으로 사용 (없으면 기본값)
   const initialValues = useMemo(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('levaValues');
@@ -348,10 +331,8 @@ function ARCanvas(props: any) {
   });
 
   useEffect(() => {
-    // 모든 컨트롤 값을 하나의 객체로 합침
+    // 컨트롤 값 localStorage에 저장
     const data = { oposition, sposition, cposition };
-
-    // localStorage에 JSON 문자열 형태로 저장 (예: 'levaValues'라는 키로)
     localStorage.setItem('levaValues', JSON.stringify(data));
   }, [oposition, sposition, cposition]);
 
@@ -433,7 +414,6 @@ function ARCanvas(props: any) {
           />
           <XRDomOverlay>
             <Leva collapsed={false} />
-
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
               fotoUrl={''}
@@ -509,8 +489,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
 
 /**
  * ModalU 컴포넌트 (합성)
- * - 유저 카메라 화면과 three.js 캔버스를 합성합니다.
- * - 여기서 유저 카메라 영상에만 FOV 보정 효과를 적용합니다.
+ * - 유저 카메라 영상과 three.js 캔버스를 합성합니다.
  */
 const ModalU = function ({
   closeModal,
@@ -655,12 +634,11 @@ export default function BasicApp() {
 
   // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
-  // 아래 useEffect는 BasicApp에서 calibrationMatrixRef가 읽히도록 하여 TS6133 에러를 피하기 위한 더미 사용입니다.
   useEffect(() => {
     console.log('Calibration ref in BasicApp:', calibrationMatrixRef.current);
   }, []);
 
-  // 토끼(오브젝트) 배치를 위한 상태: 버튼 클릭 시 현재 카메라 기준 3미터 앞쪽 좌표
+  // 토끼(오브젝트) 배치를 위한 상태
   const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
 
   const logDebug = (msg: any, ...optionalParams: any[]) => {
@@ -675,45 +653,61 @@ export default function BasicApp() {
   const circleR = 100;
   const circleColor = 'blue';
 
-  const onTest = () => {
+  // 기존 자동진입 로직 (페이지 접속 시 XR 세션 시작)
+  useEffect(() => {
+    const initializeMedia = async () => {
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream.getTracks().forEach((track) => track.stop());
+        xrStoreRef.current = createXRStore();
+        setMount(true);
+      } catch (err) {
+        logDebug('UserMedia test failed: ' + err);
+      }
+    };
+
+    initializeMedia();
+  }, []);
+
+  /**
+   * openModalHandler
+   * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
+   * - 그 시점의 최신 glRef.current.camera 를 기준으로 토끼 위치(3m 앞)를 계산합니다.
+   * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
+   */
+  const openModalHandler = (gl: any) => {
+    if (gl && gl.camera) {
+      // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
+      const cameraPos = gl.camera.position.clone();
+      const direction = new THREE.Vector3();
+      gl.camera.getWorldDirection(direction);
+      const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
+      setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
+      logDebug('Rabbit position updated on button click:', newRabbitPos);
+    }
+    // 캡쳐 및 보정을 수행
+    captureARContent(gl);
+    // 세션 종료 및 XRStore 파괴 → 다음 진입 시 새로운 기준 적용
     if (xrStoreRef.current) {
       xrStoreRef.current.getState().session?.end();
       xrStoreRef.current.destroy();
       xrStoreRef.current = null;
     }
-    xrStoreRef.current = createXRStore();
-    setTimeout(() => {
-      setMount(true);
-    }, 2000);
-  };
-
-  const shareOrDownloadImage = (blob: Blob) => {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'capture.png', { type: blob.type })] })) {
-      const file = new File([blob], `capture-${new Date().getTime()}.png`, {
-        type: 'image/png',
-      });
-      navigator
-        .share({
-          files: [file],
-          title: 'My Captured Image',
-          text: 'Check out this captured photo!',
-        })
-        .catch((error) => logDebug('Sharing failed: ' + error));
-    } else {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `capture-${new Date().getTime()}.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
+    setMount(false);
+    setIsOpen(true);
   };
 
   /**
    * captureARContent:
-   * - gl, scene, camera를 사용하여 캡쳐 이미지를 생성합니다.
-   * - offscreenCanvas의 크기는 devicePixelRatio를 반영합니다.
-   * - calibrationMatrixRef를 이용한 보정은 그대로 유지됩니다.
+   * - gl, scene, camera 정보를 사용하여 캡쳐 이미지를 생성합니다.
    */
   const captureARContent = ({
     gl,
@@ -754,33 +748,28 @@ export default function BasicApp() {
 
   const handleCloseSaveModal = () => {
     if (foto) {
-      shareOrDownloadImage(foto);
+      if (navigator.canShare && navigator.canShare({ files: [new File([foto], 'capture.png', { type: foto.type })] })) {
+        const file = new File([foto], `capture-${new Date().getTime()}.png`, {
+          type: 'image/png',
+        });
+        navigator
+          .share({
+            files: [file],
+            title: 'My Captured Image',
+            text: 'Check out this captured photo!',
+          })
+          .catch((error) => logDebug('Sharing failed: ' + error));
+      } else {
+        const url = URL.createObjectURL(foto);
+        const link = document.createElement('a');
+        link.download = `capture-${new Date().getTime()}.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
     }
     setIsOpen(false);
   };
-
-  useEffect(() => {
-    const initializeMedia = async () => {
-      try {
-        const constraints = {
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        stream.getTracks().forEach((track) => track.stop());
-        xrStoreRef.current = createXRStore();
-      } catch (err) {
-        logDebug('UserMedia test failed: ' + err);
-      }
-    };
-
-    initializeMedia();
-    onTest();
-  }, []);
 
   if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
     return <NftAppT3 />;
@@ -793,27 +782,8 @@ export default function BasicApp() {
           xrStoreRef={xrStoreRef}
           setSessionStarted={setSessionStarted}
           show={show}
-          sessionStarted={sessionStarted}
           modalIsOpen={modalIsOpen}
-          openModal={(gl: any) => {
-            if (gl && gl.camera) {
-              // 버튼 클릭 시점에 현재 카메라 위치와 방향을 기반으로 토끼(오브젝트)의 위치를 계산 (3미터 앞)
-              const cameraPos = gl.camera.position.clone();
-              const direction = new THREE.Vector3();
-              gl.camera.getWorldDirection(direction);
-              const newRabbitPos = cameraPos.add(direction.multiplyScalar(10));
-              setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
-              logDebug('Rabbit position updated on button click:', newRabbitPos);
-            }
-            captureARContent(gl);
-            if (xrStoreRef.current) {
-              xrStoreRef.current.getState().session?.end();
-              xrStoreRef.current.destroy();
-              xrStoreRef.current = null;
-            }
-            setMount(false);
-            setIsOpen(true);
-          }}
+          openModal={openModalHandler}
           closeModal={() => {
             setIsOpen(false);
             setShow(false);
@@ -843,7 +813,7 @@ export default function BasicApp() {
               closeModal={() => {
                 setIsOpen(false);
                 setShow(false);
-                onTest();
+                // 필요시 XR 세션 재진입 로직 추가 가능
               }}
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
@@ -875,7 +845,6 @@ export default function BasicApp() {
           </div>
         </div>
       )}
-      {/* <DebugPanel logs={debugLogs} /> */}
     </>
   );
 }
