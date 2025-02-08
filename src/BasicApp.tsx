@@ -9,12 +9,14 @@ import * as THREE from 'three';
 
 // 예: 기존 컴포넌트들 (Box, Back, Capture, Button, NftAppT3 ...)은
 // 실제 경로에 따라 import 조정
-import { Box } from './ArApp';
+import { usePinch } from '@use-gesture/react';
+import { useParams } from 'react-router-dom';
+import { Box, Tree } from './ArApp';
 import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-import { usePinch } from '@use-gesture/react';
+import { Environment } from '@react-three/drei';
 
 /* ---------------- 타입 정의들 ----------------- */
 interface SavedObjectData {
@@ -184,7 +186,7 @@ function renderSceneForCapture(
 function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
-
+  const { char } = useParams();
   // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
@@ -220,9 +222,10 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
   return (
     <>
-      <ambientLight intensity={2} />
-      <pointLight position={[10, 10, 10]} />
+      <ambientLight intensity={3} />
       <Suspense fallback={null}>
+        <Environment files="/HDRI_01.exr" preset={undefined} />
+
         <group
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
@@ -231,13 +234,19 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
           visible={visible}
         >
           {visible && (
-            <Box
-              sposition={[sposition.x, sposition.y, sposition.z]}
-              oposition={[oposition.x, oposition.y, oposition.z]}
-              sscale={scale}
-              on
-              onRenderEnd={() => {}}
-            />
+            <>
+              {char == 'moons' ? (
+                <Box
+                  sposition={[sposition.x, sposition.y, sposition.z]}
+                  oposition={[oposition.x, oposition.y, oposition.z]}
+                  sscale={scale}
+                  on
+                  onRenderEnd={() => {}}
+                />
+              ) : (
+                <Tree oposition={[oposition.x, oposition.y, oposition.z]} sscale={scale} on onRenderEnd={() => {}} />
+              )}
+            </>
           )}
         </group>
       </Suspense>
@@ -625,15 +634,14 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
-          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
 
       // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
-      const manualShiftY = -50; // 예: -30px 하면 위로 30px 올림
+      const manualShiftY = -60; // 예: -30px 하면 위로 30px 올림
 
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기

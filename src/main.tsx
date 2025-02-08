@@ -1,9 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import BasicApp from './BasicApp.tsx';
 import Layout from './components/Layout.tsx';
 import Photo from './components/photo/Photo.tsx';
@@ -16,80 +13,68 @@ import PhotoChar from './pages/PhotoChar.tsx';
 import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoRabbitT from './pages/PhotoRabbitT.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
-import BasicAppT from './BasicAppT.tsx';
-import PhotoRabbitTT from './pages/PhotoRabbitTT.tsx';
-import PhotoRabbitTTT from './pages/PhotoRabbitTTT.tsx';
-import BasicAppTT from './BasicAppTT.tsx';
+import PhotoTreeT from './pages/PhotoTreeT.tsx';
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      element: <Layout />,
+      children: [
+        {
+          path: '',
+          element: <Collection2 />,
+        },
+        {
+          path: 'photo',
+          element: <Photo />,
+          children: [
+            { path: 'tree', element: <PhotoTree /> },
+            { path: 'rabbit', element: <PhotoRabbit /> },
+            { path: 'character', element: <PhotoChar /> },
+          ],
+        },
+        {
+          path: 'ar/:char',
+          element: <NftAppT />,
+        },
+        {
+          path: 'ar2/:char',
+          element: <NftAppT2 />,
+        },
+        {
+          path: 'test',
+          element: <PhotoRabbitT />,
+        },
+        {
+          path: 'test2',
+          element: <PhotoTreeT />,
+        },
+        {
+          path: 'pl/:char',
+          element: <BasicApp />,
+        },
+        {
+          path: 'frame/:char',
+          element: <FrameApp />,
+        },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <Layout />,
-    children: [
-      {
-        path: '',
-        element: <Collection2 />
-      },
-      {
-        path: 'photo',
-        element: <Photo />,
-        children: [
-          { path: 'tree', element: <PhotoTree /> },
-          { path: 'rabbit', element: <PhotoRabbit /> },
-          { path: 'character', element: <PhotoChar /> }
-        ]
-      },
-      {
-        path: 'ar/:char',
-        element: <NftAppT />
-      },
-      {
-        path: 'ar2/:char',
-        element: <NftAppT2 />
-      },
-      {
-        path: 'test',
-        element: <PhotoRabbitT />
-      },
-      {
-        path: 'teste', // UI
-        element: <PhotoRabbitTT />
-      },
-      {
-        path: 'testa', // RATIO
-        element: <PhotoRabbitTTT />
-      },
-      {
-        path: 'pl/:char',
-        element: <BasicApp />
-      },
-      {
-        path: 'ple',
-        element: <BasicAppT />
-      },
-      {
-        path: 'plee',
-        element: <BasicAppTT />
-      },
-      {
-        path: 'frame/:char',
-        element: <FrameApp />
-      }
-    ]
-  },
-], {
-  basename: import.meta.env.VITE_PUBLIC_URL,
-  future: {
-    v7_relativeSplatPath: true,
-    v7_fetcherPersist: true,
-    v7_normalizeFormMethod: true,
-    v7_partialHydration: true,
-    v7_skipActionErrorRevalidation: true
+    basename: import.meta.env.VITE_PUBLIC_URL,
+    future: {
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    },
   }
-});
+);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RouterProvider router={router} future={{ v7_startTransition: true }} />
-  </StrictMode>,
-)
+  </StrictMode>
+);

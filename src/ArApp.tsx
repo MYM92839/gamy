@@ -6,7 +6,7 @@ import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 // import { useARNft, useNftMarker } from './libs/arnft/arnft/arnftContext';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
-import { Environment, Mask, useAnimations, useGLTF, useMask } from '@react-three/drei';
+import { Environment, Mask, useAnimations, useGLTF } from '@react-three/drei';
 // import Modal from 'react-modal';
 // import { Effects } from './libs/arnft/arnft/components/Effects';
 import Spinner from './components/Spinner.js';
@@ -124,66 +124,51 @@ const CircularMask = () => (
 export function Tree({
   onRenderEnd,
   on,
+  oposition,
+  sscale,
   ...props
-}: JSX.IntrinsicElements['group'] & { onRenderEnd: () => void; on: boolean }) {
+}: JSX.IntrinsicElements['group'] & {
+  onRenderEnd: () => void;
+  on: boolean;
+  oposition: number[];
+  sscale?: number;
+}) {
   const modelRef = useRef<THREE.Group>(null);
   const { nodes, materials, animations } = useGLTF('/tree_f.glb', true, true) as GLTFResult3;
-  const stencil = useMask(1, true);
-  const [mask, setMask] = useState(true);
+
   const { actions, mixer } = useAnimations(animations, modelRef);
 
   useEffect(() => {
-    let id: string | number | NodeJS.Timeout | undefined;
     if (actions && on && actions.walk) {
       actions.walk.setLoop(THREE.LoopOnce, 1);
       actions.walk.clampWhenFinished = true;
       actions.walk?.reset().play();
-      id = setTimeout(() => {
-        setMask(false);
-      }, 2000);
+
       mixer.addEventListener('finished', () => {
         actions.idle?.setLoop(THREE.LoopRepeat, Infinity);
         actions.idle?.reset().play();
       });
     }
-    return () => {
-      if (id) clearTimeout(id);
-    };
   }, [on]);
 
   useEffect(() => {
-    if (nodes) onRenderEnd();
-  }, [nodes]);
-
-  useEffect(() => {
-    if (stencil && modelRef.current) {
-      if (mask) {
-        modelRef.current.traverse((m) => {
-          if ((m as THREE.Mesh).isMesh) {
-            ((m as THREE.Mesh).material as THREE.Material).stencilFail = stencil.stencilFail;
-            ((m as THREE.Mesh).material as THREE.Material).stencilFunc = stencil.stencilFunc;
-            ((m as THREE.Mesh).material as THREE.Material).stencilRef = stencil.stencilRef;
-            ((m as THREE.Mesh).material as THREE.Material).stencilWrite = stencil.stencilWrite;
-            ((m as THREE.Mesh).material as THREE.Material).stencilZFail = stencil.stencilZFail;
-            ((m as THREE.Mesh).material as THREE.Material).stencilZPass = stencil.stencilZPass;
-            ((m as THREE.Mesh).material as THREE.Material).needsUpdate = true;
-          }
-        });
-      } else {
-        modelRef.current.traverse((m) => {
-          if ((m as THREE.Mesh).isMesh) {
-            ((m as THREE.Mesh).material as THREE.Material).stencilRef = 999;
-            ((m as THREE.Mesh).material as THREE.Material).needsUpdate = true;
+    if (nodes) {
+      onRenderEnd();
+      if (modelRef.current) {
+        modelRef.current.traverse((obj) => {
+          if ((obj as THREE.Mesh).isMesh) {
+            ((obj as THREE.Mesh).material as THREE.MeshStandardMaterial).metalness = 0;
           }
         });
       }
     }
-  }, [stencil, mask]);
+  }, [nodes]);
+
   return (
     <group
       ref={modelRef}
-      scale={[0.4, 0.4, 0.4]}
-      position={[0, 0, 0]}
+      scale={sscale ? [4 * sscale, 4 * sscale, 4 * sscale] : [4, 4, 4]}
+      position={oposition as [number, number, number]}
       rotation={[0, Math.PI / 4, 0]}
       {...props}
       dispose={null}
@@ -835,7 +820,7 @@ export default function ArApp() {
             }}
           >
             <CircularMask />
-            <Tree on={on} onRenderEnd={handleLoading} />
+            <Tree on={on} onRenderEnd={handleLoading} scale={1} oposition={[0, 0, 0]} />
           </ARAnchor>
         )}
         {/* <Tree on={on} onRenderEnd={handleLoading} /> */}
