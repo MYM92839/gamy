@@ -254,7 +254,7 @@ export function Box({
   on: boolean;
   oposition: number[];
   sposition: number[];
-  sscale: number;
+  sscale?: number;
 }) {
   const modelRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
@@ -429,7 +429,7 @@ export function Box({
         name="Scene"
         ref={modelRef}
         visible={true}
-        scale={[0.15 * sscale, 0.15 * sscale, 0.15 * sscale]}
+        scale={sscale ? [0.15 * sscale, 0.15 * sscale, 0.15 * sscale] : [0.15, 0.15, 0.15]}
         position={[-0.45 + oposition[0], -1.5 + oposition[1], -1 + oposition[2]]}
         rotation={[0, 0, 0]}
       >
