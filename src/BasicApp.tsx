@@ -2,14 +2,7 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitHandles } from '@react-three/handle';
-import {
-  createXRStore,
-  noEvents,
-  PointerEvents,
-  XR,
-  XRDomOverlay,
-  XROrigin,
-} from '@react-three/xr';
+import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -54,12 +47,7 @@ interface UIOverlayProps {
 }
 
 // Utils
-function calcCover(
-  srcWidth: number,
-  srcHeight: number,
-  destWidth: number,
-  destHeight: number
-) {
+function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destHeight: number) {
   const srcAspect = srcWidth / srcHeight;
   const destAspect = destWidth / destHeight;
   let drawWidth, drawHeight, offsetX, offsetY;
@@ -211,11 +199,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       <Suspense fallback={null}>
         <group
           ref={groupRef}
-          position={[
-            rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y,
-            rabbitPosition[2] + cposition.z,
-          ]}
+          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
           rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
@@ -413,7 +397,6 @@ function ARCanvas(props: any) {
             cposition={cposition}
           />
           <XRDomOverlay>
-            <Leva collapsed={false} />
             <UIOverlay
               modalIsOpen={props.modalIsOpen}
               fotoUrl={''}
@@ -430,6 +413,7 @@ function ARCanvas(props: any) {
               circleColor={props.circleColor}
               cameraFov={props.cameraFov}
             />
+            <Leva collapsed={false} />
           </XRDomOverlay>
         </XR>
       </Canvas>
