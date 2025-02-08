@@ -413,7 +413,7 @@ function ARCanvas(props: any) {
               circleColor={props.circleColor}
               cameraFov={props.cameraFov}
             />
-            <div className='fixed top-0 bottom-0'>
+            <div className='fixed top-0 bottom-0 z-[99999999]'>
               <Leva collapsed={false} />
             </div>
           </XRDomOverlay>
