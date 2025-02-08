@@ -24,6 +24,7 @@ interface SceneProps {
   sposition: any;
   cposition: any;
   visible: boolean;
+  addRef: any;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
   rabbitPosition: [number, number, number]; // 토끼 위치
@@ -165,7 +166,7 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addRef }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -182,6 +183,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
     if (gl) {
       // 최초 렌더 시에도 gl, camera, scene 정보를 저장
       glRef.current = { gl, camera, scene };
+      addRef();
     }
   }, [camera, gl, glRef, scene]);
 
@@ -395,6 +397,7 @@ function ARCanvas(props: any) {
           <Scene
             visible={props.show}
             glRef={glRef}
+            addRef={handleModal}
             calibrationMatrixRef={props.calibrationMatrixRef}
             rabbitPosition={props.rabbitPosition}
             sposition={sposition}
@@ -624,6 +627,7 @@ export default function BasicApp() {
   const [, setDebugLogs] = useState<string[]>([]);
   const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
 
+  const glRef = useRef<any>(null);
   // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
   useEffect(() => {
@@ -669,6 +673,17 @@ export default function BasicApp() {
     initializeMedia();
   }, []);
 
+  const onTest = () => {
+    if (xrStoreRef.current) {
+      xrStoreRef.current.getState().session?.end();
+      xrStoreRef.current.destroy();
+      xrStoreRef.current = null;
+    }
+    xrStoreRef.current = createXRStore();
+    setTimeout(() => {
+      setMount(true);
+    }, 2000);
+  };
   /**
    * openModalHandler
    * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
@@ -676,8 +691,9 @@ export default function BasicApp() {
    * - 캡쳐 후 onXRSessionEnd 로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
    */
 
-  const correctPose = (gl: any) => {
-    if (gl && gl.camera) {
+  const correctPose = () => {
+    if (glRef && glRef.current) {
+      const gl = glRef.current;
       // 최신 카메라 포즈를 기준으로 계산 (3m 앞)
       const cameraPos = gl.camera.position.clone();
       const direction = new THREE.Vector3();
@@ -688,7 +704,9 @@ export default function BasicApp() {
     }
   };
   const openModalHandler = (gl: any) => {
-    correctPose(gl);
+    glRef.current = gl;
+    correctPose();
+
     // 캡쳐 및 보정을 수행
     captureARContent(gl);
     // 세션 종료 및 XRStore 파괴 → 다음 진입 시 새로운 기준 적용
@@ -810,6 +828,7 @@ export default function BasicApp() {
               closeModal={() => {
                 setIsOpen(false);
                 setShow(false);
+                onTest();
                 // 필요시 XR 세션 재진입 로직 추가 가능
               }}
               closeSaveModal={handleCloseSaveModal}
