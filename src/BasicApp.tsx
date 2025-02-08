@@ -220,7 +220,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
 function UIOverlay({
   openModal,
-  setShow,
+  // setShow,
   domWidth,
   domHeight,
   circleX,
@@ -479,7 +479,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
  * - 유저 카메라 영상과 three.js 캔버스를 합성합니다.
  */
 const ModalU = function ({
-  closeModal,
+  // closeModal,
   closeSaveModal,
   setFoto,
   offscreenCanvas,
@@ -570,8 +570,8 @@ const ModalU = function ({
           <button
             onClick={() => {
               // 모달 닫힘 및 상태 초기화 후 XR 세션 재진입
-              setIsOpen(false);
-              setShow(false);
+              // setIsOpen(false);
+              // setShow(false);
               // restartXRSession 함수는 BasicApp에서 전달받은 closeModal으로 처리
               // (아래 closeModal 콜백에 restartXRSession 호출하도록 함)
             }}
