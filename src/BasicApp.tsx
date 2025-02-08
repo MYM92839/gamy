@@ -772,7 +772,7 @@ export default function BasicApp() {
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
   const circleR = 100;
-  const circleColor = 'blue';
+  // const circleColor = 'blue';
 
   // 최신 카메라 변환
   const latestCameraTransform = useRef({
