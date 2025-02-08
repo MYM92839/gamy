@@ -37,29 +37,28 @@ type GLTFResult3 = GLTF & {
 
 type GLTFResult = GLTF & {
   nodes: {
-    Brow_GEO001: THREE.SkinnedMesh;
-    Incisor_GEO001: THREE.SkinnedMesh;
-    L_EyeBall_GEO001: THREE.SkinnedMesh;
-    L_EyeHighLight_GEO001: THREE.SkinnedMesh;
-    Lower_gum_GEO001: THREE.SkinnedMesh;
-    Lower_Teeth_GEO001: THREE.SkinnedMesh;
-    R_EyeBall_GEO001: THREE.SkinnedMesh;
-    R_EyeHighLight_GEO001: THREE.SkinnedMesh;
-    Rabbit_Xgen_GEO001: THREE.SkinnedMesh;
-    Tongue_GEO001: THREE.SkinnedMesh;
-    Upper_gum_GEO001: THREE.SkinnedMesh;
-    Upper_Teeth_GEO001: THREE.SkinnedMesh;
-    L_Iris_GEO001: THREE.Mesh;
-    R_Iris_GEO001: THREE.Mesh;
+    Brow_GEO: THREE.SkinnedMesh;
+    Incisor_GEO: THREE.SkinnedMesh;
+    L_EyeBall_GEO: THREE.SkinnedMesh;
+    L_EyeHighLight_GEO: THREE.SkinnedMesh;
+    Lower_gum_GEO: THREE.SkinnedMesh;
+    Lower_Teeth_GEO: THREE.SkinnedMesh;
+    R_EyeBall_GEO: THREE.SkinnedMesh;
+    R_EyeHighLight_GEO: THREE.SkinnedMesh;
+    Rabbit_Xgen_GEO: THREE.SkinnedMesh;
+    Tongue_GEO: THREE.SkinnedMesh;
+    Upper_gum_GEO: THREE.SkinnedMesh;
+    Upper_Teeth_GEO: THREE.SkinnedMesh;
+    L_Iris_GEO: THREE.Mesh;
     Root_M: THREE.Bone;
   };
   materials: {
-    ['Motion_aa_Eyelash_M_LMBT.001']: THREE.MeshStandardMaterial;
-    ['Motion_Mouth_M_BLNN.001']: THREE.MeshStandardMaterial;
-    ['Motion_Eye_M_LMBT.001']: THREE.MeshStandardMaterial;
-    ['Motion_EyeHighLight_M_LMBT.001']: THREE.MeshStandardMaterial;
-    ['Motion_aa_Body_M_BLNN.001']: THREE.MeshStandardMaterial;
-    ['Motion_Iris_M_BLNN.001']: THREE.MeshStandardMaterial;
+    Motion_aa_Eyelash_M_LMBT: THREE.MeshStandardMaterial;
+    Motion_Mouth_M_BLNN: THREE.MeshStandardMaterial;
+    Motion_Eye_M_LMBT: THREE.MeshStandardMaterial;
+    Motion_EyeHighLight_M_LMBT: THREE.MeshStandardMaterial;
+    Motion_aa_Body_M_BLNN: THREE.MeshStandardMaterial;
+    Motion_Iris_M_BLNN: THREE.MeshStandardMaterial;
   };
 };
 
@@ -433,90 +432,90 @@ export function Box({
         position={[-0.45 + oposition[0], -1.5 + oposition[1], -1 + oposition[2]]}
         rotation={[0, 0, 0]}
       >
-        <group name="Group001">
-          <group name="DeformationSystem001">
+        <group name="Group" rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
+          <group name="DeformationSystem">
             <skinnedMesh
-              name="Brow_GEO001"
-              geometry={nodes.Brow_GEO001.geometry}
-              material={materials['Motion_aa_Eyelash_M_LMBT.001']}
-              skeleton={nodes.Brow_GEO001.skeleton}
+              name="Brow_GEO"
+              geometry={nodes.Brow_GEO.geometry}
+              material={materials.Motion_aa_Eyelash_M_LMBT}
+              skeleton={nodes.Brow_GEO.skeleton}
             />
             <skinnedMesh
-              name="Incisor_GEO001"
-              geometry={nodes.Incisor_GEO001.geometry}
-              material={materials['Motion_Mouth_M_BLNN.001']}
-              skeleton={nodes.Incisor_GEO001.skeleton}
+              name="Incisor_GEO"
+              geometry={nodes.Incisor_GEO.geometry}
+              material={materials.Motion_Mouth_M_BLNN}
+              skeleton={nodes.Incisor_GEO.skeleton}
             />
             <skinnedMesh
-              name="L_EyeBall_GEO001"
-              geometry={nodes.L_EyeBall_GEO001.geometry}
-              material={materials['Motion_Eye_M_LMBT.001']}
-              skeleton={nodes.L_EyeBall_GEO001.skeleton}
+              name="L_EyeBall_GEO"
+              geometry={nodes.L_EyeBall_GEO.geometry}
+              material={materials.Motion_Eye_M_LMBT}
+              skeleton={nodes.L_EyeBall_GEO.skeleton}
             />
             <skinnedMesh
-              name="L_EyeHighLight_GEO001"
-              geometry={nodes.L_EyeHighLight_GEO001.geometry}
-              material={materials['Motion_EyeHighLight_M_LMBT.001']}
-              skeleton={nodes.L_EyeHighLight_GEO001.skeleton}
+              name="L_EyeHighLight_GEO"
+              geometry={nodes.L_EyeHighLight_GEO.geometry}
+              material={materials.Motion_EyeHighLight_M_LMBT}
+              skeleton={nodes.L_EyeHighLight_GEO.skeleton}
             />
             <skinnedMesh
-              name="Lower_gum_GEO001"
-              geometry={nodes.Lower_gum_GEO001.geometry}
-              material={materials['Motion_Mouth_M_BLNN.001']}
-              skeleton={nodes.Lower_gum_GEO001.skeleton}
+              name="Lower_gum_GEO"
+              geometry={nodes.Lower_gum_GEO.geometry}
+              material={materials.Motion_Mouth_M_BLNN}
+              skeleton={nodes.Lower_gum_GEO.skeleton}
             />
             <skinnedMesh
-              name="Lower_Teeth_GEO001"
-              geometry={nodes.Lower_Teeth_GEO001.geometry}
-              material={materials['Motion_Mouth_M_BLNN.001']}
-              skeleton={nodes.Lower_Teeth_GEO001.skeleton}
+              name="Lower_Teeth_GEO"
+              geometry={nodes.Lower_Teeth_GEO.geometry}
+              material={materials.Motion_Mouth_M_BLNN}
+              skeleton={nodes.Lower_Teeth_GEO.skeleton}
             />
             <skinnedMesh
-              name="R_EyeBall_GEO001"
-              geometry={nodes.R_EyeBall_GEO001.geometry}
-              material={materials['Motion_Eye_M_LMBT.001']}
-              skeleton={nodes.R_EyeBall_GEO001.skeleton}
+              name="R_EyeBall_GEO"
+              geometry={nodes.R_EyeBall_GEO.geometry}
+              material={materials.Motion_Eye_M_LMBT}
+              skeleton={nodes.R_EyeBall_GEO.skeleton}
             />
             <skinnedMesh
-              name="R_EyeHighLight_GEO001"
-              geometry={nodes.R_EyeHighLight_GEO001.geometry}
-              material={materials['Motion_EyeHighLight_M_LMBT.001']}
-              skeleton={nodes.R_EyeHighLight_GEO001.skeleton}
+              name="R_EyeHighLight_GEO"
+              geometry={nodes.R_EyeHighLight_GEO.geometry}
+              material={materials.Motion_EyeHighLight_M_LMBT}
+              skeleton={nodes.R_EyeHighLight_GEO.skeleton}
             />
             <skinnedMesh
-              name="Rabbit_Xgen_GEO001"
-              geometry={nodes.Rabbit_Xgen_GEO001.geometry}
-              material={materials['Motion_aa_Body_M_BLNN.001']}
-              skeleton={nodes.Rabbit_Xgen_GEO001.skeleton}
+              name="Rabbit_Xgen_GEO"
+              geometry={nodes.Rabbit_Xgen_GEO.geometry}
+              material={materials.Motion_aa_Body_M_BLNN}
+              skeleton={nodes.Rabbit_Xgen_GEO.skeleton}
             />
             <skinnedMesh
-              name="Tongue_GEO001"
-              geometry={nodes.Tongue_GEO001.geometry}
-              material={materials['Motion_Mouth_M_BLNN.001']}
-              skeleton={nodes.Tongue_GEO001.skeleton}
+              name="Tongue_GEO"
+              geometry={nodes.Tongue_GEO.geometry}
+              material={materials.Motion_Mouth_M_BLNN}
+              skeleton={nodes.Tongue_GEO.skeleton}
             />
             <skinnedMesh
-              name="Upper_gum_GEO001"
-              geometry={nodes.Upper_gum_GEO001.geometry}
-              material={materials['Motion_Mouth_M_BLNN.001']}
-              skeleton={nodes.Upper_gum_GEO001.skeleton}
+              name="Upper_gum_GEO"
+              geometry={nodes.Upper_gum_GEO.geometry}
+              material={materials.Motion_Mouth_M_BLNN}
+              skeleton={nodes.Upper_gum_GEO.skeleton}
             />
             <skinnedMesh
-              name="Upper_Teeth_GEO001"
-              geometry={nodes.Upper_Teeth_GEO001.geometry}
-              material={materials['Motion_Mouth_M_BLNN.001']}
-              skeleton={nodes.Upper_Teeth_GEO001.skeleton}
+              name="Upper_Teeth_GEO"
+              geometry={nodes.Upper_Teeth_GEO.geometry}
+              material={materials.Motion_Mouth_M_BLNN}
+              skeleton={nodes.Upper_Teeth_GEO.skeleton}
             />
             <primitive object={nodes.Root_M} />
           </group>
         </group>
         <mesh
-          name="L_Iris_GEO001"
+          name="L_Iris_GEO"
           castShadow
           receiveShadow
-          geometry={nodes.L_Iris_GEO001.geometry}
-          material={materials['Motion_Iris_M_BLNN.001']}
-          position={[0, 26.939, 1.844]}
+          geometry={nodes.L_Iris_GEO.geometry}
+          material={materials.Motion_Iris_M_BLNN}
+          position={[0, 1.844, -26.939]}
           scale={7.71}
         />
       </group>
