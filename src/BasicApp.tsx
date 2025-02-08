@@ -552,7 +552,7 @@ const ModalU = function ({
 
       const defaultVideoFov = 35;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 0.95;
+      const addedFactor = 0.9;
       const fovScale =
         (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
