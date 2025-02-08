@@ -220,7 +220,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
 function UIOverlay({
   openModal,
-  // setShow,
+  setShow,
   domWidth,
   domHeight,
   circleX,
@@ -277,9 +277,8 @@ function UIOverlay({
           <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
         </svg>
       </div>
-      {/* → "토끼 부르기" 버튼 클릭 시 openModal 호출하여 최신 카메라 포즈 기준 토끼 위치 갱신 */}
       <Button
-        onClick={openModal}
+        onClick={() => setShow(true)}
         title="토끼 부르기"
         className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
@@ -479,7 +478,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
  * - 유저 카메라 영상과 three.js 캔버스를 합성합니다.
  */
 const ModalU = function ({
-  // closeModal,
+  closeModal,
   closeSaveModal,
   setFoto,
   offscreenCanvas,
@@ -566,17 +565,7 @@ const ModalU = function ({
     >
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }} className="max-h-screen">
         <div style={{ display: 'flex', gap: '8px' }} className="h-max p-4">
-          {/* "다시 찍기" 버튼: 누르면 모달을 닫고 XR 세션을 재진입 */}
-          <button
-            onClick={() => {
-              // 모달 닫힘 및 상태 초기화 후 XR 세션 재진입
-              // setIsOpen(false);
-              // setShow(false);
-              // restartXRSession 함수는 BasicApp에서 전달받은 closeModal으로 처리
-              // (아래 closeModal 콜백에 restartXRSession 호출하도록 함)
-            }}
-            style={{ flex: 1 }}
-          >
+          <button onClick={closeModal} style={{ flex: 1 }}>
             다시 찍기
           </button>
           <button onClick={closeSaveModal} style={{ flex: 1 }}>
@@ -674,14 +663,6 @@ export default function BasicApp() {
     initializeMedia();
   }, []);
 
-  // 재진입 함수: 모달 닫기(다시 찍기) 시 XR 세션을 재진입하도록 함
-  const restartXRSession = () => {
-    savedObjects = [];
-    savedCameraMatrix.identity();
-    xrStoreRef.current = createXRStore();
-    setMount(true);
-  };
-
   /**
    * openModalHandler
    * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
@@ -694,8 +675,7 @@ export default function BasicApp() {
       const cameraPos = gl.camera.position.clone();
       const direction = new THREE.Vector3();
       gl.camera.getWorldDirection(direction);
-      // 새로운 토끼 위치는 현재 카메라 위치에서 정규화된 방향 벡터에 3m를 곱한 값
-      const newRabbitPos = cameraPos.add(direction.normalize().multiplyScalar(3));
+      const newRabbitPos = cameraPos.add(direction.multiplyScalar(3));
       setRabbitPosition([newRabbitPos.x, newRabbitPos.y, newRabbitPos.z]);
       logDebug('Rabbit position updated on button click:', newRabbitPos);
     }
@@ -793,7 +773,6 @@ export default function BasicApp() {
           closeModal={() => {
             setIsOpen(false);
             setShow(false);
-            restartXRSession();
           }}
           closeSaveModal={handleCloseSaveModal}
           setShow={setShow}
@@ -818,11 +797,9 @@ export default function BasicApp() {
               modalIsOpen={modalIsOpen}
               setFoto={setFoto}
               closeModal={() => {
-                // "다시 찍기" 버튼은 ModalU 내부의 버튼 onClick에서 호출된 후
-                // BasicApp의 closeModal (즉, restartXRSession)이 실행됩니다.
                 setIsOpen(false);
                 setShow(false);
-                restartXRSession();
+                // 필요시 XR 세션 재진입 로직 추가 가능
               }}
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
