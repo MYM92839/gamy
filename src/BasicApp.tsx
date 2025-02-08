@@ -626,8 +626,6 @@ export default function BasicApp() {
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
   const [, setDebugLogs] = useState<string[]>([]);
   const [cameraFov, setCameraFov] = useState<number>(60); // XR 카메라 fov 상태
-
-  const glRef = useRef<any>(null);
   // 캘리브레이션 행렬 (센서 보정용)
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
   useEffect(() => {
