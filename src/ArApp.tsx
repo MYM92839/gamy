@@ -130,7 +130,7 @@ export function Tree({
 }: JSX.IntrinsicElements['group'] & {
   onRenderEnd: () => void;
   on: boolean;
-  oposition: number[];
+  oposition?: number[];
   sscale?: number;
 }) {
   const modelRef = useRef<THREE.Group>(null);
@@ -168,7 +168,7 @@ export function Tree({
     <group
       ref={modelRef}
       scale={sscale ? [4 * sscale, 4 * sscale, 4 * sscale] : [4, 4, 4]}
-      position={oposition as [number, number, number]}
+      position={oposition ? (oposition as [number, number, number]) : [1, 1, 1]}
       rotation={[0, Math.PI / 4, 0]}
       {...props}
       dispose={null}
