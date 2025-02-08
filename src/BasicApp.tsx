@@ -287,10 +287,10 @@ function UIOverlay({
       </div>
       <Button
         onClick={() => {
-          correctPose();
           setShow(false);
-
-          setShow(true);
+          setTimeout(() => {
+            setShow(true);
+          }, 0);
         }}
         title="토끼 부르기"
         className="z-[99999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
