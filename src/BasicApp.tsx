@@ -272,7 +272,7 @@ function UIOverlay({
           left: '24px',
           background: 'transparent',
           border: 'none',
-          zIndex: 100000,
+          zIndex: 1000001,
         }}
         onClick={() => {
           window.location.href = 'https://gamy-six.vercel.app/test';
