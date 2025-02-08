@@ -346,14 +346,16 @@ function ARCanvas(props: any) {
       oposition: { x: 0, y: 0, z: 0 },
       sposition: { x: 0, y: 0, z: 0 },
       cposition: { x: 0, y: 0, z: 0 },
-      scale: { x: 0.5, y: 0.5, z: 0.5 },
+      scale: 0.5,
     };
   }, []);
-  const { oposition, sposition, cposition, sscale } = useControls({
+  const { oposition, sposition, cposition } = useControls({
     oposition: { value: initialValues.oposition, step: 0.1 },
     sposition: { value: initialValues.sposition, step: 0.1 },
     cposition: { value: initialValues.cposition, step: 0.1 },
-    sscale: { value: initialValues.cposition, step: 0.1 },
+  });
+  const { sscale } = useControls({
+    sscale: { value: initialValues.scale, step: 0.1 },
   });
 
   useEffect(() => {
