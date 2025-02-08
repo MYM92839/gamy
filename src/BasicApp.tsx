@@ -2,7 +2,15 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitHandles } from '@react-three/handle';
-import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
+import {
+  createXRStore,
+  noEvents,
+  PointerEvents,
+  XR,
+  XRDomOverlay,
+  XROrigin,
+  useXR, // <-- 추가
+} from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -103,6 +111,7 @@ function renderSceneForCapture(
   const height = Math.floor(containerHeight * dpr);
 
   // --- 임시 카메라 생성 및 보정 시작 ---
+  // camera.fov가 아니라 "XR에서 추출한 fov"를 쓰고 싶다면, 필요 시 인자로 바꿔도 됨.
   const tempCamera = new THREE.PerspectiveCamera(camera.fov, containerWidth / containerHeight, camera.near, camera.far);
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
 
@@ -169,6 +178,17 @@ function renderSceneForCapture(
   return tempCanvas.toDataURL('image/png');
 }
 
+// ====================================================================
+// 추가 1: projectionMatrix에서 FOV 추출 함수 (column-major 가정)
+// ====================================================================
+function extractFovFromProjectionMatrix(mat: Float32Array | number[]) {
+  // mat[5] == m[1][1] in column-major, which is ~1/tan(fov/2)
+  const m11 = mat[5];
+  const verticalFovRad = 2 * Math.atan(1 / m11);
+  return (verticalFovRad * 180) / Math.PI; // degrees
+}
+// ====================================================================
+
 // Components
 
 function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
@@ -203,9 +223,6 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
 
         const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
         const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        // 곱셈 순서에 주의합니다.
-        // 아래처럼 현재 quaternion에 추가 회전(offsetQuat)을 오른쪽으로 곱하면,
-        // 현재 회전 후 로컬 좌표계 기준 추가 회전이 적용됩니다.
         groupRef.current.quaternion.multiply(offsetQuat);
       }
     }
@@ -303,7 +320,6 @@ function UIOverlay({
         onClick={() => {
           if (!init) setInit(true);
           correctPose();
-
           setShow(false);
           setTimeout(() => {
             setShow(true);
@@ -316,7 +332,34 @@ function UIOverlay({
   );
 }
 
-// 새로운 컴포넌트: 최신 카메라 변환값을 매 프레임 업데이트
+// ---------------------------------------
+// 추가 2: XRFrame에서 projectionMatrix를 읽어 FOV를 추출하는 컴포넌트
+// ---------------------------------------
+function XRFovUpdater({ setCameraFov }: { setCameraFov: React.Dispatch<React.SetStateAction<number>> }) {
+  const { gl } = useThree();
+  const { session } = useXR(); // react-three/xr 제공
+
+  useFrame(() => {
+    if (!session || !gl.xr.getReferenceSpace()) return;
+    const xrFrame = gl.xr.getFrame?.();
+    if (!xrFrame) return;
+
+    const pose = xrFrame.getViewerPose(gl.xr.getReferenceSpace()!);
+    if (!pose || pose.views.length === 0) return;
+
+    // 보통 AR은 단안(왼쪽/오른쪽) 2개 또는 1개가 있을 수 있으니 0번째만 사용
+    const view = pose.views[0];
+    if (!view) return;
+
+    // 이제 projectionMatrix에서 FOV 추출
+    const newFov = extractFovFromProjectionMatrix(view.projectionMatrix);
+    setCameraFov(newFov);
+  });
+
+  return null;
+}
+// ---------------------------------------
+
 function CameraUpdater({
   latestCameraTransformRef,
 }: {
@@ -334,7 +377,7 @@ function ARCanvas(props: any) {
   const { setOffscreenCanvas, logDebug, latestCameraTransformRef } = props;
   const [init, setInit] = useState(false);
   const glRef = useRef(null);
-  // localStorage에 저장된 값을 불러와 초기값으로 사용 (없으면 기본값)
+  // localStorage에 저장된 값을 불러와 초기값으로 사용
   const initialValues = useMemo(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('levaValues');
@@ -363,7 +406,6 @@ function ARCanvas(props: any) {
   });
 
   useEffect(() => {
-    // 컨트롤 값 localStorage에 저장
     const data = { oposition, sposition, cposition, sscale };
     localStorage.setItem('levaValues', JSON.stringify(data));
   }, [oposition, sposition, cposition, sscale]);
@@ -418,6 +460,8 @@ function ARCanvas(props: any) {
         id="three-canvas"
         style={{ width: '100vw', height: '100vh', background: 'transparent' }}
         gl={{ alpha: true, preserveDrawingBuffer: true }}
+        // 여기서 camera.fov=30 은 최초 기본값일 뿐,
+        // 아래 XRFovUpdater가 XRView로부터 매 프레임 새로 추출하여 업데이트하게 됨.
         camera={{ fov: 30 }}
         onCreated={(state) => {
           state.gl.setPixelRatio(window.devicePixelRatio);
@@ -435,8 +479,25 @@ function ARCanvas(props: any) {
         <PointerEvents />
         <OrbitHandles />
         <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
+
+        {/* --------------------
+            추가 3: XR FOV 추출해서 props.cameraFov에 반영
+           -------------------- */}
         <XR store={props.xrStoreRef.current}>
           <XROrigin position={[0, 0.5, 0]} />
+
+          {/* FOV를 props.setCameraFov 에 전달하는 컴포넌트 */}
+          <XRFovUpdater
+            setCameraFov={
+              props.logDebug
+                ? (fov) => {
+                    props.logDebug(`XR FOV updated: ${(fov as number).toFixed(2)}`);
+                    props.setCameraFov(fov);
+                  }
+                : props.setCameraFov
+            }
+          />
+
           <Scene
             visible={props.show}
             glRef={glRef}
@@ -559,10 +620,8 @@ const ModalU = function ({
       const ctx = compositeCanvas.getContext('2d');
       if (!ctx) return;
 
-      // 고화질 보간 옵션 적용
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-
       ctx.scale(dpr, dpr);
 
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
@@ -570,9 +629,10 @@ const ModalU = function ({
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
+      // 여기서 cameraFov는 XR에서 얻은 실시간 FOV가 될 수 있음
       const defaultVideoFov = 25;
       const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 1;
+      const addedFactor = 1.0;
       const fovScale =
         (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
@@ -582,11 +642,12 @@ const ModalU = function ({
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2;
 
+      // 배경 비디오
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
 
+      // three.js offscreen
       const threeCSSWidth = offscreenCanvas!.width / dpr;
       const threeCSSHeight = offscreenCanvas!.height / dpr;
-      // calcCover를 사용하여 비디오와 동일한 방식으로 offscreenCanvas의 크기와 오프셋 계산
       const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
 
       ctx.filter = 'brightness(2)';
@@ -713,7 +774,6 @@ export default function BasicApp() {
     quaternion: new THREE.Quaternion(),
   });
 
-  // 기존 자동진입 로직 (페이지 접속 시 XR 세션 시작)
   useEffect(() => {
     const initializeMedia = async () => {
       try {
@@ -733,7 +793,6 @@ export default function BasicApp() {
         logDebug('UserMedia test failed: ' + err);
       }
     };
-
     initializeMedia();
   }, []);
 
@@ -749,11 +808,10 @@ export default function BasicApp() {
     }, 2000);
   };
 
-  // 수정된 correctPose 함수: 최신 카메라 transform(latestCameraTransform)을 사용
+  // 수정된 correctPose 함수
   const correctPose = () => {
     if (latestCameraTransform.current) {
       let pos = { x: 0, y: 0, z: 0 };
-
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('levaValues');
         if (saved) {
@@ -761,17 +819,14 @@ export default function BasicApp() {
             const s = JSON.parse(saved);
             pos = s.oposition;
           } catch (error) {
-            console.error('저장된 값을 파싱하는데 실패했습니다:', error);
+            console.error('저장된 값을 파싱 실패:', error);
           }
         }
       }
 
-      // 최신 카메라 transform 값 사용 (useFrame에서 업데이트됨)
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      // 머리 좌표계에서의 오프셋 (전방 +Z를 사용)
       const offset = new THREE.Vector3(0, 0, -11);
-      // 카메라의 쿼터니언의 역(인버스)을 적용하여 머리 좌표계의 오프셋을 구함
       const invQuat = cameraQuat.clone();
       offset.applyQuaternion(invQuat);
       const newPosition = cameraPos.add(offset);
@@ -780,17 +835,9 @@ export default function BasicApp() {
     }
   };
 
-  /**
-   * openModalHandler
-   * - UI의 “토끼 부르기” 버튼 클릭 시 호출됨.
-   * - 그 시점의 최신 카메라 transform(latestCameraTransform)을 기준으로 토끼 위치(3m 앞)를 계산합니다.
-   * - 캡쳐 후 onXRSessionEnd로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
-   */
   const openModalHandler = (gl: any) => {
     correctPose();
-    // 캡쳐 및 보정을 수행
     captureARContent(gl);
-    // 세션 종료 및 XRStore 파괴 → 다음 진입 시 새로운 기준 적용
     if (xrStoreRef.current) {
       xrStoreRef.current.getState().session?.end();
       xrStoreRef.current.destroy();
@@ -800,10 +847,6 @@ export default function BasicApp() {
     setIsOpen(true);
   };
 
-  /**
-   * captureARContent:
-   * - gl, scene, camera 정보를 사용하여 캡쳐 이미지를 생성합니다.
-   */
   const captureARContent = ({
     gl,
     scene,
@@ -814,7 +857,10 @@ export default function BasicApp() {
     scene: THREE.Scene;
   }) => {
     onXRSessionEnd(scene, camera);
+    // 여기서 setCameraFov(camera.fov)를 했지만,
+    // 위 XRFovUpdater로부터 이미 실시간 XR FOV를 받고 있으니, 상황 맞춰 조절해도 됨.
     setCameraFov(camera.fov);
+
     const imgData = renderSceneForCapture(gl, scene, camera, calibrationMatrixRef.current);
     const threeCanvas = document.querySelector('#three-canvas');
 
@@ -825,13 +871,12 @@ export default function BasicApp() {
       offscreenCanvas.width = Math.floor(containerWidth * dpr);
       offscreenCanvas.height = Math.floor(containerHeight * dpr);
       const ctx = offscreenCanvas.getContext('2d');
-
       if (!ctx) {
         logDebug('captureARContent: offscreen canvas context failed.');
         return;
       }
-
       ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
       const img = new Image();
       img.onload = () => {
         const params = calcCover(img.width, img.height, offscreenCanvas.width, offscreenCanvas.height);
@@ -844,15 +889,9 @@ export default function BasicApp() {
   const handleCloseSaveModal = () => {
     if (foto) {
       if (navigator.canShare && navigator.canShare({ files: [new File([foto], 'capture.png', { type: foto.type })] })) {
-        const file = new File([foto], `capture-${new Date().getTime()}.png`, {
-          type: 'image/png',
-        });
+        const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: 'image/png' });
         navigator
-          .share({
-            files: [file],
-            title: 'My Captured Image',
-            text: 'Check out this captured photo!',
-          })
+          .share({ files: [file], title: 'My Captured Image', text: 'Check out this captured photo!' })
           .catch((error) => logDebug('Sharing failed: ' + error));
       } else {
         const url = URL.createObjectURL(foto);
@@ -894,7 +933,7 @@ export default function BasicApp() {
           circleColor={circleColor}
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
-          cameraFov={cameraFov}
+          cameraFov={cameraFov} // <- 실시간 갱신되는 값
           calibrationMatrixRef={calibrationMatrixRef}
           rabbitPosition={rabbitPosition}
           latestCameraTransformRef={latestCameraTransform}
@@ -911,12 +950,11 @@ export default function BasicApp() {
                 setIsOpen(false);
                 setShow(false);
                 onTest();
-                // 필요시 XR 세션 재진입 로직 추가 가능
               }}
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
               logDebug={logDebug}
-              cameraFov={cameraFov}
+              cameraFov={cameraFov} // 합성 시 사용
             />
           )}
         </>
