@@ -744,7 +744,7 @@ export default function BasicApp() {
    * - 캡쳐 후 onXRSessionEnd로 오브젝트와 카메라 행렬을 저장하고, 세션 종료 후 모달을 엽니다.
    */
   const openModalHandler = (gl: any) => {
-    correctPose(gl);
+    correctPose();
     // 캡쳐 및 보정을 수행
     captureARContent(gl);
     // 세션 종료 및 XRStore 파괴 → 다음 진입 시 새로운 기준 적용
