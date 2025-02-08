@@ -2,14 +2,7 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitHandles } from '@react-three/handle';
-import {
-  createXRStore,
-  noEvents,
-  PointerEvents,
-  XR,
-  XRDomOverlay,
-  XROrigin
-} from '@react-three/xr';
+import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -298,17 +291,16 @@ function UIOverlay({
       <div
         style={{
           position: 'fixed',
-          width: `${domWidth}px`,
-          height: `${domHeight}px`,
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           background: 'transparent',
           overflow: 'hidden',
-          zIndex: 9999,
+          zIndex: 0,
         }}
+        className="w-fit h-fit min-w-[calc(100%/2)] min-h-[calc(100%/2)]"
       >
-        <svg width={domWidth} height={domHeight} style={{ position: 'absolute', top: 0, left: 0 }}>
+        <svg width={domWidth} height={domHeight}>
           <circle cx={circleX} cy={circleY} r={circleR} fill="none" stroke={circleColor} strokeWidth="2" />
         </svg>
       </div>
@@ -606,8 +598,7 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
-          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
