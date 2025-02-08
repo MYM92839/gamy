@@ -22,6 +22,7 @@ interface SavedObjectData {
 interface SceneProps {
   oposition: any;
   sposition: any;
+  scale: number;
   cposition: any;
   addGl: any;
   visible: boolean;
@@ -166,7 +167,7 @@ function renderSceneForCapture(
 
 // Components
 
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -193,6 +194,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
       if (groupRef.current && glRef.current && glRef.current.camera) {
+        groupRef.current.scale.set(scale, scale, scale);
         // 오브젝트가 카메라 위치를 바라보도록 설정합니다.
         groupRef.current.lookAt(glRef.current.camera.position);
 
@@ -344,12 +346,14 @@ function ARCanvas(props: any) {
       oposition: { x: 0, y: 0, z: 0 },
       sposition: { x: 0, y: 0, z: 0 },
       cposition: { x: 0, y: 0, z: 0 },
+      scale: 0.5,
     };
   }, []);
-  const { oposition, sposition, cposition } = useControls({
+  const { oposition, sposition, cposition, scale } = useControls({
     oposition: { value: initialValues.oposition, step: 0.1 },
     sposition: { value: initialValues.sposition, step: 0.1 },
     cposition: { value: initialValues.cposition, step: 0.1 },
+    scale: { value: initialValues.scale, step: 0.1 },
   });
 
   useEffect(() => {
@@ -437,6 +441,7 @@ function ARCanvas(props: any) {
             sposition={sposition}
             oposition={oposition}
             cposition={cposition}
+            scale={scale}
           />
           <XRDomOverlay>
             <UIOverlay

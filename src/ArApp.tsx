@@ -296,12 +296,8 @@ export function Box({
 
   return (
     <group {...props} position={[0, 0, 0]} rotation={[0, Math.PI / 4, 0]} dispose={null}>
-      <group name="Scene" ref={shadowRef} dispose={null}>
-        <group
-          position={[0 + sposition[0], 3 + sposition[1], -3 + sposition[2]]}
-          rotation={[Math.PI / 2, 0, 0]}
-          scale={0.01}
-        >
+      <group name="Scene" ref={shadowRef} dispose={null} position={sposition as [number, number, number]}>
+        <group position={[0, 3, -3]} rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <mesh
             name="side_body"
             castShadow
@@ -412,7 +408,7 @@ export function Box({
           receiveShadow
           geometry={snodes.cramp.geometry}
           material={smaterials.cramp}
-          position={[-0.78 + sposition[0], 0.004 + sposition[1], -3 + sposition[2]]}
+          position={[-0.78, 0.004, -3]}
           rotation={[Math.PI / 2, 0, 0]}
           scale={0.01}
         />
@@ -422,7 +418,7 @@ export function Box({
           receiveShadow
           geometry={snodes.hammer.geometry}
           material={smaterials.hammer}
-          position={[-0.09 + sposition[0], 2.498 + sposition[1], -3 + sposition[2]]}
+          position={[-0.09, 2.498, -3]}
           scale={0}
         />
       </group>
