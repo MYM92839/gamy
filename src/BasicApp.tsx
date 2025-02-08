@@ -263,7 +263,7 @@ function UIOverlay({
     setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
   });
   return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
+    <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
         style={{
           position: 'fixed',
@@ -296,7 +296,6 @@ function UIOverlay({
         <Capture />
       </button>
       <div
-        {...bind()} // 핀치 제스처 바인딩
         style={{
           position: 'fixed',
           top: '50%',
