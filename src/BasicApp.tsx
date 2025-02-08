@@ -418,6 +418,7 @@ function ARCanvas(props: any) {
         id="three-canvas"
         style={{ width: '100vw', height: '100vh', background: 'transparent' }}
         gl={{ alpha: true, preserveDrawingBuffer: true }}
+        camera={{ fov: 30}}
         onCreated={(state) => {
           state.gl.setPixelRatio(window.devicePixelRatio);
           state.gl.setSize(window.innerWidth, window.innerHeight);
@@ -485,7 +486,11 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
         audio: false,
       })
       .then((stream) => {
@@ -585,7 +590,13 @@ const ModalU = function ({
       const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
 
       ctx.filter = 'brightness(2)';
-      ctx.drawImage(offscreenCanvas!, threeParams.offsetX, threeParams.offsetY, threeParams.drawWidth, threeParams.drawHeight);
+      ctx.drawImage(
+        offscreenCanvas!,
+        threeParams.offsetX,
+        threeParams.offsetY,
+        threeParams.drawWidth,
+        threeParams.drawHeight
+      );
       ctx.filter = 'none';
 
       compositeCanvas.toBlob((blob: Blob | null) => {
@@ -709,8 +720,8 @@ export default function BasicApp() {
         const constraints = {
           video: {
             facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
           audio: false,
         };
