@@ -294,7 +294,11 @@ function UIOverlay({
 }
 
 // 새로운 컴포넌트: 최신 카메라 변환값을 매 프레임 업데이트
-function CameraUpdater({ latestCameraTransformRef }: { latestCameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion; }> }) {
+function CameraUpdater({
+  latestCameraTransformRef,
+}: {
+  latestCameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion }>;
+}) {
   const { camera } = useThree();
   useFrame(() => {
     latestCameraTransformRef.current.position.copy(camera.position);
@@ -533,8 +537,7 @@ const ModalU = function ({
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 0.95;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
-          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
 
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
@@ -727,12 +730,12 @@ export default function BasicApp() {
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
       // 머리 좌표계에서의 오프셋 (전방 +Z를 사용)
-      const offset = new THREE.Vector3(pos.x, pos.y, 3 + pos.z);
+      const offset = new THREE.Vector3(0, 0, 11);
       // 카메라의 쿼터니언의 역(인버스)을 적용하여 머리 좌표계의 오프셋을 구함
       const invQuat = cameraQuat.clone().invert();
       offset.applyQuaternion(invQuat);
       const newPosition = cameraPos.add(offset);
-      setRabbitPosition([newPosition.x, newPosition.y, newPosition.z]);
+      setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
       logDebug('Rabbit position updated:', newPosition);
     }
   };
