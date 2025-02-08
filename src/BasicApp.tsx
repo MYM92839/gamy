@@ -194,7 +194,6 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
       if (groupRef.current && glRef.current && glRef.current.camera) {
-        groupRef.current.scale.set(scale, scale, scale);
         // 오브젝트가 카메라 위치를 바라보도록 설정합니다.
         groupRef.current.lookAt(glRef.current.camera.position);
 
@@ -224,6 +223,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
             <Box
               sposition={[sposition.x, sposition.y, sposition.z]}
               oposition={[oposition.x, oposition.y, oposition.z]}
+              scale={scale}
               on
               onRenderEnd={() => {}}
             />

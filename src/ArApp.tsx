@@ -247,6 +247,7 @@ export function Box({
   on,
   oposition,
   sposition,
+  scale,
   ...props
 }: JSX.IntrinsicElements['group'] & {
   onRenderEnd: () => void;
@@ -296,7 +297,7 @@ export function Box({
 
   return (
     <group {...props} position={[0, 0, 0]} rotation={[0, Math.PI / 4, 0]} dispose={null}>
-      <group name="Scene" ref={shadowRef} dispose={null} position={sposition as [number, number, number]}>
+      <group name="Scene" ref={shadowRef} dispose={null} position={sposition as [number, number, number]} scale={scale}>
         <group position={[0, 3, -3]} rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <mesh
             name="side_body"
