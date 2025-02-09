@@ -1096,7 +1096,7 @@ export default function BasicApp() {
             files: [new File([foto], 'capture.png', { type: foto.type || 'image/png' })],
           })
         ) {
-          const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: foto.type || 'image/png' });
+          const file = new File([foto], `gamyoungar-${new Date().getTime()}.png`, { type: foto.type || 'image/png' });
           await navigator.share({
             files: [file],
             title: 'My Captured Image',
