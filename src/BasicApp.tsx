@@ -1125,7 +1125,7 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   target,
-  distance = 10,
+  distance = 15,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
@@ -1203,7 +1203,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
         <group
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[0, -Math.PI / 4, 0]}
+          rotation={[Math.PI, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
