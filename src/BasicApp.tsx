@@ -1082,7 +1082,7 @@ export default function BasicApp() {
           const handle = await (window as any).showSaveFilePicker(opts);
           const writable = await handle.createWritable();
           // 만약 foto의 타입이 올바르지 않다면, 올바른 MIME 타입을 지정한 Blob으로 감싸줍니다.
-          const blob = foto.type && foto.type !== '' ? foto : new Blob([foto], { type: 'image/png' });
+          const blob = new Blob([foto], { type: 'image/png' });
           await writable.write(blob);
           await writable.close();
         }
