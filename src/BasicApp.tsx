@@ -1096,7 +1096,7 @@ function DeviceOrientationController({ isPermissionGranted }: { isPermissionGran
       const radBeta = THREE.MathUtils.degToRad(beta || 0);
       const radGamma = THREE.MathUtils.degToRad(gamma || 0);
       // iOS에서는 회전값을 반전하여 적용
-      const euler = new THREE.Euler(-radBeta, -radAlpha, radGamma, 'YXZ');
+      const euler = new THREE.Euler(radBeta, radAlpha, -radGamma, 'YXZ');
       camera.quaternion.setFromEuler(euler);
     }
     if (isPermissionGranted) {
