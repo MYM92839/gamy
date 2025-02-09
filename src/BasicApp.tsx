@@ -1122,15 +1122,13 @@ interface DeviceOrientationControllerProps {
   resetTrigger: number; // 토끼 호출 시마다 바뀌는 값
 }
 
-export function DeviceOrientationController({
+function DeviceOrientationController({
   isPermissionGranted,
   target,
   distance = 15,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
-  // 디바이스 센서의 회전값을 저장할 ref
-  const deviceQuaternionRef = useRef(new THREE.Quaternion());
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
@@ -1138,16 +1136,16 @@ export function DeviceOrientationController({
       const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
       const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
-      // 센서 값을 바탕으로 Euler 각도 생성 (YXZ 순서 사용)
+      // 센서 값으로 Euler 생성 (YXZ 순서)
       const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
       const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
 
-      // iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
+      // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
       const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       deviceQuaternion.multiply(correctionQuaternion);
 
-      // deviceQuaternion을 ref에 저장
-      deviceQuaternionRef.current.copy(deviceQuaternion);
+      camera.up.set(0, 1, 0);
+      camera.quaternion.copy(deviceQuaternion);
     }
 
     if (isPermissionGranted) {
@@ -1156,22 +1154,22 @@ export function DeviceOrientationController({
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-  }, [isPermissionGranted, resetTrigger]);
+    // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
+  }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
-    // target이 배열 또는 THREE.Vector3일 수 있으므로 변환 처리
+    // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    const offset = new THREE.Vector3(0, 0, distance);
+    offset.applyQuaternion(camera.quaternion);
+    camera.position.copy(targetVec).add(offset);
 
-    // 기본 forward 벡터 (0, 0, -1)에 저장된 deviceQuaternion 적용
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(deviceQuaternionRef.current);
-    // 카메라 위치를 target에서 forward 방향으로 distance만큼 떨어진 위치로 계산
-    camera.position.copy(targetVec).sub(forward.multiplyScalar(distance));
-    // 카메라가 항상 target을 바라보도록 함
-    camera.lookAt(targetVec);
+    // camera.lookAt(targetVec);
   });
 
   return null;
 }
+
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
