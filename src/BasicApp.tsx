@@ -1069,33 +1069,34 @@ export default function BasicApp() {
     if (foto) {
       try {
         // 1. File System Access API 사용 (지원되는 경우)
-        if ((window as any).showSaveFilePicker) {
-          const opts = {
-            startIn: 'pictures',
-            suggestedName: `capture.jpeg`,
-            types: [
-              {
-                description: 'jpeg Image',
-                accept: { 'image/jpeg': ['.jpeg'] },
-              },
-            ],
-          };
+        // if ((window as any).showSaveFilePicker) {
+        //   const opts = {
+        //     startIn: 'pictures',
+        //     suggestedName: `capture.png`,
+        //     types: [
+        //       {
+        //         description: 'png Image',
+        //         accept: { 'image/png': ['.png'] },
+        //       },
+        //     ],
+        //   };
 
-          const handle = await (window as any).showSaveFilePicker(opts);
-          const writable = await handle.createWritable();
-          // 만약 foto의 타입이 올바르지 않다면, 올바른 MIME 타입을 지정한 Blob으로 감싸줍니다.
-          const blob = new Blob([foto], { type: 'image/jpeg' });
-          await writable.write(blob);
-          await writable.close();
-        }
-        // 2. File System Access API가 없으면 Web Share API 사용 (파일 공유 지원 여부 확인)
-        else if (
+        //   const handle = await (window as any).showSaveFilePicker(opts);
+        //   const writable = await handle.createWritable();
+        //   // 만약 foto의 타입이 올바르지 않다면, 올바른 MIME 타입을 지정한 Blob으로 감싸줍니다.
+        //   const blob = new Blob([foto], { type: 'image/jpeg' });
+        //   await writable.write(blob);
+        //   await writable.close();
+        // }
+        // // 2. File System Access API가 없으면 Web Share API 사용 (파일 공유 지원 여부 확인)
+        // else
+        if (
           navigator.canShare &&
           navigator.canShare({
             files: [new File([foto], 'capture.png', { type: foto.type || 'image/png' })],
           })
         ) {
-          const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: foto.type || 'image/png' });
+          const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: 'image/png' });
           await navigator.share({
             files: [file],
             title: 'My Captured Image',
