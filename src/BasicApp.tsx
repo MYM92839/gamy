@@ -57,15 +57,6 @@ interface UIOverlayProps {
   cameraFov: number; // XR 카메라의 fov
 }
 
-/* [iOS용] DeviceOrientationController Props */
-interface DeviceOrientationControllerProps {
-  isPermissionGranted: boolean;
-  target: THREE.Vector3; // 토끼(목표)의 위치
-  distance?: number; // 대상과의 고정 거리 (기본값 -20)
-  resetTrigger: number; // 호출 시마다 값 변경
-  forceLookAt?: boolean; // 강제 lookAt 보정 적용 여부
-}
-
 /* -------------- 유틸들 + 전역 -------------- */
 function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destHeight: number) {
   const srcAspect = srcWidth / srcHeight;
@@ -277,7 +268,7 @@ function UIOverlay({
 }: UIOverlayProps) {
   const [init, setInit] = useState(false);
   const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
-  const [scale, setScale] = useState(1); // 반지름 상태 관리
+  const [scale, setScale] = useState(1); // 반지름 상태 관리c
 
   // 핀치 제스처로 반지름을 조정
   const bind = usePinch((state) => {
@@ -300,6 +291,7 @@ function UIOverlay({
           zIndex: 99999,
         }}
         onClick={() => {
+          // 예시 링크
           window.location.href = 'https://gamy-six.vercel.app/test';
         }}
       >
@@ -885,7 +877,7 @@ export default function BasicApp() {
       // 예시:
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, -11);
+      const offset = new THREE.Vector3(0, 0, -21);
       offset.applyQuaternion(cameraQuat);
       const newPosition = cameraPos.add(offset);
 
@@ -1133,59 +1125,49 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   // target,
-  // distance = -20,
+  // distance = -30,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      if (timeoutRef.current) return;
-      timeoutRef.current = setTimeout(() => {
-        timeoutRef.current = null;
-        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
-        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
-        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+      const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
-        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-        const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
+      // 센서 값으로 Euler 생성 (YXZ 순서)
+      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+      const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
 
-        // iOS 센서 보정 (X축 기준 +90° 회전)
-        const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-        deviceQuaternion.multiply(correctionQuaternion);
+      // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
+      const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      deviceQuaternion.multiply(correctionQuaternion);
 
-        camera.up.set(0, 1, 0);
-        camera.quaternion.copy(deviceQuaternion);
-      }, 16);
+      camera.up.set(0, 1, 0);
+      camera.quaternion.copy(deviceQuaternion);
     }
 
     if (isPermissionGranted) {
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
+    // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
   }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
-    // target이 배열이면 Vector3로 변환
-    // const targetVec = Array.isArray(target)
-    //   ? new THREE.Vector3(target[0], target[1], target[2])
-    //   : target;
-
-    // 만약 카메라 위치 업데이트를 하지 않고 device orientation에 따른 회전만 유지하고 싶다면,
-    // useFrame 내에서 카메라 위치 업데이트 코드를 제거합니다.
-    // 아래 코드를 제거하거나 주석 처리해 보세요.
+    // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
+    // const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     // const offset = new THREE.Vector3(0, 0, distance);
     // offset.applyQuaternion(camera.quaternion);
     // camera.position.copy(targetVec).add(offset);
+    // camera.lookAt(targetVec);
   });
 
   return null;
 }
-
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
@@ -1386,7 +1368,7 @@ function IOSARCanvasCore(props: any) {
 }
 
 function IOSARCanvas(props: any) {
-  const [, setInit] = useState(false);
+  const [init, setInit] = useState(false);
   const glRef = useRef<any>(null);
   const latestCameraTransformRef = props.latestCameraTransformRef;
   const [orientationEnabled, setOrientationEnabled] = useState(false);
@@ -1407,9 +1389,13 @@ function IOSARCanvas(props: any) {
       setOrientationEnabled(true);
     }
   };
+
   useEffect(() => {
-    if (!orientationEnabled) requestDeviceOrientation();
-  }, []);
+    if (init && !orientationEnabled) {
+      requestDeviceOrientation();
+    }
+  }, [init]);
+
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <BackgroundVideo streamRef={props.streamRef} setIsMount={props.setIsMount} logDebug={props.logDebug} />
