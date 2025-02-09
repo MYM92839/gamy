@@ -9,13 +9,14 @@ import * as THREE from 'three';
 
 // 예: 기존 컴포넌트들 (Box, Back, Capture, Button, NftAppT3 ...)은
 // 실제 경로에 따라 import 조정
+import { usePinch } from '@use-gesture/react';
+import { useParams } from 'react-router-dom';
 import { Box, Tree } from './ArApp';
-import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-import { usePinch } from '@use-gesture/react';
-import { useParams } from 'react-router-dom';
+
+const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
 
 /* ---------------- 타입 정의들 ----------------- */
 interface SavedObjectData {
@@ -840,7 +841,9 @@ export default function BasicApp() {
         logDebug('UserMedia test failed:', err);
       }
     };
-    initMedia();
+    if (isIOS) {
+      setMount(true);
+    } else initMedia();
   }, []);
 
   // 세션 리트라이
@@ -971,42 +974,69 @@ export default function BasicApp() {
     setIsOpen(false);
   };
 
-  // iOS ARKit 미지원 시
-  if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
-    return <NftAppT3 />;
-  }
-
   return (
     <>
       {mount ? (
-        <ARCanvas
-          xrStoreRef={xrStoreRef}
-          setSessionStarted={setSessionStarted}
-          show={show}
-          modalIsOpen={modalIsOpen}
-          openModal={openModalHandler}
-          closeModal={() => {
-            setIsOpen(false);
-            setShow(false);
-          }}
-          closeSaveModal={handleCloseSaveModal}
-          setShow={setShow}
-          correctPose={correctPose}
-          domWidth={domWidth}
-          domHeight={domHeight}
-          circleX={circleX}
-          circleY={circleY}
-          circleR={circleR}
-          char={char}
-          circleColor="blue"
-          setOffscreenCanvas={setOffscreenCanvas}
-          logDebug={logDebug}
-          /** 수정: cameraFov → 상태값 전달 */
-          cameraFov={cameraFov}
-          calibrationMatrixRef={calibrationMatrixRef}
-          rabbitPosition={rabbitPosition}
-          latestCameraTransformRef={latestCameraTransform}
-        />
+        isIOS ? (
+          <IOSARCanvas
+            xrStoreRef={xrStoreRef}
+            setSessionStarted={setSessionStarted}
+            show={show}
+            modalIsOpen={modalIsOpen}
+            openModal={openModalHandler}
+            closeModal={() => {
+              setIsOpen(false);
+              setShow(false);
+            }}
+            closeSaveModal={handleCloseSaveModal}
+            setShow={setShow}
+            correctPose={correctPose}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            char={char}
+            circleColor="blue"
+            setOffscreenCanvas={setOffscreenCanvas}
+            logDebug={logDebug}
+            cameraFov={cameraFov}
+            calibrationMatrixRef={calibrationMatrixRef}
+            rabbitPosition={rabbitPosition}
+            latestCameraTransformRef={latestCameraTransform}
+            streamRef={streamRef}
+            setIsMount={setIsMount}
+          />
+        ) : (
+          <ARCanvas
+            xrStoreRef={xrStoreRef}
+            setSessionStarted={setSessionStarted}
+            show={show}
+            modalIsOpen={modalIsOpen}
+            openModal={openModalHandler}
+            closeModal={() => {
+              setIsOpen(false);
+              setShow(false);
+            }}
+            closeSaveModal={handleCloseSaveModal}
+            setShow={setShow}
+            correctPose={correctPose}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            char={char}
+            circleColor="blue"
+            setOffscreenCanvas={setOffscreenCanvas}
+            logDebug={logDebug}
+            /** 수정: cameraFov → 상태값 전달 */
+            cameraFov={cameraFov}
+            calibrationMatrixRef={calibrationMatrixRef}
+            rabbitPosition={rabbitPosition}
+            latestCameraTransformRef={latestCameraTransform}
+          />
+        )
       ) : sessionStarted ? (
         <>
           <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
@@ -1050,5 +1080,318 @@ export default function BasicApp() {
         </div>
       )}
     </>
+  );
+}
+
+/* --------------------------------------------------
+   [iOS용] 컴포넌트 (DeviceOrientation 등 별도 분기)
+   -------------------------------------------------- */
+// iOS 전용 DeviceOrientationController (회전값 반전 적용)
+function DeviceOrientationController({ isPermissionGranted }: { isPermissionGranted: boolean }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    function handleOrientation(event: DeviceOrientationEvent) {
+      const { alpha, beta, gamma } = event;
+      const radAlpha = THREE.MathUtils.degToRad(alpha || 0);
+      const radBeta = THREE.MathUtils.degToRad(beta || 0);
+      const radGamma = THREE.MathUtils.degToRad(gamma || 0);
+      // iOS에서는 회전값을 반전하여 적용
+      const euler = new THREE.Euler(-radBeta, -radAlpha, radGamma, 'YXZ');
+      camera.quaternion.setFromEuler(euler);
+    }
+    if (isPermissionGranted) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+    };
+  }, [camera, isPermissionGranted]);
+  return null;
+}
+
+function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
+  const { gl, camera, scene } = useThree();
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (glRef.current) {
+      glRef.current.camera = camera;
+      glRef.current.scene = scene;
+      glRef.current.gl = gl;
+    }
+  });
+  useEffect(() => {
+    if (gl) {
+      glRef.current = { gl, camera, scene };
+      addGl(glRef.current);
+    }
+  }, [camera, gl, glRef, scene]);
+  // iOS에서는 센서(DeviceOrientation)로 회전 업데이트되므로, 오브젝트 위치와 고정 회전만 설정
+  useEffect(() => {
+    if (visible && groupRef.current) {
+      groupRef.current.position.set(
+        rabbitPosition[0] + cposition.x,
+        rabbitPosition[1] + cposition.y,
+        rabbitPosition[2] + cposition.z
+      );
+      groupRef.current.rotation.set(0, -Math.PI / 4, 0);
+    }
+  }, [visible, rabbitPosition, cposition]);
+  return (
+    <>
+      <ambientLight intensity={3} />
+      <Suspense fallback={null}>
+        <group
+          ref={groupRef}
+          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
+          rotation={[0, -Math.PI / 4, 0]}
+          scale={[0.5, 0.5, 0.5]}
+          visible={visible}
+        >
+          {visible &&
+            (char === 'moons' ? (
+              <Box
+                sposition={[sposition.x, sposition.y, sposition.z]}
+                oposition={[oposition.x, oposition.y, oposition.z]}
+                sscale={scale}
+                on
+                onRenderEnd={() => {}}
+              />
+            ) : (
+              <Tree oposition={[oposition.x, oposition.y, oposition.z]} sscale={scale} on onRenderEnd={() => {}} />
+            ))}
+        </group>
+      </Suspense>
+    </>
+  );
+}
+
+function UIOverlayIOS({
+  openModal,
+  setShow,
+  domWidth,
+  domHeight,
+  circleX,
+  circleY,
+  circleR,
+  correctPose,
+  char,
+}: UIOverlayProps) {
+  const [init, setInit] = useState(false);
+  const [radius, setRadius] = useState(circleR);
+  const [scale, setScale] = useState(1);
+  const bind = usePinch((state) => {
+    if (char === 'moons') {
+      setRadius(circleR * state.offset[0]);
+    } else {
+      setScale(scale * state.offset[0]);
+    }
+  });
+  return (
+    <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
+      <button
+        style={{
+          position: 'fixed',
+          bottom: '65px',
+          left: '24px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 99999,
+        }}
+        onClick={() => {
+          window.location.href = 'https://gamy-six.vercel.app/test';
+        }}
+      >
+        <Back />
+      </button>
+      <button
+        style={{
+          position: 'fixed',
+          bottom: '48px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'transparent',
+          border: 'none',
+          padding: '1rem',
+          zIndex: 99999,
+        }}
+        onClick={openModal}
+      >
+        <Capture />
+      </button>
+      <div
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      >
+        <svg width={domWidth} height={domHeight}>
+          <circle
+            cx={circleX}
+            cy={circleY}
+            r={radius}
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeDasharray="4, 4"
+          />
+        </svg>
+      </div>
+      <Button
+        onClick={() => {
+          if (!init) setInit(true);
+          correctPose();
+          setShow(false);
+          setTimeout(() => setShow(true), 0);
+        }}
+        title={init ? '토끼 다시 부르기' : '토끼 부르기'}
+        className="z-[9999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+      />
+    </div>
+  );
+}
+
+function IOSARCanvasCore(props: any) {
+  const { latestCameraTransformRef, orientationEnabled } = props;
+  const initialValues = useMemo(() => {
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (error) {
+        console.error('Leva parse failed:', error);
+      }
+    }
+    return {
+      oposition: { x: 0, y: 0, z: 0 },
+      sposition: { x: 0, y: 0, z: 0 },
+      cposition: { x: 0, y: 0, z: 0 },
+      sscale: 0.5,
+    };
+  }, []);
+  const { oposition, sposition, cposition } = useControls({
+    oposition: { value: initialValues.oposition, step: 0.1 },
+    sposition: { value: initialValues.sposition, step: 0.1 },
+    cposition: { value: initialValues.cposition, step: 0.1 },
+  });
+  const { sscale } = useControls({ sscale: initialValues.sscale || 0.5 });
+  useEffect(() => {
+    localStorage.setItem('levaValues', JSON.stringify({ oposition, sposition, cposition, sscale }));
+  }, [oposition, sposition, cposition, sscale]);
+  return (
+    <>
+      <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
+      <DeviceOrientationController isPermissionGranted={orientationEnabled} />
+      <SceneIOS
+        visible={props.show}
+        glRef={props.glRef}
+        addGl={(gl: any) => {
+          props.glRef.current = gl;
+        }}
+        calibrationMatrixRef={props.calibrationMatrixRef}
+        rabbitPosition={props.rabbitPosition}
+        sposition={sposition}
+        oposition={oposition}
+        cposition={cposition}
+        scale={sscale}
+        char={props.char}
+      />
+    </>
+  );
+}
+
+function IOSARCanvas(props: any) {
+  const [, setInit] = useState(false);
+  const glRef = useRef<any>(null);
+  const latestCameraTransformRef = props.latestCameraTransformRef;
+  const [orientationEnabled, setOrientationEnabled] = useState(false);
+  const requestDeviceOrientation = async () => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const response = await (DeviceOrientationEvent as any).requestPermission();
+        if (response === 'granted') {
+          setOrientationEnabled(true);
+          props.logDebug('DeviceOrientation permission granted (iOS).');
+        } else {
+          props.logDebug('DeviceOrientation permission not granted.');
+        }
+      } catch (err) {
+        console.error('DeviceOrientation permission error:', err);
+      }
+    } else {
+      setOrientationEnabled(true);
+    }
+  };
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <BackgroundVideo streamRef={props.streamRef} setIsMount={props.setIsMount} logDebug={props.logDebug} />
+      <Canvas
+        id="three-canvas"
+        style={{ width: '100vw', height: '100vh', background: 'transparent', position: 'relative', zIndex: 10 }}
+        gl={{ alpha: true, preserveDrawingBuffer: true }}
+        camera={{ fov: 30 }}
+        onCreated={(state) => {
+          state.gl.setPixelRatio(window.devicePixelRatio);
+          state.gl.setSize(window.innerWidth, window.innerHeight);
+          setInit(true);
+          props.logDebug('Canvas created, init set to true (iOS version).');
+          const offscreen = document.createElement('canvas');
+          offscreen.width = Math.floor(window.innerWidth * window.devicePixelRatio);
+          offscreen.height = Math.floor(window.innerHeight * window.devicePixelRatio);
+          props.setOffscreenCanvas(offscreen);
+          props.logDebug('Offscreen canvas created in IOSARCanvas.');
+        }}
+        events={noEvents}
+      >
+        <IOSARCanvasCore
+          {...props}
+          glRef={glRef}
+          latestCameraTransformRef={latestCameraTransformRef}
+          orientationEnabled={orientationEnabled}
+        />
+      </Canvas>
+      <UIOverlayIOS
+        modalIsOpen={props.modalIsOpen}
+        fotoUrl={''}
+        correctPose={() => props.correctPose(glRef.current)}
+        openModal={() => props.openModal(glRef.current)}
+        closeModal={props.closeModal}
+        closeSaveModal={props.closeSaveModal}
+        show={props.show}
+        setShow={props.setShow}
+        domWidth={props.domWidth}
+        domHeight={props.domHeight}
+        circleX={props.circleX}
+        circleY={props.circleY}
+        circleR={props.circleR}
+        circleColor={props.circleColor}
+        cameraFov={props.cameraFov}
+        char={props.char}
+      />
+      <div style={{ position: 'fixed', top: 0, zIndex: 99999999 }}>
+        <Leva collapsed={false} />
+      </div>
+      {!orientationEnabled && (
+        <button
+          onClick={requestDeviceOrientation}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999999,
+            padding: '0.5rem 1rem',
+            background: '#fff',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+          }}
+        >
+          Enable Device Orientation
+        </button>
+      )}
+    </div>
   );
 }
