@@ -856,10 +856,13 @@ export default function BasicApp() {
     }, 2000);
   };
 
+  // BasicApp (또는 해당 상위 컴포넌트) 내에서
+  const [resetTrigger, setResetTrigger] = useState(0);
+
   // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
-    if (!glRefObj) return;
-    if (latestCameraTransform.current) {
+    if (isIOS) {
+      if (!glRefObj) return;
       let pos = { x: 0, y: 0, z: 0 };
       const saved = localStorage.getItem('levaValues');
       if (saved) {
@@ -870,6 +873,8 @@ export default function BasicApp() {
           console.error('levaValues parse fail:', error);
         }
       }
+      // 기존에 저장된 카메라 위치와 오프셋 등을 기반으로 새로운 토끼 위치 계산
+      // 예시:
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
       const offset = new THREE.Vector3(0, 0, -11);
@@ -878,6 +883,31 @@ export default function BasicApp() {
 
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
       logDebug('Rabbit position updated:', newPosition);
+
+      // 토끼 부르기마다 resetTrigger 증가하여 DeviceOrientationController를 리셋
+      setResetTrigger((prev) => prev + 1);
+    } else {
+      if (!glRefObj) return;
+      if (latestCameraTransform.current) {
+        let pos = { x: 0, y: 0, z: 0 };
+        const saved = localStorage.getItem('levaValues');
+        if (saved) {
+          try {
+            const s = JSON.parse(saved);
+            pos = s.cposition;
+          } catch (error) {
+            console.error('levaValues parse fail:', error);
+          }
+        }
+        const cameraPos = latestCameraTransform.current.position.clone();
+        const cameraQuat = latestCameraTransform.current.quaternion.clone();
+        const offset = new THREE.Vector3(0, 0, -11);
+        offset.applyQuaternion(cameraQuat);
+        const newPosition = cameraPos.add(offset);
+
+        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+        logDebug('Rabbit position updated:', newPosition);
+      }
     }
   };
 
@@ -987,6 +1017,7 @@ export default function BasicApp() {
             closeSaveModal={handleCloseSaveModal}
             setShow={setShow}
             correctPose={correctPose}
+            resetTrigger={resetTrigger} // 여기서 전달
             domWidth={domWidth}
             domHeight={domHeight}
             circleX={circleX}
@@ -1086,16 +1117,21 @@ export default function BasicApp() {
 
 interface DeviceOrientationControllerProps {
   isPermissionGranted: boolean;
-  target: THREE.Vector3; // 대상 오브젝트의 위치 (예: 토끼의 위치)
-  distance?: number; // 대상과 카메라 사이의 고정 거리 (기본값 10)
+  target: THREE.Vector3; // 대상 오브젝트의 위치 (예: 토끼 위치)
+  distance?: number; // 대상과 카메라 사이의 고정 거리 (기본값 -30)
+  resetTrigger: number; // 토끼 호출 시마다 바뀌는 값
 }
 
-function DeviceOrientationController({ isPermissionGranted, target, distance = -30 }: DeviceOrientationControllerProps) {
+function DeviceOrientationController({
+  isPermissionGranted,
+  target,
+  distance = -30,
+  resetTrigger,
+}: DeviceOrientationControllerProps) {
   const { camera } = useThree();
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      // 센서로부터 얻은 각도(degree)를 라디안으로 변환
       const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
       const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
       const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
@@ -1104,16 +1140,11 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = -
       const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
       const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
 
-      // 보정: iOS 센서 좌표계는 up이 -Z로 되어 있으므로,
-      // X축을 기준으로 +90° 회전시키면 (0,0,-1)이 (0,1,0)이 되어 three.js 기본 up과 일치합니다.
+      // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
       const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-      // 센서 쿼터니언에 보정 쿼터니언을 곱함 (순서는 deviceQuaternion * correctionQuaternion)
       deviceQuaternion.multiply(correctionQuaternion);
 
-      // 카메라의 up 벡터를 three.js의 기본값 (0,1,0)으로 설정합니다.
       camera.up.set(0, 1, 0);
-
-      // 보정된 쿼터니언을 카메라에 적용
       camera.quaternion.copy(deviceQuaternion);
     }
 
@@ -1123,9 +1154,11 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = -
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-  }, [camera, isPermissionGranted]);
+    // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
+  }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
+    // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
@@ -1311,7 +1344,11 @@ function IOSARCanvasCore(props: any) {
   return (
     <>
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
-      <DeviceOrientationController target={props.rabbitPosition} isPermissionGranted={orientationEnabled} />
+      <DeviceOrientationController
+        resetTrigger={props.resetTrigger} // 여기서 전달
+        target={props.rabbitPosition}
+        isPermissionGranted={orientationEnabled}
+      />
       <SceneIOS
         visible={props.show}
         glRef={props.glRef}
@@ -1376,6 +1413,7 @@ function IOSARCanvas(props: any) {
         <IOSARCanvasCore
           {...props}
           glRef={glRef}
+          resetTrigger={props.resetTrigger} // 여기서 전달
           latestCameraTransformRef={latestCameraTransformRef}
           orientationEnabled={orientationEnabled}
         />
