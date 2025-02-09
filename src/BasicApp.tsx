@@ -1125,7 +1125,7 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   target,
-  distance = -30,
+  distance = -20,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
@@ -1165,9 +1165,7 @@ function DeviceOrientationController({
   }, [camera, isPermissionGranted, resetTrigger]); // resetTrigger 변경 시에도 재설정
 
   useFrame(() => {
-    const targetVec = Array.isArray(target)
-      ? new THREE.Vector3(target[0], target[1], target[2])
-      : target;
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
@@ -1397,6 +1395,10 @@ function IOSARCanvas(props: any) {
       setOrientationEnabled(true);
     }
   };
+
+  useEffect(() => {
+    if (!orientationEnabled) requestDeviceOrientation();
+  }, []);
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <BackgroundVideo streamRef={props.streamRef} setIsMount={props.setIsMount} logDebug={props.logDebug} />
@@ -1447,24 +1449,6 @@ function IOSARCanvas(props: any) {
       <div style={{ position: 'fixed', top: 0, zIndex: 99999999 }}>
         <Leva collapsed={false} />
       </div>
-      {!orientationEnabled && (
-        <button
-          onClick={requestDeviceOrientation}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 999999,
-            padding: '0.5rem 1rem',
-            background: '#fff',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-          }}
-        >
-          Enable Device Orientation
-        </button>
-      )}
     </div>
   );
 }
