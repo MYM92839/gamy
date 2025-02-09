@@ -412,7 +412,18 @@ function ARCanvasCore(props: any) {
 
   // LEVA 세팅
   const initialValues = useMemo(() => {
-    if (ox || oy || oz || cx || cy || cz || sx || sy || sz) {
+    if (
+      ox !== undefined ||
+      oy !== undefined ||
+      oz !== undefined ||
+      cx !== undefined ||
+      cy !== undefined ||
+      cz !== undefined ||
+      sx !== undefined ||
+      sy !== undefined ||
+      sz !== undefined ||
+      ss !== undefined
+    ) {
       return {
         oposition: { x: ox, y: oy, z: oz },
         sposition: { x: sx, y: sy, z: sz },
@@ -1473,7 +1484,18 @@ function IOSARCanvasCore(props: any) {
 
   const initialValues = useMemo(() => {
     const saved = localStorage.getItem('levaValues');
-    if (ox || oy || oz || cx || cy || cz || sx || sy || sz || ss) {
+    if (
+      ox !== undefined ||
+      oy !== undefined ||
+      oz !== undefined ||
+      cx !== undefined ||
+      cy !== undefined ||
+      cz !== undefined ||
+      sx !== undefined ||
+      sy !== undefined ||
+      sz !== undefined ||
+      ss !== undefined
+    ) {
       return {
         oposition: { x: ox, y: oy, z: oz },
         sposition: { x: sx, y: sy, z: sz },
