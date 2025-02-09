@@ -14,11 +14,34 @@ export default function PhotoRabbitT() {
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
 
+  const requestDeviceOrientation = async () => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const response = await (DeviceOrientationEvent as any).requestPermission();
+        if (response === 'granted') {
+          // setOrientationEnabled(true);
+          // props.logDebug('DeviceOrientation permission granted (iOS).');
+        } else {
+          alert('WHY');
+          // props.logDebug('DeviceOrientation permission not granted.');
+        }
+      } catch (err) {
+        alert('WHY2 :' + err);
+
+        console.error('DeviceOrientation permission error:', err);
+      }
+    } else {
+      // setOrientationEnabled(true);
+    }
+  };
+
   return (
     <div className="w-full h-full relative">
       <PhotoPara title={`달조명을 배경으로 토끼와 함께 \n 사진을 찍을 수 있어요!`}>
-        <Link to={`/pl/moons?ox=${ox}&oy=${oy}&oz=${oz}&ox=${cx}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}`}>
-          <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={() => {}} />
+        <Link
+          to={`/pl/moons?ox=${ox}&oy=${oy}&oz=${oz}&ox=${cx}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}`}
+        >
+          <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={requestDeviceOrientation} />
         </Link>
       </PhotoPara>
     </div>

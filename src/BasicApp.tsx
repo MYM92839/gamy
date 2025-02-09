@@ -1368,36 +1368,36 @@ function IOSARCanvasCore(props: any) {
 }
 
 function IOSARCanvas(props: any) {
-  const [init, setInit] = useState(false);
+  const [, setInit] = useState(false);
   const glRef = useRef<any>(null);
   const latestCameraTransformRef = props.latestCameraTransformRef;
-  const [orientationEnabled, setOrientationEnabled] = useState(false);
-  const requestDeviceOrientation = async () => {
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      try {
-        const response = await (DeviceOrientationEvent as any).requestPermission();
-        if (response === 'granted') {
-          setOrientationEnabled(true);
-          props.logDebug('DeviceOrientation permission granted (iOS).');
-        } else {
-          alert('WHY');
-          props.logDebug('DeviceOrientation permission not granted.');
-        }
-      } catch (err) {
-        alert('WHY2 :' + err);
+  const [orientationEnabled] = useState(true);
+  // const requestDeviceOrientation = async () => {
+  //   if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+  //     try {
+  //       const response = await (DeviceOrientationEvent as any).requestPermission();
+  //       if (response === 'granted') {
+  //         setOrientationEnabled(true);
+  //         props.logDebug('DeviceOrientation permission granted (iOS).');
+  //       } else {
+  //         alert('WHY');
+  //         props.logDebug('DeviceOrientation permission not granted.');
+  //       }
+  //     } catch (err) {
+  //       alert('WHY2 :' + err);
 
-        console.error('DeviceOrientation permission error:', err);
-      }
-    } else {
-      setOrientationEnabled(true);
-    }
-  };
+  //       console.error('DeviceOrientation permission error:', err);
+  //     }
+  //   } else {
+  //     setOrientationEnabled(true);
+  //   }
+  // };
 
-  useEffect(() => {
-    if (init && !orientationEnabled) {
-      requestDeviceOrientation();
-    }
-  }, [init]);
+  // useEffect(() => {
+  //   if (init && !orientationEnabled) {
+  //     requestDeviceOrientation();
+  //   }
+  // }, [init]);
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
