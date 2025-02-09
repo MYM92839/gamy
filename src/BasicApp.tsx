@@ -1090,7 +1090,11 @@ interface DeviceOrientationControllerProps {
   distance?: number; // 대상과 카메라 사이의 고정 거리 (기본값 10)
 }
 
-function DeviceOrientationController({ isPermissionGranted, target, distance = 10 }: DeviceOrientationControllerProps) {
+function DeviceOrientationController({
+  isPermissionGranted,
+  target,
+  distance = 10,
+}: DeviceOrientationControllerProps) {
   const { camera } = useThree();
 
   useEffect(() => {
@@ -1104,14 +1108,17 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
       const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
       const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
 
-      // 보정: iOS 센서 좌표계와 three.js 좌표계 차이를 보정하기 위해
-      // X축을 기준으로 90도 회전하는 보정 쿼터니언 생성
-      const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-      // 센서 쿼터니언에 보정 쿼터니언을 곱함 (순서에 주의)
+      // 보정: iOS 센서 좌표계는 up이 -Z로 되어 있으므로,
+      // X축을 기준으로 +90° 회전시키면 (0,0,-1)이 (0,1,0)이 되어 three.js 기본 up과 일치합니다.
+      const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        Math.PI / 2
+      );
+      // 센서 쿼터니언에 보정 쿼터니언을 곱함 (순서는 deviceQuaternion * correctionQuaternion)
       deviceQuaternion.multiply(correctionQuaternion);
 
-      // 카메라의 up 벡터를 (0, 0, 1)로 설정하여 three.js 환경과 맞춥니다.
-      camera.up.set(0, 0, 1);
+      // 카메라의 up 벡터를 three.js의 기본값 (0,1,0)으로 설정합니다.
+      camera.up.set(0, 1, 0);
 
       // 보정된 쿼터니언을 카메라에 적용
       camera.quaternion.copy(deviceQuaternion);
@@ -1126,7 +1133,9 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
   }, [camera, isPermissionGranted]);
 
   useFrame(() => {
-    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    const targetVec = Array.isArray(target)
+      ? new THREE.Vector3(target[0], target[1], target[2])
+      : target;
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
@@ -1135,6 +1144,7 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
 
   return null;
 }
+
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
