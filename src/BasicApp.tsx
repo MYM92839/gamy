@@ -1087,32 +1087,27 @@ export default function BasicApp() {
    [iOS용] 컴포넌트 (DeviceOrientation 등 별도 분기)
    -------------------------------------------------- */
 // iOS 전용 DeviceOrientationController (회전값 반전 적용)
-function DeviceOrientationController({ isPermissionGranted }: { isPermissionGranted: boolean }) {
-  const { camera } = useThree();
 
-  // 보정을 위한 상수 설정 (Three.js DeviceOrientationControls 참고)
-  const zee = new THREE.Vector3(0, 0, 1);
-  const euler = new THREE.Euler();
-  const q0 = new THREE.Quaternion(); // 화면 회전 보정용 (초기값)
-  // q1는 기기가 "기본" 상태(위쪽이 위로 보이는 상태)에서의 보정을 위해 사용합니다.
-  const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -π/2 around the x-axis
+interface DeviceOrientationControllerProps {
+  isPermissionGranted: boolean;
+  target: THREE.Vector3; // 대상 오브젝트의 위치 (예: 토끼의 위치)
+  distance?: number; // 대상과 카메라 사이의 고정 거리 (기본값 10)
+}
+
+function DeviceOrientationController({ isPermissionGranted, target, distance = 10 }: DeviceOrientationControllerProps) {
+  const { camera } = useThree();
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
+      // deviceorientation 이벤트에서 얻은 값(degrees)을 라디안으로 변환
       const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
       const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
       const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
-      // 화면 회전(orientation) 값 (portrait/landscape) 보정
-      const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
-      // 기기의 회전값을 Euler 각으로 변환 (YXZ 순서)
-      euler.set(beta, alpha, -gamma, 'YXZ');
-
-      // 카메라 쿼터니언을 Euler로부터 설정하고, 보정용 쿼터니언을 곱해준다.
+      // Euler 각: YXZ 순서 (디바이스 회전 값 그대로 사용)
+      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+      // 카메라의 회전을 디바이스 회전으로 설정
       camera.quaternion.setFromEuler(euler);
-      camera.quaternion.multiply(q1);
-      // 화면 회전 보정: 현재 화면의 orientation(회전)값을 적용
-      camera.quaternion.multiply(q0.setFromAxisAngle(zee, -orient));
     }
 
     if (isPermissionGranted) {
@@ -1122,6 +1117,18 @@ function DeviceOrientationController({ isPermissionGranted }: { isPermissionGran
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
   }, [camera, isPermissionGranted]);
+
+  // 매 프레임마다 카메라의 위치를 대상의 위치와 카메라의 회전에 기반하여 업데이트합니다.
+  useFrame(() => {
+    // 로컬 공간에서 (0, 0, distance) 벡터를 생성 (카메라로부터 대상까지의 오프셋)
+    const offset = new THREE.Vector3(0, 0, distance);
+    // 카메라의 현재 회전(쿼터니언)을 적용하여 월드 오프셋을 계산
+    offset.applyQuaternion(camera.quaternion);
+    // 카메라의 위치를 대상의 위치 + 오프셋으로 설정
+    camera.position.copy(target).add(offset);
+    // 항상 대상을 바라보도록 설정
+    camera.lookAt(target);
+  });
 
   return null;
 }
@@ -1301,7 +1308,7 @@ function IOSARCanvasCore(props: any) {
   return (
     <>
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
-      <DeviceOrientationController isPermissionGranted={orientationEnabled} />
+      <DeviceOrientationController target={props.rabbitPosition} isPermissionGranted={orientationEnabled} />
       <SceneIOS
         visible={props.show}
         glRef={props.glRef}
