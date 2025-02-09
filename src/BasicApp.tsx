@@ -215,9 +215,9 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
       if (groupRef.current && glRef.current && glRef.current.camera) {
         groupRef.current.lookAt(glRef.current.camera.position);
 
-        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        groupRef.current.quaternion.multiply(offsetQuat);
+        // const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+        // const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+        // groupRef.current.quaternion.multiply(offsetQuat);
       }
     }
   }, [visible, camera, rabbitPosition]);
