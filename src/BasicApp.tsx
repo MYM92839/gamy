@@ -1057,7 +1057,7 @@ export default function BasicApp() {
       const img = new Image();
       img.onload = () => {
         const params = calcCover(img.width, img.height, offscreenCanvas.width, offscreenCanvas.height);
-        ctx.filter = 'brightness(2)';
+        ctx.filter = 'brightness(1.7)';
         ctx.drawImage(img, params.offsetX, params.offsetY, params.drawWidth, params.drawHeight);
         ctx.filter = 'none';
       };
