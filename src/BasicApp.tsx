@@ -1135,35 +1135,37 @@ function DeviceOrientationController({
       const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
       const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
       const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
-
-      // 센서 값으로 Euler 생성 (YXZ 순서)
       const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
       const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
-
-      // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
       const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       deviceQuaternion.multiply(correctionQuaternion);
-
       camera.up.set(0, 1, 0);
       camera.quaternion.copy(deviceQuaternion);
     }
-
     if (isPermissionGranted) {
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-    // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
   }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
-    // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
-    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    // target이 배열이면 Vector3로 변환
+    const targetVec = Array.isArray(target)
+      ? new THREE.Vector3(target[0], target[1], target[2])
+      : target;
+    // 여기서는 모델이 바닥에 붙어 있도록, 카메라의 y 좌표는 target의 y로 고정합니다.
+    // 그리고 offset 계산은 오직 수평(yaw) 회전만 반영하도록 합니다.
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    euler.setFromQuaternion(camera.quaternion);
+    const yaw = euler.y;
+    const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
     const offset = new THREE.Vector3(0, 0, distance);
-    offset.applyQuaternion(camera.quaternion);
+    offset.applyQuaternion(yawQuat);
     camera.position.copy(targetVec).add(offset);
-    // camera.lookAt(targetVec);
+    camera.position.y = targetVec.y; // y축 고정
+    // camera.lookAt(targetVec); // 제거하여 센서 회전 유지
   });
 
   return null;
