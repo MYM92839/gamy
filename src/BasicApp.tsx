@@ -1071,6 +1071,7 @@ export default function BasicApp() {
         // 1. File System Access API 사용 (지원되는 경우)
         if ((window as any).showSaveFilePicker) {
           const opts = {
+            startIn: 'pictures',
             suggestedName: `capture.jpeg`,
             types: [
               {
