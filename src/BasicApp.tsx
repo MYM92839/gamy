@@ -855,7 +855,6 @@ export default function BasicApp() {
       setMount(true);
     }, 2000);
   };
-  const initialCameraTransform = useRef<{ position: THREE.Vector3; quaternion: THREE.Quaternion } | null>(null);
 
   // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
