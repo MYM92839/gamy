@@ -1384,7 +1384,7 @@ function IOSARCanvas(props: any) {
           props.logDebug('DeviceOrientation permission not granted.');
         }
       } catch (err) {
-        alert('WHY2');
+        alert('WHY2 :' + err);
 
         console.error('DeviceOrientation permission error:', err);
       }
