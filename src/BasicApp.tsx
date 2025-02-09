@@ -510,9 +510,9 @@ function ARCanvasCore(props: any) {
   });
 
   useEffect(() => {
-    const data = { oposition, sposition, cposition, sscale };
+    const data = { oposition, sposition, cposition, sscale, cscale };
     localStorage.setItem('levaValues', JSON.stringify(data));
-  }, [oposition, sposition, cposition, sscale]);
+  }, [oposition, sposition, cposition, sscale, cscale]);
 
   return (
     <>
@@ -1633,8 +1633,8 @@ function IOSARCanvasCore(props: any) {
     cscale: initialValues.cscale || 1,
   });
   useEffect(() => {
-    localStorage.setItem('levaValues', JSON.stringify({ oposition, sposition, cposition, sscale }));
-  }, [oposition, sposition, cposition, sscale]);
+    localStorage.setItem('levaValues', JSON.stringify({ oposition, sposition, cposition, sscale, cscale }));
+  }, [oposition, sposition, cposition, sscale, cscale]);
   return (
     <>
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
