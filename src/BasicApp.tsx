@@ -1092,68 +1092,52 @@ interface DeviceOrientationControllerProps {
 
 function DeviceOrientationController({ isPermissionGranted, target, distance = 10 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
-  // sensor의 pitch와 roll만 저장하는 ref (yaw는 나중에 lookAt에서 결정)
-  const sensorPitchRollRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      // 센서 값(degree)을 라디안으로 변환
-      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0; // yaw 원래값
-      const beta  = event.beta  ? THREE.MathUtils.degToRad(event.beta)  : 0; // pitch 원래값
-      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0; // roll 원래값
+      // 센서의 alpha, beta, gamma (단위: degree)를 라디안으로 변환
+      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;  // 원래 yaw 값
+      const beta  = event.beta  ? THREE.MathUtils.degToRad(event.beta)  : 0;  // 원래 pitch 값
+      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;  // 원래 roll 값
 
-      // 센서 값으로 Euler 생성 (YXZ 순서)
+      // Euler 생성 (YXZ 순서: beta = pitch, alpha = yaw, -gamma = roll)
       const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
       const sensorQuat = new THREE.Quaternion().setFromEuler(euler);
 
-      // iOS 센서 좌표계 보정을 위해 X축을 기준으로 +90° 회전
+      // iOS 센서 좌표계에서는 기본적으로 up이 -Z이므로,
+      // X축을 기준으로 +90° 회전을 적용해 three.js의 up (0,1,0)과 일치시킵니다.
       const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       sensorQuat.multiply(correctionQuat);
 
-      // sensorQuat를 Euler로 변환하고, 여기서 pitch와 roll만 저장 (yaw는 무시)
-      const sensorEuler = new THREE.Euler().setFromQuaternion(sensorQuat, 'YXZ');
-      sensorPitchRollRef.current.x = sensorEuler.x; // pitch
-      sensorPitchRollRef.current.z = sensorEuler.z; // roll
-      // yaw는 lookAt에서 결정하므로 0으로 둡니다.
-      sensorPitchRollRef.current.y = 0;
+      // 센서 값에 따른 최종 카메라 회전을 설정합니다.
+      camera.quaternion.copy(sensorQuat);
+      camera.up.set(0, 1, 0);
     }
+
     if (isPermissionGranted) {
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-  }, [isPermissionGranted]);
+  }, [camera, isPermissionGranted]);
 
   useFrame(() => {
-    // 대상(토끼) 위치
-    const targetVec = Array.isArray(target)
-      ? new THREE.Vector3(...target)
-      : target;
+    // target: 토끼의 고정된 세계 좌표 (예: [x, y, z] 또는 Vector3)
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(...target) : target;
 
-    // 먼저 lookAt으로 대상 쪽의 yaw(방향)를 맞춥니다.
-    camera.lookAt(targetVec);
-    // lookAt 후, 카메라의 현재 Euler 값을 추출 (이때 yaw는 대상 방향으로 설정됨)
-    const currentEuler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-    const currentYaw = currentEuler.y;
+    // 센서에 의해 결정된 카메라의 forward 벡터(기본적으로 (0,0,-1))를 계산합니다.
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
 
-    // lookAt에서 결정된 yaw는 그대로 유지하고, sensor의 pitch와 roll을 덮어씁니다.
-    currentEuler.x = sensorPitchRollRef.current.x; // sensor의 pitch 적용
-    currentEuler.z = sensorPitchRollRef.current.z; // sensor의 roll 적용
-    camera.quaternion.setFromEuler(currentEuler);
-
-    // offset 계산은 오직 yaw만 사용하도록:
-    // lookAt에서 설정된 yaw만 남기기 위해 pitch와 roll 0으로 만든 Euler
-    const yawEuler = new THREE.Euler(0, currentYaw, 0, 'YXZ');
-    const yawQuat = new THREE.Quaternion().setFromEuler(yawEuler);
-    const offset = new THREE.Vector3(0, 0, distance).applyQuaternion(yawQuat);
-
-    // 카메라 위치 = 대상 위치에서 offset만큼 떨어진 곳 (즉, 대상의 정면)
-    camera.position.copy(targetVec).add(offset);
+    // 카메라의 위치는 대상 위치에서 forward 방향의 반대쪽(즉, target - forward * distance)
+    // 로 계산하여, 대상(토끼)는 고정된 위치에 있게 됩니다.
+    camera.position.copy(targetVec).sub(forward.multiplyScalar(distance));
+    // 카메라의 orientation은 sensor에 의해 결정되므로 따로 lookAt을 호출하지 않습니다.
   });
 
   return null;
 }
+
 
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
