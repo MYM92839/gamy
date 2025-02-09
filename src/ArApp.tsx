@@ -437,12 +437,12 @@ export function Box({
               material={materials.Motion_Eye_M_LMBT}
               skeleton={nodes.L_EyeBall_GEO.skeleton}
             />
-            <skinnedMesh
+            {/* <skinnedMesh
               name="L_EyeHighLight_GEO"
               geometry={nodes.L_EyeHighLight_GEO.geometry}
               material={materials.Motion_EyeHighLight_M_LMBT}
               skeleton={nodes.L_EyeHighLight_GEO.skeleton}
-            />
+            /> */}
             <skinnedMesh
               name="Lower_gum_GEO"
               geometry={nodes.Lower_gum_GEO.geometry}
@@ -461,12 +461,12 @@ export function Box({
               material={materials.Motion_Eye_M_LMBT}
               skeleton={nodes.R_EyeBall_GEO.skeleton}
             />
-            <skinnedMesh
+            {/* <skinnedMesh
               name="R_EyeHighLight_GEO"
               geometry={nodes.R_EyeHighLight_GEO.geometry}
               material={materials.Motion_EyeHighLight_M_LMBT}
               skeleton={nodes.R_EyeHighLight_GEO.skeleton}
-            />
+            /> */}
             <skinnedMesh
               name="Rabbit_Xgen_GEO"
               geometry={nodes.Rabbit_Xgen_GEO.geometry}

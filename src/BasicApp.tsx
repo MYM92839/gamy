@@ -1057,7 +1057,9 @@ export default function BasicApp() {
       const img = new Image();
       img.onload = () => {
         const params = calcCover(img.width, img.height, offscreenCanvas.width, offscreenCanvas.height);
+        ctx.filter = 'brightness(2)';
         ctx.drawImage(img, params.offsetX, params.offsetY, params.drawWidth, params.drawHeight);
+        ctx.filter = 'none';
       };
       img.src = imgData;
     }
@@ -1080,10 +1082,7 @@ export default function BasicApp() {
           const handle = await (window as any).showSaveFilePicker(opts);
           const writable = await handle.createWritable();
           // 만약 foto의 타입이 올바르지 않다면, 올바른 MIME 타입을 지정한 Blob으로 감싸줍니다.
-          const blob =
-            foto.type && foto.type !== ''
-              ? foto
-              : new Blob([foto], { type: 'image/png' });
+          const blob = foto.type && foto.type !== '' ? foto : new Blob([foto], { type: 'image/png' });
           await writable.write(blob);
           await writable.close();
         }
@@ -1094,11 +1093,7 @@ export default function BasicApp() {
             files: [new File([foto], 'capture.png', { type: foto.type || 'image/png' })],
           })
         ) {
-          const file = new File(
-            [foto],
-            `capture-${new Date().getTime()}.png`,
-            { type: foto.type || 'image/png' }
-          );
+          const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: foto.type || 'image/png' });
           await navigator.share({
             files: [file],
             title: 'My Captured Image',
