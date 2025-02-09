@@ -688,8 +688,6 @@ const ModalU = function ({
       const threeCSSHeight = offscreenCanvas!.height / dpr;
       const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
 
-      ctx.filter = 'brightness(2)';
-
       // 3D도 동일하게 manualShiftY 적용
       ctx.drawImage(
         offscreenCanvas!,
@@ -698,7 +696,6 @@ const ModalU = function ({
         threeParams.drawWidth,
         threeParams.drawHeight
       );
-      ctx.filter = 'none';
 
       compositeCanvas.toBlob((blob: Blob | null) => {
         if (blob) {
