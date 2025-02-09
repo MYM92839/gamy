@@ -858,26 +858,57 @@ export default function BasicApp() {
 
   // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
-    if (!glRefObj) return;
-    if (latestCameraTransform.current) {
-      let pos = { x: 0, y: 0, z: 0 };
-      const saved = localStorage.getItem('levaValues');
-      if (saved) {
-        try {
-          const s = JSON.parse(saved);
-          pos = s.cposition;
-        } catch (error) {
-          console.error('levaValues parse fail:', error);
+    if (isIOS) {
+      if (!glRefObj) return;
+      if (latestCameraTransform.current) {
+        let pos = { x: 0, y: 0, z: 0 };
+        const saved = localStorage.getItem('levaValues');
+        if (saved) {
+          try {
+            const s = JSON.parse(saved);
+            pos = s.cposition;
+          } catch (error) {
+            console.error('levaValues parse fail:', error);
+          }
         }
-      }
-      const cameraPos = latestCameraTransform.current.position.clone();
-      const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, -11);
-      offset.applyQuaternion(cameraQuat);
-      const newPosition = cameraPos.add(offset);
+        const cameraPos = latestCameraTransform.current.position.clone();
+        const cameraQuat = latestCameraTransform.current.quaternion.clone();
 
-      setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-      logDebug('Rabbit position updated:', newPosition);
+        // 카메라의 forward 벡터 계산 (기본 forward: (0, 0, -1))
+        let forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuat);
+        // 수직 성분(피치)을 제거하여 수평 방향만 사용
+        forward.y = 0;
+        forward.normalize();
+
+        // 원하는 거리만큼 앞쪽으로 offset 계산 (여기서는 11)
+        const offset = forward.multiplyScalar(11);
+        const newPosition = cameraPos.clone().add(offset);
+
+        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+        logDebug('Rabbit position updated:', newPosition);
+      }
+    } else {
+      if (!glRefObj) return;
+      if (latestCameraTransform.current) {
+        let pos = { x: 0, y: 0, z: 0 };
+        const saved = localStorage.getItem('levaValues');
+        if (saved) {
+          try {
+            const s = JSON.parse(saved);
+            pos = s.cposition;
+          } catch (error) {
+            console.error('levaValues parse fail:', error);
+          }
+        }
+        const cameraPos = latestCameraTransform.current.position.clone();
+        const cameraQuat = latestCameraTransform.current.quaternion.clone();
+        const offset = new THREE.Vector3(0, 0, -11);
+        offset.applyQuaternion(cameraQuat);
+        const newPosition = cameraPos.add(offset);
+
+        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+        logDebug('Rabbit position updated:', newPosition);
+      }
     }
   };
 
