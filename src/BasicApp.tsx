@@ -1141,7 +1141,7 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
 
     // 원래 코드와 동일하게 대상 위치에 offset을 더합니다.
     camera.position.copy(targetVec).add(offset);
-    camera.lookAt(targetVec);
+    // camera.lookAt(targetVec);
   });
 
   return null;
