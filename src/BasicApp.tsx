@@ -1093,37 +1093,25 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({ isPermissionGranted, target, distance = 10 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
 
-  // (THREE.DeviceOrientationControls의 로직 참고)
-  const zee = new THREE.Vector3(0, 0, 1);
-  const euler = new THREE.Euler();
-  // q1: X축을 기준으로 -90° 보정 (iOS 센서 좌표계에서 up이 -Z인 것을 보정)
-  const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
-
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      // 센서 값(degree)을 라디안으로 변환
-      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0; // Z축 회전
-      const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;    // X축 회전
-      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0; // Y축 회전
-      // 화면 회전값 (portrait/landscape)
-      const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+      // 센서로부터 얻은 각도(degree)를 라디안으로 변환
+      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+      const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
       // 센서 값으로 Euler 생성 (YXZ 순서)
-      euler.set(beta, alpha, -gamma, 'YXZ');
+      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
       const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
-      // X축 보정: 센서 좌표계에서 up이 -Z이므로, X축을 기준으로 -90° 회전 (q1)
-      deviceQuaternion.multiply(q1);
-      // 화면 방향 보정: 화면의 회전(orient)을 보정
-      deviceQuaternion.multiply(new THREE.Quaternion().setFromAxisAngle(zee, -orient));
 
-      // **문제 1 해결:** extra yaw 보정을 반대 방향(-Math.PI)로 적용하여,
-      // 카메라가 실제 디바이스 방향과 일치하게 하고, 토끼가 정면에 보이도록 함.
-      const extraYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI);
-      deviceQuaternion.multiply(extraYaw);
+      // 보정: iOS 센서 좌표계는 up이 -Z로 되어 있으므로,
+      // X축을 기준으로 +90° 회전시키면 (0,0,-1)이 (0,1,0)이 되어 three.js 기본 up과 일치합니다.
+      const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      deviceQuaternion.multiply(correctionQuaternion);
 
-      camera.quaternion.copy(deviceQuaternion);
-      // 카메라의 up 벡터는 항상 (0,1,0)으로 고정
+      // 원래 코드에서는 extra yaw 보정 없이 그대로 사용합니다.
       camera.up.set(0, 1, 0);
+      camera.quaternion.copy(deviceQuaternion);
     }
 
     if (isPermissionGranted) {
@@ -1135,31 +1123,29 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
   }, [camera, isPermissionGranted]);
 
   useFrame(() => {
-    // 대상(토끼) 위치를 벡터로 변환
     const targetVec = Array.isArray(target)
       ? new THREE.Vector3(target[0], target[1], target[2])
       : target;
 
-    // 카메라의 전체 회전에는 pitch, roll, yaw가 모두 포함되어 있지만,
-    // 여기서는 오직 수평(yaw)만 사용하여 offset을 계산합니다.
+    // 기존에는 전체 카메라 쿼터니언을 사용하여 offset을 계산했는데,
+    // 여기서는 카메라의 회전 중 수평(yaw)만 사용하도록 추출합니다.
     const q = camera.quaternion.clone();
-    const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
-    e.x = 0; // pitch 제거
-    e.z = 0; // roll 제거
-    const yawOnlyQuat = new THREE.Quaternion().setFromEuler(e);
+    const euler = new THREE.Euler().setFromQuaternion(q, 'YXZ');
+    euler.x = 0; // pitch 제거
+    euler.z = 0; // roll 제거
+    const yawOnlyQuat = new THREE.Quaternion().setFromEuler(euler);
 
-    // 기본 forward 벡터 (0, 0, -1)에 yawOnlyQuat 적용 → 수평 forward 방향 계산
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(yawOnlyQuat).normalize();
+    // 기본 forward 벡터 (0, 0, distance)를 yawOnlyQuat로 회전하여 오직 수평 offset만 계산
+    const offset = new THREE.Vector3(0, 0, distance);
+    offset.applyQuaternion(yawOnlyQuat);
 
-    // 대상 기준으로 일정 거리(distance) 만큼 앞쪽(수평)으로 배치
-    const offset = forward.multiplyScalar(distance);
+    // 원래 코드와 동일하게 대상 위치에 offset을 더합니다.
     camera.position.copy(targetVec).add(offset);
-    // camera.lookAt(targetVec)는 센서 회전을 덮어쓰므로 호출하지 않습니다.
+    camera.lookAt(targetVec);
   });
 
   return null;
 }
-
 
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
