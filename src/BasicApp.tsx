@@ -30,6 +30,7 @@ interface SavedObjectData {
   scale: THREE.Vector3;
 }
 
+// SceneProps에 isIOS?: boolean 를 추가하여 분기 처리할 수 있도록 함
 interface SceneProps {
   oposition: any;
   char: string;
@@ -40,7 +41,8 @@ interface SceneProps {
   visible: boolean;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
-  rabbitPosition: [number, number, number]; // 토끼 위치
+  rabbitPosition: [number, number, number]; // AR 오브젝트(예: 토끼)의 위치
+  isIOS?: boolean; // 추가: iOS 분기를 위한 플래그
 }
 
 interface UIOverlayProps {
@@ -86,8 +88,7 @@ let savedObjects: SavedObjectData[] = [];
 let savedCameraMatrix = new THREE.Matrix4();
 
 function extractFovFromProjectionMatrix(mat: Float32Array | number[]) {
-  // mat[5] = 1 / tan(fov/2)
-  const m11 = mat[5];
+  const m11 = mat[5]; // 1/tan(fov/2)
   const verticalFovRad = 2 * Math.atan(1 / m11);
   return (verticalFovRad * 180) / Math.PI;
 }
@@ -180,7 +181,9 @@ function renderSceneForCapture(
 }
 
 /* ---------------- Scene, UIOverlay, CameraUpdater 등 ---------------- */
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale, char }: SceneProps) {
+
+// 원래 웹XR용 기존 로직
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale, char, isIOS = false }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -199,31 +202,39 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
     }
   }, [camera, gl, glRef, scene]);
 
+  // 분기: 웹XR(비‑iOS)에서는 원래의 lookAt 및 그룹 회전 로직을 사용,
+  // iOS에서는 카메라 회전은 센서(DeviceOrientationController)가 처리하도록 하고,
+  // AR 오브젝트의 위치와 고정 회전만 설정합니다.
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
-      camera.updateProjectionMatrix();
-      if (groupRef.current && glRef.current && glRef.current.camera) {
-        groupRef.current.lookAt(glRef.current.camera.position);
-        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        groupRef.current.quaternion.multiply(offsetQuat);
+      if (isIOS) {
+        // iOS 전용: 오브젝트의 위치만 설정하고 회전은 고정값(-45°)
+        groupRef.current.position.set(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y,
+          rabbitPosition[2] + cposition.z
+        );
+        groupRef.current.rotation.set(0, -Math.PI / 4, 0);
+      } else {
+        // 원래 웹XR 로직
+        camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
+        camera.updateProjectionMatrix();
+        if (groupRef.current && glRef.current && glRef.current.camera) {
+          groupRef.current.lookAt(glRef.current.camera.position);
+          const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+          const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+          groupRef.current.quaternion.multiply(offsetQuat);
+        }
       }
     }
-  }, [visible, camera, rabbitPosition]);
+  }, [visible, camera, rabbitPosition, cposition, isIOS]);
 
   return (
     <>
       <ambientLight intensity={3} />
       <Suspense fallback={null}>
         <Environment files="/HDRI_01.exr" preset={undefined} />
-        <group
-          ref={groupRef}
-          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[0, -Math.PI / 4, 0]}
-          scale={[0.5, 0.5, 0.5]}
-          visible={visible}
-        >
+        <group ref={groupRef} scale={[0.5, 0.5, 0.5]} visible={visible}>
           {visible &&
             (char === 'moons' ? (
               <Box
@@ -373,9 +384,9 @@ function CameraUpdater({
 }
 
 /*
- ★ 수정: DeviceOrientationController
- - isPermissionGranted prop에 따라 이벤트를 등록합니다.
- - TypeScript 오류를 피하기 위해 (DeviceOrientationEvent as any).requestPermission를 사용합니다.
+ ★ DeviceOrientationController
+ - isPermissionGranted prop에 따라 deviceorientation 이벤트를 등록합니다.
+ - TypeScript 오류 회피를 위해 (DeviceOrientationEvent as any).requestPermission를 사용합니다.
 */
 function DeviceOrientationController({ isPermissionGranted }: { isPermissionGranted: boolean }) {
   const { camera } = useThree();
@@ -400,7 +411,7 @@ function DeviceOrientationController({ isPermissionGranted }: { isPermissionGran
 
 /*
   -----------------------------
-  ARCanvasCore: XR 포함 캔버스 내부 로직
+  ARCanvasCore: 웹XR용(비‑iOS) 캔버스 내부 로직
   -----------------------------
 */
 const ARCanvasCore: React.FC<any> = (props) => {
@@ -436,6 +447,7 @@ const ARCanvasCore: React.FC<any> = (props) => {
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
       <XR store={props.xrStoreRef.current}>
         <XROrigin position={[0, 0.5, 0]} />
+        {/* 웹XR용 Scene: isIOS 미설정 (또는 false) */}
         <Scene
           char={props.char}
           visible={props.show}
@@ -517,6 +529,7 @@ const IOSARCanvasCore: React.FC<any> = (props) => {
     <>
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
       <DeviceOrientationController isPermissionGranted={orientationEnabled} />
+      {/* iOS용 Scene: isIOS={true} */}
       <Scene
         char={props.char}
         visible={props.show}
@@ -530,6 +543,7 @@ const IOSARCanvasCore: React.FC<any> = (props) => {
         oposition={oposition}
         cposition={cposition}
         scale={sscale}
+        isIOS={true}
       />
     </>
   );
@@ -537,7 +551,7 @@ const IOSARCanvasCore: React.FC<any> = (props) => {
 
 /*
   -----------------------------
-  ARCanvas: XR 사용하는 비-iOS 캔버스
+  ARCanvas: 웹XR 사용하는 비‑iOS 캔버스
   -----------------------------
 */
 function ARCanvas(props: any) {
@@ -623,10 +637,10 @@ const IOSARCanvas: React.FC<any> = (props) => {
   // DeviceOrientation 권한 활성화 상태 관리
   const [orientationEnabled, setOrientationEnabled] = useState(false);
 
-  // BackgroundVideo (iOS에서도 사용자 카메라 피드 표시)
-  // streamRef와 setIsMount는 BasicApp에서 전달받은 값 사용
+  // 사용자 카메라 피드를 표시 (iOS에서도)
+  // streamRef와 setIsMount는 BasicApp에서 전달받은 값을 사용
 
-  // 사용자 제스처를 통한 권한 요청 함수 (TS 캐스팅 적용)
+  // 사용자 제스처를 통한 권한 요청 (TS 캐스팅 적용)
   const requestDeviceOrientation = async () => {
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
@@ -889,7 +903,7 @@ const ModalU = function ({
       </div>
     </div>
   );
-};
+}
 
 /*
   -----------------------------
