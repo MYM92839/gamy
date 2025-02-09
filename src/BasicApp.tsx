@@ -665,10 +665,9 @@ const IOSARCanvas: React.FC<any> = (props) => {
   const [, setInit] = useState(false);
   const glRef = useRef<any>(null);
   const latestCameraTransformRef = props.latestCameraTransformRef;
-
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <div className="w-screen h-screen bg-white flex items-center justify-center">
+      {/* <div className="w-screen h-screen bg-white flex items-center justify-center">
         <div role="status" className="inset-0">
           <svg
             aria-hidden="true"
@@ -687,10 +686,10 @@ const IOSARCanvas: React.FC<any> = (props) => {
           </svg>
           <span className="sr-only">Loading...</span>
         </div>
-      </div>
+      </div> */}
       <Canvas
         id="three-canvas"
-        style={{ width: '100vw', height: '100vh', background: 'transparent' }}
+        style={{ width: '100vw', height: '100vh', background: 'transparent', zIndex: 99999 }}
         gl={{ alpha: true, preserveDrawingBuffer: true }}
         camera={{ fov: 30 }}
         onCreated={(state) => {
@@ -713,10 +712,10 @@ const IOSARCanvas: React.FC<any> = (props) => {
         modalIsOpen={props.modalIsOpen}
         fotoUrl={''}
         correctPose={() => {
-          props.correctPose(props.glRef.current);
+          props.correctPose(glRef.current);
         }}
         openModal={() => {
-          props.openModal(props.glRef.current);
+          props.openModal(glRef.current);
         }}
         closeModal={props.closeModal}
         closeSaveModal={props.closeSaveModal}
@@ -1008,7 +1007,8 @@ export default function BasicApp() {
         logDebug('UserMedia test failed:', err);
       }
     };
-    initMedia();
+    if (!isIOS) initMedia();
+    else setMount(true);
   }, []);
 
   // 세션 리트라이
