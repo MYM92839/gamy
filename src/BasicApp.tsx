@@ -885,7 +885,7 @@ export default function BasicApp() {
       // 예시:
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, -11);
+      const offset = new THREE.Vector3(0, 0, 0);
       offset.applyQuaternion(cameraQuat);
       const newPosition = cameraPos.add(offset);
 
@@ -1133,33 +1133,34 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   target,
-  distance = 20,
+  distance = 10,
   resetTrigger,
-  forceLookAt = false,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
-  const sensorQuaternion = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const lookAtQuaternion = useRef<THREE.Quaternion>(new THREE.Quaternion());
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
+      // 16ms 정도로 지연 시간을 줄입니다.
       if (timeoutRef.current) return;
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
+
         const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+
         const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-        const deviceQuat = new THREE.Quaternion().setFromEuler(euler);
-        const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-        deviceQuat.multiply(correctionQuat);
-        // 부호 일관성 보정: 각 구성요소를 -1배 합니다.
-        if (sensorQuaternion.current.dot(deviceQuat) < 0) {
-          deviceQuat.set(-deviceQuat.x, -deviceQuat.y, -deviceQuat.z, -deviceQuat.w);
-        }
-        sensorQuaternion.current.copy(deviceQuat);
-      }, 100);
+        const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
+
+        // iOS 센서 보정 (X축 기준 +90° 회전)
+        const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+        deviceQuaternion.multiply(correctionQuaternion);
+
+        camera.up.set(0, 1, 0);
+        // 바로 카메라에 적용 (보간 없이)
+        camera.quaternion.copy(deviceQuaternion);
+      }, 16); // 16ms 지연 (약 60fps)
     }
 
     if (isPermissionGranted) {
@@ -1169,33 +1170,23 @@ function DeviceOrientationController({
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-  }, [isPermissionGranted, resetTrigger]);
+  }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
-    const targetVec = Array.isArray(target)
-      ? new THREE.Vector3(target[0], target[1], target[2])
-      : target;
+    // target이 배열이면 Vector3로 변환
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
 
-    if (forceLookAt) {
-      const dummyCamera = camera.clone();
-      dummyCamera.position.copy(camera.position);
-      dummyCamera.lookAt(targetVec);
-      lookAtQuaternion.current.copy(dummyCamera.quaternion);
-      // 블렌딩: 20% lookAt, 80% 센서
-      camera.quaternion.slerpQuaternions(sensorQuaternion.current, lookAtQuaternion.current, 0.2);
-    } else {
-      camera.quaternion.slerp(sensorQuaternion.current, 0.1);
-    }
-
+    // offset 계산 (여기서는 별도의 회전 보간 없이 현재 쿼터니언에 따라 적용)
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
-    // 여기서 lookAt를 호출하지 않음
+    // lookAt 호출을 제거하면, device orientation의 회전이 그대로 반영됩니다.
+    // 만약 토끼(목표)가 화면 중앙에 오도록 하려면,
+    // 이 부분은 상황에 맞게 조정해야 합니다.
   });
 
   return null;
 }
-
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
