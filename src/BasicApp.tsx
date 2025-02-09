@@ -1161,25 +1161,31 @@ function DeviceOrientationController({
     // PERFECT
     // const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     // const offset = new THREE.Vector3(0, 0, distance);
-    // offset.x = -offset.x;
     // offset.applyQuaternion(camera.quaternion);
     // camera.position.copy(targetVec).add(offset);
-
-    // 대상 오브젝트의 위치를 구합니다.
+    // 대상 오브젝트의 위치 (예: 토끼 위치)
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
 
-    // 카메라의 quaternion에서 Euler 각도로 변환합니다.
-    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-    // 좌우 회전(yaw)만 반전합니다.
-    euler.y = -euler.y;
-    // 수정된 Euler 각도로부터 새로운 quaternion을 생성합니다.
-    const flippedQuat = new THREE.Quaternion().setFromEuler(euler);
+    // 기존 방식: 전체 offset을 구하여 그 중 Y(수직) 성분을 보존
+    const offset = new THREE.Vector3(0, 0, distance);
+    offset.applyQuaternion(camera.quaternion);
+    const vertical = offset.y; // 수직 offset
 
-    // (0, 0, distance) 벡터를 flippedQuat로 회전시켜 offset을 구합니다.
-    const offset = new THREE.Vector3(0, 0, distance).applyQuaternion(flippedQuat);
+    // 카메라의 회전(quaternion)에서 수평 회전(=yaw)만 추출합니다.
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    euler.setFromQuaternion(camera.quaternion);
+    const yaw = euler.y; // 현재 카메라의 yaw 각도
 
-    // 대상 위치에 offset을 더해 카메라의 최종 위치를 결정합니다.
-    camera.position.copy(targetVec).add(offset);
+    // 원래의 수평 offset은 (sin(yaw), 0, cos(yaw)) * distance 입니다.
+    // 그런데 "좌우" 효과만 반전하려면, x 성분만 반전하면 됩니다.
+    // 즉, 새로운 수평 offset은 (‑sin(yaw), 0, cos(yaw)) * distance가 됩니다.
+    const horizontal = new THREE.Vector3(-Math.sin(yaw), 0, Math.cos(yaw)).multiplyScalar(distance);
+
+    // 최종 offset은 수평 offset과 수직 offset을 결합합니다.
+    const newOffset = new THREE.Vector3(horizontal.x, vertical, horizontal.z);
+
+    // 대상 위치에 newOffset을 더해 카메라의 위치를 결정합니다.
+    camera.position.copy(targetVec).add(newOffset);
   });
 
   return null;
