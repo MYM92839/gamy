@@ -1368,7 +1368,7 @@ function IOSARCanvasCore(props: any) {
 }
 
 function IOSARCanvas(props: any) {
-  const [, setInit] = useState(false);
+  const [init, setInit] = useState(false);
   const glRef = useRef<any>(null);
   const latestCameraTransformRef = props.latestCameraTransformRef;
   const [orientationEnabled, setOrientationEnabled] = useState(false);
@@ -1391,10 +1391,10 @@ function IOSARCanvas(props: any) {
   };
 
   useEffect(() => {
-    if (!orientationEnabled) {
+    if (init && !orientationEnabled) {
       requestDeviceOrientation();
     }
-  }, []);
+  }, [init]);
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
