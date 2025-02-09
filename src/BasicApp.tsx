@@ -1089,16 +1089,32 @@ export default function BasicApp() {
 // iOS 전용 DeviceOrientationController (회전값 반전 적용)
 function DeviceOrientationController({ isPermissionGranted }: { isPermissionGranted: boolean }) {
   const { camera } = useThree();
+
+  // 보정을 위한 상수 설정 (Three.js DeviceOrientationControls 참고)
+  const zee = new THREE.Vector3(0, 0, 1);
+  const euler = new THREE.Euler();
+  const q0 = new THREE.Quaternion(); // 화면 회전 보정용 (초기값)
+  // q1는 기기가 "기본" 상태(위쪽이 위로 보이는 상태)에서의 보정을 위해 사용합니다.
+  const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -π/2 around the x-axis
+
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      const { alpha, beta, gamma } = event;
-      const radAlpha = THREE.MathUtils.degToRad(alpha || 0);
-      const radBeta = THREE.MathUtils.degToRad(beta || 0);
-      const radGamma = THREE.MathUtils.degToRad(gamma || 0);
-      // iOS에서는 회전값을 반전하여 적용
-      const euler = new THREE.Euler(radBeta, radAlpha, -radGamma, 'YXZ');
+      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+      const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+      // 화면 회전(orientation) 값 (portrait/landscape) 보정
+      const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+      // 기기의 회전값을 Euler 각으로 변환 (YXZ 순서)
+      euler.set(beta, alpha, -gamma, 'YXZ');
+
+      // 카메라 쿼터니언을 Euler로부터 설정하고, 보정용 쿼터니언을 곱해준다.
       camera.quaternion.setFromEuler(euler);
+      camera.quaternion.multiply(q1);
+      // 화면 회전 보정: 현재 화면의 orientation(회전)값을 적용
+      camera.quaternion.multiply(q0.setFromAxisAngle(zee, -orient));
     }
+
     if (isPermissionGranted) {
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
@@ -1106,6 +1122,7 @@ function DeviceOrientationController({ isPermissionGranted }: { isPermissionGran
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
   }, [camera, isPermissionGranted]);
+
   return null;
 }
 
