@@ -640,73 +640,128 @@ const ModalU = function ({
   offscreenCanvas,
   isMount,
   cameraFov,
+  isIOS,
 }: UIOverlayProps & any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
     const captureComposite = () => {
-      const containerWidth = window.innerWidth;
-      const containerHeight = window.innerHeight;
-      const dpr = window.devicePixelRatio || 1;
-      const compositeCanvas = document.createElement('canvas');
-      compositeCanvas.width = Math.floor(containerWidth * dpr);
-      compositeCanvas.height = Math.floor(containerHeight * dpr);
-      const ctx = compositeCanvas.getContext('2d');
-      if (!ctx) return;
+      if (isIOS) {
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        const dpr = window.devicePixelRatio || 1;
+        const compositeCanvas = document.createElement('canvas');
+        compositeCanvas.width = Math.floor(containerWidth * dpr);
+        compositeCanvas.height = Math.floor(containerHeight * dpr);
+        const ctx = compositeCanvas.getContext('2d');
+        if (!ctx) return;
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.scale(dpr, dpr);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.scale(dpr, dpr);
 
-      const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
-      const videoWidth = videoElement.videoWidth || containerWidth;
-      const videoHeight = videoElement.videoHeight || containerHeight;
-      const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
+        const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
+        const videoWidth = videoElement.videoWidth || containerWidth;
+        const videoHeight = videoElement.videoHeight || containerHeight;
+        const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      const defaultVideoFov = 25;
-      const effectiveFov = cameraFov || defaultVideoFov;
-      const addedFactor = 1.0;
-      const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
-        addedFactor;
+        // 배경 비디오
+        ctx.drawImage(
+          videoElement,
+          videoParams.offsetX,
+          videoParams.offsetY,
+          videoParams.drawWidth,
+          videoParams.drawHeight
+        );
 
-      const adjustedDrawWidth = videoParams.drawWidth * fovScale;
-      const adjustedDrawHeight = videoParams.drawHeight * fovScale;
+        // 3D offscreen
+        const threeCSSWidth = offscreenCanvas!.width / dpr;
+        const threeCSSHeight = offscreenCanvas!.height / dpr;
+        const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
 
-      // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
-      const manualShiftY = -50; // 예: -30px 하면 위로 30px 올림
+        // 3D도 동일하게 manualShiftY 적용
+        ctx.drawImage(
+          offscreenCanvas!,
+          threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight
+        );
 
-      const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
-      // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기
-      const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2 + manualShiftY;
+        compositeCanvas.toBlob((blob: Blob | null) => {
+          if (blob) {
+            setFoto(blob);
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => {
+              setFotoUrl(reader.result as string);
+            };
+          }
+        }, 'image/png');
+      } else {
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        const dpr = window.devicePixelRatio || 1;
+        const compositeCanvas = document.createElement('canvas');
+        compositeCanvas.width = Math.floor(containerWidth * dpr);
+        compositeCanvas.height = Math.floor(containerHeight * dpr);
+        const ctx = compositeCanvas.getContext('2d');
+        if (!ctx) return;
 
-      // 배경 비디오
-      ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.scale(dpr, dpr);
 
-      // 3D offscreen
-      const threeCSSWidth = offscreenCanvas!.width / dpr;
-      const threeCSSHeight = offscreenCanvas!.height / dpr;
-      const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
+        const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
+        const videoWidth = videoElement.videoWidth || containerWidth;
+        const videoHeight = videoElement.videoHeight || containerHeight;
+        const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
 
-      // 3D도 동일하게 manualShiftY 적용
-      ctx.drawImage(
-        offscreenCanvas!,
-        threeParams.offsetX,
-        threeParams.offsetY,
-        threeParams.drawWidth,
-        threeParams.drawHeight
-      );
+        const defaultVideoFov = 25;
+        const effectiveFov = cameraFov || defaultVideoFov;
+        const addedFactor = 1.0;
+        const fovScale =
+          (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+          addedFactor;
 
-      compositeCanvas.toBlob((blob: Blob | null) => {
-        if (blob) {
-          setFoto(blob);
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          reader.onload = () => {
-            setFotoUrl(reader.result as string);
-          };
-        }
-      }, 'image/png');
+        const adjustedDrawWidth = videoParams.drawWidth * fovScale;
+        const adjustedDrawHeight = videoParams.drawHeight * fovScale;
+
+        // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
+        const manualShiftY = -50; // 예: -30px 하면 위로 30px 올림
+
+        const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
+        // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기
+        const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2 + manualShiftY;
+
+        // 배경 비디오
+        ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
+
+        // 3D offscreen
+        const threeCSSWidth = offscreenCanvas!.width / dpr;
+        const threeCSSHeight = offscreenCanvas!.height / dpr;
+        const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
+
+        // 3D도 동일하게 manualShiftY 적용
+        ctx.drawImage(
+          offscreenCanvas!,
+          threeParams.offsetX,
+          threeParams.offsetY,
+          threeParams.drawWidth,
+          threeParams.drawHeight
+        );
+
+        compositeCanvas.toBlob((blob: Blob | null) => {
+          if (blob) {
+            setFoto(blob);
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => {
+              setFotoUrl(reader.result as string);
+            };
+          }
+        }, 'image/png');
+      }
     };
 
     if (isMount) {
@@ -913,30 +968,61 @@ export default function BasicApp() {
 
   /** ★ 수정: openModalHandler에서 XRFrame으로부터 FOV 추출 후 setCameraFov(newFov) */
   const openModalHandler = (gl: any) => {
-    correctPose(gl);
+    if (isIOS) {
+      const threeCanvas = document.querySelector('#three-canvas')?.children[0].children[0];
 
-    // XRFrame → projectionMatrix → FOV 추출
-    const xrFrame = gl.gl.xr.getFrame?.();
-    const refSpace = gl.gl.xr.getReferenceSpace?.();
-    if (xrFrame && refSpace) {
-      const pose = xrFrame.getViewerPose(refSpace);
-      if (pose && pose.views.length > 0) {
-        const newFov = extractFovFromProjectionMatrix(pose.views[0].projectionMatrix);
-        setCameraFov(newFov);
-        logDebug('Captured FOV from XRFrame:', newFov);
+      if (threeCanvas && offscreenCanvas) {
+        const imgData = (threeCanvas as HTMLCanvasElement).toDataURL();
+
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        const dpr = window.devicePixelRatio || 1;
+        offscreenCanvas.width = Math.floor(containerWidth * dpr);
+        offscreenCanvas.height = Math.floor(containerHeight * dpr);
+
+        const ctx = offscreenCanvas.getContext('2d');
+        if (!ctx) {
+          logDebug('captureARContent: offscreen canvas context failed.');
+          return;
+        }
+        ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+        const img = new Image();
+        img.onload = () => {
+          const params = calcCover(img.width, img.height, offscreenCanvas.width, offscreenCanvas.height);
+          ctx.drawImage(img, params.offsetX, params.offsetY, params.drawWidth, params.drawHeight);
+        };
+        img.src = imgData;
+
+        setMount(false);
+        setIsOpen(true);
       }
+    } else {
+      correctPose(gl);
+
+      // XRFrame → projectionMatrix → FOV 추출
+      const xrFrame = gl.gl.xr.getFrame?.();
+      const refSpace = gl.gl.xr.getReferenceSpace?.();
+      if (xrFrame && refSpace) {
+        const pose = xrFrame.getViewerPose(refSpace);
+        if (pose && pose.views.length > 0) {
+          const newFov = extractFovFromProjectionMatrix(pose.views[0].projectionMatrix);
+          setCameraFov(newFov);
+          logDebug('Captured FOV from XRFrame:', newFov);
+        }
+      }
+
+      captureARContent(gl);
+
+      if (xrStoreRef.current) {
+        xrStoreRef.current.getState().session?.end();
+        xrStoreRef.current.destroy();
+        xrStoreRef.current = null;
+      }
+      setMount(false);
+
+      setIsOpen(true);
     }
-
-    captureARContent(gl);
-
-    if (xrStoreRef.current) {
-      xrStoreRef.current.getState().session?.end();
-      xrStoreRef.current.destroy();
-      xrStoreRef.current = null;
-    }
-    setMount(false);
-
-    setIsOpen(true);
   };
 
   const captureARContent = ({
@@ -1064,7 +1150,7 @@ export default function BasicApp() {
             latestCameraTransformRef={latestCameraTransform}
           />
         )
-      ) : sessionStarted ? (
+      ) : !(isIOS && sessionStarted) || isIOS ? (
         <>
           <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
           {isMount && (
@@ -1077,6 +1163,7 @@ export default function BasicApp() {
                 setShow(false);
                 onTest();
               }}
+              isIOS={isIOS}
               closeSaveModal={handleCloseSaveModal}
               offscreenCanvas={offscreenCanvas}
               logDebug={logDebug}
@@ -1159,31 +1246,11 @@ function DeviceOrientationController({
 
   useFrame(() => {
     // PERFECT
-    // const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
-    // const offset = new THREE.Vector3(0, 0, distance);
-    // offset.applyQuaternion(camera.quaternion);
-    // camera.position.copy(targetVec).add(offset);
-    // 대상 오브젝트의 위치 (예: 토끼 위치)
-
-    // 대상 오브젝트(토끼)의 위치를 구합니다.
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
-
-    // 원래 offset: (0,0,distance)를 카메라의 회전값을 반영해 회전시킵니다.
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
-
-    // offset 벡터를 구면 좌표로 변환합니다.
-    const spherical = new THREE.Spherical();
-    spherical.setFromVector3(offset);
-
-    // 수평(azimuth) 각도(theta)만 반전시킵니다.
-    spherical.theta = -spherical.theta;
-
-    // 수정된 구면 좌표를 다시 Cartesian 좌표로 변환합니다.
-    const newOffset = new THREE.Vector3().setFromSpherical(spherical);
-
-    // 대상 위치에 수정된 offset을 더해 카메라의 최종 위치를 결정합니다.
-    camera.position.copy(targetVec).add(newOffset);
+    camera.position.copy(targetVec).add(offset);
+    // 대상 오브젝트의 위치 (예: 토끼 위치)
   });
 
   return null;
