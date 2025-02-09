@@ -1137,7 +1137,7 @@ function DeviceOrientationController({
       const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
       // 센서 값으로 Euler 생성 (YXZ 순서)
-      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+      const euler = new THREE.Euler(-beta, alpha, -gamma, 'YXZ');
       const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
 
       // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
