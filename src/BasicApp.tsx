@@ -1063,26 +1063,50 @@ export default function BasicApp() {
     }
   };
 
-  const handleCloseSaveModal = () => {
+  const handleCloseSaveModal = async () => {
     if (foto) {
-      // 공유 or 다운로드
-      if (
-        navigator.canShare &&
-        navigator.canShare({
-          files: [new File([foto], 'capture.png', { type: foto.type })],
-        })
-      ) {
-        const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: 'image/png' });
-        navigator
-          .share({ files: [file], title: 'My Captured Image', text: 'Check out this captured photo!' })
-          .catch((error) => logDebug('Sharing failed: ' + error));
-      } else {
-        const url = URL.createObjectURL(foto);
-        const link = document.createElement('a');
-        link.download = `capture-${new Date().getTime()}.png`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
+      try {
+        // 1. File System Access API 사용 (지원되는 경우)
+        if ((window as any).showSaveFilePicker) {
+          const opts = {
+            suggestedName: `capture-${new Date().getTime()}.png`,
+            types: [
+              {
+                description: 'PNG Image',
+                accept: { 'image/png': ['.png'] },
+              },
+            ],
+          };
+          const handle = await (window as any).showSaveFilePicker(opts);
+          const writable = await handle.createWritable();
+          await writable.write(foto);
+          await writable.close();
+        }
+        // 2. File System Access API가 없으면 Web Share API 사용 (파일 공유 지원 여부 확인)
+        else if (
+          navigator.canShare &&
+          navigator.canShare({
+            files: [new File([foto], 'capture.png', { type: foto.type })],
+          })
+        ) {
+          const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: 'image/png' });
+          await navigator.share({
+            files: [file],
+            title: 'My Captured Image',
+            text: 'Check out this captured photo!',
+          });
+        }
+        // 3. 위의 방법 모두 지원되지 않으면 다운로드 링크 방식 사용
+        else {
+          const url = URL.createObjectURL(foto);
+          const link = document.createElement('a');
+          link.download = `capture-${new Date().getTime()}.png`;
+          link.href = url;
+          link.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        logDebug('Saving failed: ' + error);
       }
     }
     setIsOpen(false);
