@@ -1158,11 +1158,17 @@ function DeviceOrientationController({
   }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
+    // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
+    // const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    // const offset = new THREE.Vector3(0, 0, distance);
+    // offset.applyQuaternion(camera.quaternion);
+    // camera.position.copy(targetVec).add(offset);
+
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
-    const offset = new THREE.Vector3(0, 0, distance);
-    offset.applyQuaternion(camera.quaternion);
-    // 기존에는 add(offset) 했던 부분을 sub(offset)으로 변경
-    camera.position.copy(targetVec).sub(offset);
+    // 카메라의 forward 벡터: 기본 (0, 0, -1)에 카메라 quaternion 적용
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    // 카메라 위치를 target에서 forward 방향의 distance만큼 떨어뜨림
+    camera.position.copy(targetVec).sub(forward.multiplyScalar(distance));
 
     // camera.lookAt(targetVec);
   });
@@ -1199,7 +1205,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
   }, [visible, rabbitPosition, cposition]);
   return (
     <>
-      <ambientLight intensity={3} />
+      <ambientLight intensity={5} />
       <Suspense fallback={null}>
         <group
           ref={groupRef}
