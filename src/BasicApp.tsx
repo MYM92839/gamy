@@ -855,12 +855,21 @@ export default function BasicApp() {
       setMount(true);
     }, 2000);
   };
+  const initialCameraTransform = useRef<{ position: THREE.Vector3; quaternion: THREE.Quaternion } | null>(null);
 
   // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
     if (isIOS) {
       if (!glRefObj) return;
       if (latestCameraTransform.current) {
+        // 최초 한 번만 저장
+        if (!initialCameraTransform.current) {
+          initialCameraTransform.current = {
+            position: latestCameraTransform.current.position.clone(),
+            quaternion: latestCameraTransform.current.quaternion.clone(),
+          };
+        }
+
         let pos = { x: 0, y: 0, z: 0 };
         const saved = localStorage.getItem('levaValues');
         if (saved) {
@@ -871,18 +880,20 @@ export default function BasicApp() {
             console.error('levaValues parse fail:', error);
           }
         }
-        const cameraPos = latestCameraTransform.current.position.clone();
-        const cameraQuat = latestCameraTransform.current.quaternion.clone();
+
+        // 초기(고정) 카메라 transform 사용
+        const cameraPos = initialCameraTransform.current.position.clone();
+        const cameraQuat = initialCameraTransform.current.quaternion.clone();
 
         let forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuat);
+        // 수직 성분 제거 (수평 방향만 사용)
         forward.y = 0;
         forward.normalize();
 
         const offset = forward.multiplyScalar(11);
-        // 계산된 새로운 위치(절대값)
         const newPosition = cameraPos.clone().add(offset);
 
-        // 이전 rabbit 포지션에 누적되지 않도록, 오직 새롭게 계산된 값만 사용
+        // cposition(예: localStorage에서 읽은 값)가 누적되지 않도록 주의(이미 저장된 보정값이라면 한 번만 적용)
         setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         logDebug('Rabbit position updated:', newPosition);
       }
