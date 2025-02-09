@@ -278,9 +278,44 @@ function UIOverlay({
       setScale(scale * state.offset[0]);
     }
   });
+  const getPosition = () => {
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      const base = char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
+      const { oposition, sposition, cposition, sscale } = JSON.parse(saved!);
 
+      const text =
+        base +
+        `?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}`;
+
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          alert('복사되었습니다. 원하는 곳에 붙여넣기하여 주세요.');
+        })
+        .catch(() => {
+          prompt('키보드의 ctrl+C 또는 마우스 오른쪽의 복사하기를 이용해주세요.', text);
+        });
+    }
+  };
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
+      <button
+        style={{
+          position: 'fixed',
+          top: '25%',
+          right: '24px',
+          background: 'rgba(0,0,0,0.5)',
+          borderRadius: '8px',
+          color: 'white',
+          padding: '1rem',
+          border: 'none',
+          zIndex: 99999,
+        }}
+        onClick={getPosition}
+      >
+        위치저장
+      </button>
       <button
         style={{
           position: 'fixed',
@@ -292,7 +327,8 @@ function UIOverlay({
         }}
         onClick={() => {
           // 예시 링크
-          window.location.href = 'https://gamy-six.vercel.app/test';
+          window.location.href =
+            char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
         }}
       >
         <Back />
@@ -1375,8 +1411,44 @@ function UIOverlayIOS({
       setScale(scale * state.offset[0]);
     }
   });
+  const getPosition = () => {
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      const base = char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
+      const { oposition, sposition, cposition, sscale } = JSON.parse(saved!);
+
+      const text =
+        base +
+        `?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}`;
+
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          alert('복사되었습니다. 원하는 곳에 붙여넣기하여 주세요.');
+        })
+        .catch(() => {
+          prompt('키보드의 ctrl+C 또는 마우스 오른쪽의 복사하기를 이용해주세요.', text);
+        });
+    }
+  };
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
+      <button
+        style={{
+          position: 'fixed',
+          top: '25%',
+          right: '24px',
+          background: 'rgba(0,0,0,0.5)',
+          borderRadius: '8px',
+          color: 'white',
+          padding: '1rem',
+          border: 'none',
+          zIndex: 99999,
+        }}
+        onClick={getPosition}
+      >
+        위치저장
+      </button>
       <button
         style={{
           position: 'fixed',
@@ -1387,7 +1459,9 @@ function UIOverlayIOS({
           zIndex: 99999,
         }}
         onClick={() => {
-          window.location.href = 'https://gamy-six.vercel.app/test';
+          // 예시 링크
+          window.location.href =
+            char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
         }}
       >
         <Back />
