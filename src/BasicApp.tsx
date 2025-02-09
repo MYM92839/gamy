@@ -874,16 +874,15 @@ export default function BasicApp() {
         const cameraPos = latestCameraTransform.current.position.clone();
         const cameraQuat = latestCameraTransform.current.quaternion.clone();
 
-        // 카메라의 forward 벡터 계산 (기본 forward: (0, 0, -1))
         let forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuat);
-        // 수직 성분(피치)을 제거하여 수평 방향만 사용
         forward.y = 0;
         forward.normalize();
 
-        // 원하는 거리만큼 앞쪽으로 offset 계산 (여기서는 11)
         const offset = forward.multiplyScalar(11);
+        // 계산된 새로운 위치(절대값)
         const newPosition = cameraPos.clone().add(offset);
 
+        // 이전 rabbit 포지션에 누적되지 않도록, 오직 새롭게 계산된 값만 사용
         setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         logDebug('Rabbit position updated:', newPosition);
       }
