@@ -877,7 +877,7 @@ export default function BasicApp() {
       // 예시:
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, -11);
+      const offset = new THREE.Vector3(0, 0, 0);
       offset.applyQuaternion(cameraQuat);
       const newPosition = cameraPos.add(offset);
 
@@ -1124,8 +1124,8 @@ interface DeviceOrientationControllerProps {
 
 function DeviceOrientationController({
   isPermissionGranted,
-  // target,
-  // distance = -30,
+  target,
+  distance = -30,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
@@ -1159,10 +1159,10 @@ function DeviceOrientationController({
 
   useFrame(() => {
     // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
-    // const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
-    // const offset = new THREE.Vector3(0, 0, distance);
-    // offset.applyQuaternion(camera.quaternion);
-    // camera.position.copy(targetVec).add(offset);
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    const offset = new THREE.Vector3(0, 0, distance);
+    offset.applyQuaternion(camera.quaternion);
+    camera.position.copy(targetVec).add(offset);
     // camera.lookAt(targetVec);
   });
 
