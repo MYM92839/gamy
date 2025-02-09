@@ -9,14 +9,13 @@ import * as THREE from 'three';
 
 // 예: 기존 컴포넌트들 (Box, Back, Capture, Button, NftAppT3 ...)은
 // 실제 경로에 따라 import 조정
-import { usePinch } from '@use-gesture/react';
-import { useParams } from 'react-router-dom';
 import { Box, Tree } from './ArApp';
 import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-import { Environment } from '@react-three/drei';
+import { usePinch } from '@use-gesture/react';
+import { useParams } from 'react-router-dom';
 
 /* ---------------- 타입 정의들 ----------------- */
 interface SavedObjectData {
@@ -188,6 +187,7 @@ function renderSceneForCapture(
 function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
+
   // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
@@ -224,9 +224,8 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
   return (
     <>
       <ambientLight intensity={3} />
+      <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <Environment files="/HDRI_01.exr" preset={undefined} />
-
         <group
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
@@ -270,7 +269,7 @@ function UIOverlay({
   const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
   const [scale, setScale] = useState(1); // 반지름 상태 관리c
 
-  // 핀치 제스처로 반지름 조정
+  // 핀치 제스처로 반지름을 조정
   const bind = usePinch((state) => {
     if (char == 'moons') {
       setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
@@ -674,7 +673,7 @@ const ModalU = function ({
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
 
       // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
-      const manualShiftY = -60; // 예: -30px 하면 위로 30px 올림
+      const manualShiftY = -50; // 예: -30px 하면 위로 30px 올림
 
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
       // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기
