@@ -885,7 +885,7 @@ export default function BasicApp() {
       // 예시:
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, 0);
+      const offset = new THREE.Vector3(0, 0, -11);
       offset.applyQuaternion(cameraQuat);
       const newPosition = cameraPos.add(offset);
 
@@ -1133,7 +1133,7 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   target,
-  distance = 10,
+  // distance = -20,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
@@ -1141,11 +1141,9 @@ function DeviceOrientationController({
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      // 16ms 정도로 지연 시간을 줄입니다.
       if (timeoutRef.current) return;
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
-
         const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
@@ -1158,9 +1156,8 @@ function DeviceOrientationController({
         deviceQuaternion.multiply(correctionQuaternion);
 
         camera.up.set(0, 1, 0);
-        // 바로 카메라에 적용 (보간 없이)
         camera.quaternion.copy(deviceQuaternion);
-      }, 16); // 16ms 지연 (약 60fps)
+      }, 16);
     }
 
     if (isPermissionGranted) {
@@ -1178,13 +1175,12 @@ function DeviceOrientationController({
       ? new THREE.Vector3(target[0], target[1], target[2])
       : target;
 
-    // offset 계산 (여기서는 별도의 회전 보간 없이 현재 쿼터니언에 따라 적용)
-    const offset = new THREE.Vector3(0, 0, distance);
-    offset.applyQuaternion(camera.quaternion);
-    camera.position.copy(targetVec).add(offset);
-    // lookAt 호출을 제거하면, device orientation의 회전이 그대로 반영됩니다.
-    // 만약 토끼(목표)가 화면 중앙에 오도록 하려면,
-    // 이 부분은 상황에 맞게 조정해야 합니다.
+    // 만약 카메라 위치 업데이트를 하지 않고 device orientation에 따른 회전만 유지하고 싶다면,
+    // useFrame 내에서 카메라 위치 업데이트 코드를 제거합니다.
+    // 아래 코드를 제거하거나 주석 처리해 보세요.
+    // const offset = new THREE.Vector3(0, 0, distance);
+    // offset.applyQuaternion(camera.quaternion);
+    // camera.position.copy(targetVec).add(offset);
   });
 
   return null;
@@ -1225,7 +1221,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
         <group
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[0, -Math.PI / 4, 0]}
+          rotation={[Math.PI / 2, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
