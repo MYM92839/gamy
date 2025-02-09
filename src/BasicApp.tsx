@@ -2,19 +2,25 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitHandles } from '@react-three/handle';
-import { createXRStore, noEvents, PointerEvents, XR, XRDomOverlay, XROrigin } from '@react-three/xr';
+import {
+  createXRStore,
+  noEvents,
+  PointerEvents,
+  XR,
+  XRDomOverlay,
+  XROrigin,
+} from '@react-three/xr';
+import { usePinch } from '@use-gesture/react';
 import { Leva, useControls } from 'leva';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-// 예: 기존 컴포넌트들 (Box, Back, Capture, Button, NftAppT3 ...)은
-// 실제 경로에 따라 import 조정
+// 실제 경로에 따라 조정 (여기서는 예시로 처리)
+import { Environment } from '@react-three/drei';
 import { Box } from './ArApp';
-import NftAppT3 from './NftAppT3';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
 import Button from './components/Button';
-import { usePinch } from '@use-gesture/react';
 
 /* ---------------- 타입 정의들 ----------------- */
 interface SavedObjectData {
@@ -23,8 +29,10 @@ interface SavedObjectData {
   scale: THREE.Vector3;
 }
 
+// 기존 SceneProps에 isIOS? 플래그를 추가하여 분기 처리
 interface SceneProps {
   oposition: any;
+  char: string;
   sposition: any;
   scale: number;
   cposition: any;
@@ -32,7 +40,8 @@ interface SceneProps {
   visible: boolean;
   glRef: any;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
-  rabbitPosition: [number, number, number]; // 토끼 위치
+  rabbitPosition: [number, number, number]; // AR 오브젝트(예: 토끼)의 위치
+  isIOS?: boolean; // iOS 분기를 위한 플래그 (iOS에서는 별도 처리)
 }
 
 interface UIOverlayProps {
@@ -53,12 +62,11 @@ interface UIOverlayProps {
   cameraFov: number; // XR 카메라의 fov
 }
 
-/* -------------- 유틸들 + 전역 -------------- */
+/* -------------- 유틸 및 전역 -------------- */
 function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destHeight: number) {
   const srcAspect = srcWidth / srcHeight;
   const destAspect = destWidth / destHeight;
   let drawWidth, drawHeight, offsetX, offsetY;
-
   if (srcAspect > destAspect) {
     drawHeight = destHeight;
     drawWidth = destHeight * srcAspect;
@@ -76,15 +84,12 @@ function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destH
 let savedObjects: SavedObjectData[] = [];
 let savedCameraMatrix = new THREE.Matrix4();
 
-/** ★ 추가: FOV 추출 유틸 함수 */
 function extractFovFromProjectionMatrix(mat: Float32Array | number[]) {
-  // col-major 기준, mat[5] == 1 / tan(fov/2)
-  const m11 = mat[5];
+  const m11 = mat[5]; // 1/tan(fov/2)
   const verticalFovRad = 2 * Math.atan(1 / m11);
-  return (verticalFovRad * 180) / Math.PI; // degrees
+  return (verticalFovRad * 180) / Math.PI;
 }
 
-// XR 세션 종료 시 오브젝트+카메라 행렬 저장
 function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
   savedObjects = scene.children.map((obj) => ({
     position: obj.position.clone(),
@@ -94,10 +99,6 @@ function onXRSessionEnd(scene: THREE.Scene, camera: THREE.PerspectiveCamera): vo
   savedCameraMatrix.copy(camera.matrixWorld);
 }
 
-/**
- * renderSceneForCapture
- * - XR 캡쳐(Three.js 오브젝트만)용 임시 카메라
- */
 function renderSceneForCapture(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -116,11 +117,10 @@ function renderSceneForCapture(
   const tempCamera = new THREE.PerspectiveCamera(camera.fov, containerWidth / containerHeight, camera.near, camera.far);
   tempCamera.projectionMatrix.copy(camera.projectionMatrix);
 
-  // XR → Three.js 간 Y축 180도 보정
+  // Y축 180도 보정
   const offsetQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
   tempCamera.quaternion.copy(camera.quaternion).multiply(offsetQuaternion);
 
-  // calibrationMatrix 적용 (있으면)
   if (calibrationMatrix) {
     const calibratedMatrix = new THREE.Matrix4();
     calibratedMatrix.multiplyMatrices(calibrationMatrix.clone().invert(), camera.matrixWorld);
@@ -132,7 +132,6 @@ function renderSceneForCapture(
   }
   tempCamera.updateProjectionMatrix();
 
-  // 기존 오브젝트 상태 복원
   scene.children.forEach((obj, index) => {
     if (savedObjects[index]) {
       obj.position.copy(savedObjects[index].position);
@@ -181,11 +180,12 @@ function renderSceneForCapture(
 /* --------------------------------------------------
    Scene, UIOverlay, CameraUpdater 등: Canvas 내부 로직
    -------------------------------------------------- */
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
+
+// [웹XR용] 기존 Scene 로직은 그대로 사용
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale, isIOS = false }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
-  // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
       glRef.current.camera = camera;
@@ -194,7 +194,6 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
     }
   });
 
-  // 최초 렌더 시 glRef
   useEffect(() => {
     if (gl) {
       glRef.current = { gl, camera, scene };
@@ -202,34 +201,36 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
     }
   }, [camera, gl, glRef, scene]);
 
-  // rabbitPosition에 맞춰 토끼를 카메라 방향 보정
+  // 분기: 웹XR(비‑iOS)는 기존 로직, iOS는 오브젝트 위치와 고정 회전만 설정
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
-      camera.updateProjectionMatrix();
-
-      if (groupRef.current && glRef.current && glRef.current.camera) {
-        groupRef.current.lookAt(glRef.current.camera.position);
-
-        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        groupRef.current.quaternion.multiply(offsetQuat);
+      if (isIOS) {
+        groupRef.current.position.set(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y,
+          rabbitPosition[2] + cposition.z
+        );
+        groupRef.current.rotation.set(0, -Math.PI / 4, 0);
+      } else {
+        camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
+        camera.updateProjectionMatrix();
+        if (groupRef.current && glRef.current && glRef.current.camera) {
+          groupRef.current.lookAt(glRef.current.camera.position);
+          const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+          const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+          groupRef.current.quaternion.multiply(offsetQuat);
+        }
       }
     }
-  }, [visible, camera, rabbitPosition]);
+  }, [visible, camera, rabbitPosition, cposition, isIOS]);
 
   return (
     <>
       <ambientLight intensity={2} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <group
-          ref={groupRef}
-          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[0, -Math.PI / 4, 0]}
-          scale={[0.5, 0.5, 0.5]}
-          visible={visible}
-        >
+        <Environment files="/HDRI_01.exr" preset={undefined} />
+        <group ref={groupRef} scale={[0.5, 0.5, 0.5]} visible={visible}>
           {visible && (
             <Box
               sposition={[sposition.x, sposition.y, sposition.z]}
@@ -254,14 +255,15 @@ function UIOverlay({
   circleY,
   circleR,
   correctPose,
+  // char,
 }: UIOverlayProps) {
   const [init, setInit] = useState(false);
-  const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
+  const [radius, setRadius] = useState(circleR);
 
-  // 핀치 제스처로 반지름을 조정
   const bind = usePinch((state) => {
-    setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
+    setRadius(circleR * state.offset[0]);
   });
+
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
@@ -274,7 +276,6 @@ function UIOverlay({
           zIndex: 99999,
         }}
         onClick={() => {
-          // 예시 링크
           window.location.href = 'https://gamy-six.vercel.app/test';
         }}
       >
@@ -309,23 +310,20 @@ function UIOverlay({
           <circle
             cx={circleX}
             cy={circleY}
-            r={radius} // 반지름을 상태로 업데이트
+            r={radius}
             fill="none"
             stroke="white"
             strokeWidth="2"
-            strokeDasharray="4, 4" // 점선으로 만들기 위한 설정
+            strokeDasharray="4, 4"
           />
         </svg>
       </div>
-
       <Button
         onClick={() => {
           if (!init) setInit(true);
           correctPose();
           setShow(false);
-          setTimeout(() => {
-            setShow(true);
-          }, 0);
+          setTimeout(() => setShow(true), 0);
         }}
         title={init ? '토끼 다시 부르기' : '토끼 부르기'}
         className="z-[9999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
@@ -348,25 +346,45 @@ function CameraUpdater({
 }
 
 /*
+  ★ DeviceOrientationController (iOS 전용)
+  기존 로직에서 회전값이 반대로 적용되는 문제를 해결하기 위해 각도를 반전시킵니다.
+*/
+function DeviceOrientationController({ isPermissionGranted }: { isPermissionGranted: boolean }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    function handleOrientation(event: DeviceOrientationEvent) {
+      const { alpha, beta, gamma } = event;
+      const radAlpha = THREE.MathUtils.degToRad(alpha || 0);
+      const radBeta = THREE.MathUtils.degToRad(beta || 0);
+      const radGamma = THREE.MathUtils.degToRad(gamma || 0);
+      // 변경: 회전값을 반전시켜 올바른 방향이 되도록 함
+      const euler = new THREE.Euler(-radBeta, -radAlpha, radGamma, 'YXZ');
+      camera.quaternion.setFromEuler(euler);
+    }
+    if (isPermissionGranted) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+    };
+  }, [camera, isPermissionGranted]);
+  return null;
+}
+
+/*
   -----------------------------
-  ARCanvasCore:
-    원래 ARCanvas가 하던 "useFrame, Scene 렌더" 로직 담당
-    -> Canvas 내부 전용
+  ARCanvasCore: 웹XR용(비‑iOS) 캔버스 내부 로직
   -----------------------------
 */
 function ARCanvasCore(props: any) {
   const { latestCameraTransformRef } = props;
-
-  // LEVA 세팅
   const initialValues = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('levaValues');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (error) {
-          console.error('Leva parse failed:', error);
-        }
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (error) {
+        console.error('Leva parse failed:', error);
       }
     }
     return {
@@ -381,13 +399,10 @@ function ARCanvasCore(props: any) {
     sposition: { value: initialValues.sposition, step: 0.1 },
     cposition: { value: initialValues.cposition, step: 0.1 },
   });
-  const { sscale } = useControls({
-    sscale: initialValues.sscale || 0.5,
-  });
+  const { sscale } = useControls({ sscale: initialValues.sscale || 0.5 });
 
   useEffect(() => {
-    const data = { oposition, sposition, cposition, sscale };
-    localStorage.setItem('levaValues', JSON.stringify(data));
+    localStorage.setItem('levaValues', JSON.stringify({ oposition, sposition, cposition, sscale }));
   }, [oposition, sposition, cposition, sscale]);
 
   return (
@@ -395,16 +410,16 @@ function ARCanvasCore(props: any) {
       <PointerEvents />
       <OrbitHandles />
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
-
-      {/* XR 영역 */}
       <XR store={props.xrStoreRef.current}>
         <XROrigin position={[0, 0.5, 0]} />
+        {/* 웹XR용 Scene: isIOS 미설정 */}
         <Scene
           visible={props.show}
           glRef={props.glRef}
           addGl={(gl: any) => {
             props.glRef.current = gl;
           }}
+          char=''
           calibrationMatrixRef={props.calibrationMatrixRef}
           rabbitPosition={props.rabbitPosition}
           sposition={sposition}
@@ -416,13 +431,8 @@ function ARCanvasCore(props: any) {
           <UIOverlay
             modalIsOpen={props.modalIsOpen}
             fotoUrl={''}
-            correctPose={() => {
-              props.correctPose(props.glRef.current);
-            }}
-            openModal={() => {
-              // openModalHandler
-              props.openModal(props.glRef.current);
-            }}
+            correctPose={() => props.correctPose(props.glRef.current)}
+            openModal={() => props.openModal(props.glRef.current)}
             closeModal={props.closeModal}
             closeSaveModal={props.closeSaveModal}
             show={props.show}
@@ -446,17 +456,71 @@ function ARCanvasCore(props: any) {
 
 /*
   -----------------------------
-  ARCanvas:
-    1) <Canvas> 리턴
-    2) 내부에서 <ARCanvasCore> 렌더
-    -> 여긴 R3F 훅 X
+  IOSARCanvasCore: iOS 전용, DeviceOrientation 사용
+  -----------------------------
+*/
+function IOSARCanvasCore(props: any) {
+  const { latestCameraTransformRef, orientationEnabled } = props;
+  const initialValues = useMemo(() => {
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (error) {
+        console.error('Leva parse failed:', error);
+      }
+    }
+    return {
+      oposition: { x: 0, y: 0, z: 0 },
+      sposition: { x: 0, y: 0, z: 0 },
+      cposition: { x: 0, y: 0, z: 0 },
+      sscale: 0.5,
+    };
+  }, []);
+  const { oposition, sposition, cposition } = useControls({
+    oposition: { value: initialValues.oposition, step: 0.1 },
+    sposition: { value: initialValues.sposition, step: 0.1 },
+    cposition: { value: initialValues.cposition, step: 0.1 },
+  });
+  const { sscale } = useControls({ sscale: initialValues.sscale || 0.5 });
+
+  useEffect(() => {
+    localStorage.setItem('levaValues', JSON.stringify({ oposition, sposition, cposition, sscale }));
+  }, [oposition, sposition, cposition, sscale]);
+
+  return (
+    <>
+      <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
+      <DeviceOrientationController isPermissionGranted={orientationEnabled} />
+      {/* iOS용 Scene: isIOS를 true로 전달 */}
+      <Scene
+        visible={props.show}
+        glRef={props.glRef}
+        addGl={(gl: any) => {
+          props.glRef.current = gl;
+        }}
+        calibrationMatrixRef={props.calibrationMatrixRef}
+        rabbitPosition={props.rabbitPosition}
+        sposition={sposition}
+        oposition={oposition}
+        cposition={cposition}
+        scale={sscale}
+        isIOS={true}
+        char={props.char}
+      />
+    </>
+  );
+}
+
+/*
+  -----------------------------
+  ARCanvas: 웹XR 사용하는 비‑iOS 캔버스 (Canvas 래퍼)
   -----------------------------
 */
 function ARCanvas(props: any) {
   const [init, setInit] = useState(false);
   const glRef = useRef<any>(null);
 
-  // XR 세션 자동 진입
   useEffect(() => {
     let id: ReturnType<typeof setTimeout>;
     const func = async () => {
@@ -480,7 +544,6 @@ function ARCanvas(props: any) {
     <div style={{ position: 'absolute', inset: 0 }}>
       <div className="w-screen h-screen bg-white flex items-center justify-center">
         <div role="status" className="inset-0">
-          {/* 로딩 SVG */}
           <svg
             aria-hidden="true"
             className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
@@ -509,10 +572,7 @@ function ARCanvas(props: any) {
           state.gl.setPixelRatio(window.devicePixelRatio);
           state.gl.setSize(window.innerWidth, window.innerHeight);
           setInit(true);
-
           props.logDebug('Canvas created, init set to true.');
-
-          // offscreenCanvas
           const offscreen = document.createElement('canvas');
           offscreen.width = Math.floor(window.innerWidth * window.devicePixelRatio);
           offscreen.height = Math.floor(window.innerHeight * window.devicePixelRatio);
@@ -521,10 +581,6 @@ function ARCanvas(props: any) {
         }}
         events={noEvents}
       >
-        {/*
-          여기 내부에서 R3F 훅을 써도 OK.
-          ARCanvasCore가 실제 useFrame/useThree 로직 담당
-        */}
         <ARCanvasCore {...props} glRef={glRef} />
       </Canvas>
     </div>
@@ -532,19 +588,118 @@ function ARCanvas(props: any) {
 }
 
 /*
-  BackgroundVideo: getUserMedia + 비디오 태그
+  -----------------------------
+  IOSARCanvas: iOS 전용 – 배경 비디오 포함, DeviceOrientation 권한 요청
+  -----------------------------
+*/
+function IOSARCanvas(props: any) {
+  const [, setInit] = useState(false);
+  const glRef = useRef<any>(null);
+  const latestCameraTransformRef = props.latestCameraTransformRef;
+
+  // DeviceOrientation 권한 활성화 상태 관리
+  const [orientationEnabled, setOrientationEnabled] = useState(false);
+
+  // 사용자 제스처를 통한 권한 요청 (TypeScript 캐스팅 적용)
+  const requestDeviceOrientation = async () => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const response = await (DeviceOrientationEvent as any).requestPermission();
+        if (response === 'granted') {
+          setOrientationEnabled(true);
+          props.logDebug('DeviceOrientation permission granted (iOS).');
+        } else {
+          props.logDebug('DeviceOrientation permission not granted.');
+        }
+      } catch (err) {
+        console.error('DeviceOrientation permission error:', err);
+      }
+    } else {
+      setOrientationEnabled(true);
+    }
+  };
+
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <BackgroundVideo streamRef={props.streamRef} setIsMount={props.setIsMount} logDebug={props.logDebug} />
+      <Canvas
+        id="three-canvas"
+        style={{ width: '100vw', height: '100vh', background: 'transparent', position: 'relative', zIndex: 10 }}
+        gl={{ alpha: true, preserveDrawingBuffer: true }}
+        camera={{ fov: 30 }}
+        onCreated={(state) => {
+          state.gl.setPixelRatio(window.devicePixelRatio);
+          state.gl.setSize(window.innerWidth, window.innerHeight);
+          setInit(true);
+          props.logDebug('Canvas created, init set to true (iOS version).');
+          const offscreen = document.createElement('canvas');
+          offscreen.width = Math.floor(window.innerWidth * window.devicePixelRatio);
+          offscreen.height = Math.floor(window.innerHeight * window.devicePixelRatio);
+          props.setOffscreenCanvas(offscreen);
+          props.logDebug('Offscreen canvas created in IOSARCanvas.');
+        }}
+        events={noEvents}
+      >
+        <IOSARCanvasCore
+          {...props}
+          glRef={glRef}
+          latestCameraTransformRef={latestCameraTransformRef}
+          orientationEnabled={orientationEnabled}
+        />
+      </Canvas>
+      <UIOverlay
+        modalIsOpen={props.modalIsOpen}
+        fotoUrl={''}
+        correctPose={() => props.correctPose(glRef.current)}
+        openModal={() => props.openModal(glRef.current)}
+        closeModal={props.closeModal}
+        closeSaveModal={props.closeSaveModal}
+        show={props.show}
+        setShow={props.setShow}
+        domWidth={props.domWidth}
+        domHeight={props.domHeight}
+        circleX={props.circleX}
+        circleY={props.circleY}
+        circleR={props.circleR}
+        circleColor={props.circleColor}
+        cameraFov={props.cameraFov}
+      />
+      <div style={{ position: 'fixed', top: 0, zIndex: 99999999 }}>
+        <Leva collapsed={false} />
+      </div>
+      {!orientationEnabled && (
+        <button
+          onClick={requestDeviceOrientation}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999999,
+            padding: '0.5rem 1rem',
+            background: '#fff',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+          }}
+        >
+          Enable Device Orientation
+        </button>
+      )}
+    </div>
+  );
+}
+
+/*
+  -----------------------------
+  BackgroundVideo: 사용자 카메라 피드를 표시 (getUserMedia)
+  -----------------------------
 */
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
-
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       })
       .then((stream) => {
@@ -558,7 +713,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         }
       })
       .catch((err) => logDebug('getUserMedia error: ' + err));
-
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track: any) => track.stop());
@@ -566,20 +720,11 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
       }
     };
   }, []);
-
   return (
     <video
       id="three-video"
       ref={videoRef}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        objectFit: 'cover',
-        zIndex: 0,
-      }}
+      style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh', objectFit: 'cover', zIndex: 0 }}
       autoPlay
       playsInline
       muted
@@ -589,7 +734,9 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
 }
 
 /*
-  ModalU: 배경 비디오 + offscreenCanvas(3D) 합성
+  -----------------------------
+  ModalU: 배경 비디오와 3D offscreen 캔버스 합성
+  -----------------------------
 */
 const ModalU = function ({
   closeModal,
@@ -600,7 +747,6 @@ const ModalU = function ({
   cameraFov,
 }: UIOverlayProps & any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
-
   useEffect(() => {
     const captureComposite = () => {
       const containerWidth = window.innerWidth;
@@ -611,45 +757,29 @@ const ModalU = function ({
       compositeCanvas.height = Math.floor(containerHeight * dpr);
       const ctx = compositeCanvas.getContext('2d');
       if (!ctx) return;
-
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.scale(dpr, dpr);
-
       const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
       const videoWidth = videoElement.videoWidth || containerWidth;
       const videoHeight = videoElement.videoHeight || containerHeight;
       const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
-
       const defaultVideoFov = 25;
       const effectiveFov = cameraFov || defaultVideoFov;
       const addedFactor = 1.0;
       const fovScale =
-        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) /
-          Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
+        (Math.tan(((effectiveFov / 2) * Math.PI) / 180) / Math.tan(((defaultVideoFov / 2) * Math.PI) / 180)) *
         addedFactor;
-
       const adjustedDrawWidth = videoParams.drawWidth * fovScale;
       const adjustedDrawHeight = videoParams.drawHeight * fovScale;
-
-      // ★ 원하는 만큼 화면을 위로 이동 (양수면 아래로, 음수면 위로)
-      const manualShiftY = -50; // 예: -30px 하면 위로 30px 올림
-
+      const manualShiftY = -50;
       const adjustedOffsetX = (containerWidth - adjustedDrawWidth) / 2;
-      // 원래 adjustedOffsetY에 manualShiftY 더하거나 빼기
       const adjustedOffsetY = (containerHeight - adjustedDrawHeight) / 2 + manualShiftY;
-
-      // 배경 비디오
       ctx.drawImage(videoElement, adjustedOffsetX, adjustedOffsetY, adjustedDrawWidth, adjustedDrawHeight);
-
-      // 3D offscreen
       const threeCSSWidth = offscreenCanvas!.width / dpr;
       const threeCSSHeight = offscreenCanvas!.height / dpr;
       const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
-
       ctx.filter = 'brightness(2)';
-
-      // 3D도 동일하게 manualShiftY 적용
       ctx.drawImage(
         offscreenCanvas!,
         threeParams.offsetX,
@@ -658,7 +788,6 @@ const ModalU = function ({
         threeParams.drawHeight
       );
       ctx.filter = 'none';
-
       compositeCanvas.toBlob((blob: Blob | null) => {
         if (blob) {
           setFoto(blob);
@@ -670,13 +799,11 @@ const ModalU = function ({
         }
       }, 'image/png');
     };
-
     if (isMount) {
       const timeoutId = setTimeout(captureComposite, 2000);
       return () => clearTimeout(timeoutId);
     }
   }, [isMount, offscreenCanvas, cameraFov, setFoto]);
-
   return (
     <div
       style={{
@@ -691,8 +818,8 @@ const ModalU = function ({
       }}
       className="overflow-y-hidden"
     >
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }} className="max-h-screen">
-        <div style={{ display: 'flex', gap: '8px' }} className="h-max p-4">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
+        <div style={{ display: 'flex', gap: '8px', padding: '1rem' }}>
           <button onClick={closeModal} style={{ flex: 1 }}>
             다시 찍기
           </button>
@@ -729,11 +856,11 @@ const ModalU = function ({
       </div>
     </div>
   );
-};
+}
 
 /*
   -----------------------------
-  BasicApp: 메인
+  BasicApp: 메인 컴포넌트
   -----------------------------
 */
 export default function BasicApp() {
@@ -748,7 +875,7 @@ export default function BasicApp() {
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
 
-  /** ★ 수정: cameraFov를 “상태”로 선언 (초기값 60) */
+  // cameraFov를 상태로 선언 (초기값 60)
   const [cameraFov, setCameraFov] = useState<number>(60);
 
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
@@ -772,24 +899,17 @@ export default function BasicApp() {
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
   const circleR = 100;
-  // const circleColor = 'blue';
 
-  // 최신 카메라 변환
   const latestCameraTransform = useRef({
     position: new THREE.Vector3(),
     quaternion: new THREE.Quaternion(),
   });
 
-  // 초기 미디어 세팅
   useEffect(() => {
     const initMedia = async () => {
       try {
         const constraints = {
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -800,10 +920,12 @@ export default function BasicApp() {
         logDebug('UserMedia test failed:', err);
       }
     };
-    initMedia();
+    // iOS 여부에 따라 분기 (iOS는 별도 캔버스를 사용)
+    const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
+    if (!isIOS) initMedia();
+    else setMount(true);
   }, []);
 
-  // 세션 리트라이
   const onTest = () => {
     if (xrStoreRef.current) {
       xrStoreRef.current.getState().session?.end();
@@ -816,37 +938,30 @@ export default function BasicApp() {
     }, 2000);
   };
 
-  // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
     if (!glRefObj) return;
-
-    if (latestCameraTransform.current) {
-      let pos = { x: 0, y: 0, z: 0 };
-      const saved = localStorage.getItem('levaValues');
-      if (saved) {
-        try {
-          const s = JSON.parse(saved);
-          pos = s.cposition;
-        } catch (error) {
-          console.error('levaValues parse fail:', error);
-        }
+    let pos = { x: 0, y: 0, z: 0 };
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        pos = s.cposition;
+      } catch (error) {
+        console.error('levaValues parse fail:', error);
       }
-      const cameraPos = latestCameraTransform.current.position.clone();
-      const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, -11);
-      offset.applyQuaternion(cameraQuat);
-      const newPosition = cameraPos.add(offset);
-
-      setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-      logDebug('Rabbit position updated:', newPosition);
     }
+    const cameraPos = latestCameraTransform.current.position.clone();
+    const cameraQuat = latestCameraTransform.current.quaternion.clone();
+    const offset = new THREE.Vector3(0, 0, -11);
+    offset.applyQuaternion(cameraQuat);
+    const newPosition = cameraPos.add(offset);
+    setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+    logDebug('Rabbit position updated:', newPosition);
   };
 
-  /** ★ 수정: openModalHandler에서 XRFrame으로부터 FOV 추출 후 setCameraFov(newFov) */
   const openModalHandler = (gl: any) => {
     correctPose(gl);
 
-    // XRFrame → projectionMatrix → FOV 추출
     const xrFrame = gl.gl.xr.getFrame?.();
     const refSpace = gl.gl.xr.getReferenceSpace?.();
     if (xrFrame && refSpace) {
@@ -866,7 +981,6 @@ export default function BasicApp() {
       xrStoreRef.current = null;
     }
     setMount(false);
-
     setIsOpen(true);
   };
 
@@ -882,21 +996,18 @@ export default function BasicApp() {
     onXRSessionEnd(scene, camera);
     const imgData = renderSceneForCapture(gl, scene, camera, calibrationMatrixRef.current);
     const threeCanvas = document.querySelector('#three-canvas');
-
     if (threeCanvas && offscreenCanvas) {
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
       const dpr = window.devicePixelRatio || 1;
       offscreenCanvas.width = Math.floor(containerWidth * dpr);
       offscreenCanvas.height = Math.floor(containerHeight * dpr);
-
       const ctx = offscreenCanvas.getContext('2d');
       if (!ctx) {
         logDebug('captureARContent: offscreen canvas context failed.');
         return;
       }
       ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
       const img = new Image();
       img.onload = () => {
         const params = calcCover(img.width, img.height, offscreenCanvas.width, offscreenCanvas.height);
@@ -908,7 +1019,6 @@ export default function BasicApp() {
 
   const handleCloseSaveModal = () => {
     if (foto) {
-      // 공유 or 다운로드
       if (
         navigator.canShare &&
         navigator.canShare({
@@ -931,41 +1041,71 @@ export default function BasicApp() {
     setIsOpen(false);
   };
 
-  // iOS ARKit 미지원 시
-  if (/(iPad|iPhone|iPod)/.test(navigator.userAgent)) {
-    return <NftAppT3 />;
-  }
+  // iOS 분기: iOS 환경이면 IOSARCanvas를 사용, 아니면 ARCanvas를 사용
+  const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
 
   return (
     <>
       {mount ? (
-        <ARCanvas
-          xrStoreRef={xrStoreRef}
-          setSessionStarted={setSessionStarted}
-          show={show}
-          modalIsOpen={modalIsOpen}
-          openModal={openModalHandler}
-          closeModal={() => {
-            setIsOpen(false);
-            setShow(false);
-          }}
-          closeSaveModal={handleCloseSaveModal}
-          setShow={setShow}
-          correctPose={correctPose}
-          domWidth={domWidth}
-          domHeight={domHeight}
-          circleX={circleX}
-          circleY={circleY}
-          circleR={circleR}
-          circleColor="blue"
-          setOffscreenCanvas={setOffscreenCanvas}
-          logDebug={logDebug}
-          /** 수정: cameraFov → 상태값 전달 */
-          cameraFov={cameraFov}
-          calibrationMatrixRef={calibrationMatrixRef}
-          rabbitPosition={rabbitPosition}
-          latestCameraTransformRef={latestCameraTransform}
-        />
+        isIOS ? (
+          <IOSARCanvas
+            xrStoreRef={xrStoreRef}
+            setSessionStarted={setSessionStarted}
+            show={show}
+            modalIsOpen={modalIsOpen}
+            openModal={openModalHandler}
+            closeModal={() => {
+              setIsOpen(false);
+              setShow(false);
+            }}
+            closeSaveModal={handleCloseSaveModal}
+            setShow={setShow}
+            correctPose={correctPose}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            circleColor="blue"
+            setOffscreenCanvas={setOffscreenCanvas}
+            logDebug={logDebug}
+            cameraFov={cameraFov}
+            calibrationMatrixRef={calibrationMatrixRef}
+            rabbitPosition={rabbitPosition}
+            latestCameraTransformRef={latestCameraTransform}
+            char="n/a" // 필요에 따라 전달
+            streamRef={streamRef}
+            setIsMount={setIsMount}
+          />
+        ) : (
+          <ARCanvas
+            xrStoreRef={xrStoreRef}
+            setSessionStarted={setSessionStarted}
+            show={show}
+            modalIsOpen={modalIsOpen}
+            openModal={openModalHandler}
+            closeModal={() => {
+              setIsOpen(false);
+              setShow(false);
+            }}
+            char="n/a" // 필요에 따라 전달
+            closeSaveModal={handleCloseSaveModal}
+            setShow={setShow}
+            correctPose={correctPose}
+            domWidth={domWidth}
+            domHeight={domHeight}
+            circleX={circleX}
+            circleY={circleY}
+            circleR={circleR}
+            circleColor="blue"
+            setOffscreenCanvas={setOffscreenCanvas}
+            logDebug={logDebug}
+            cameraFov={cameraFov}
+            calibrationMatrixRef={calibrationMatrixRef}
+            rabbitPosition={rabbitPosition}
+            latestCameraTransformRef={latestCameraTransform}
+          />
+        )
       ) : sessionStarted ? (
         <>
           <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
