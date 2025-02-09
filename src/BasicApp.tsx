@@ -25,6 +25,7 @@ interface SavedObjectData {
 
 interface SceneProps {
   oposition: any;
+  char: string;
   sposition: any;
   scale: number;
   cposition: any;
@@ -50,6 +51,7 @@ interface UIOverlayProps {
   circleR: number;
   circleColor: string;
   fotoUrl: string;
+  char: string;
   cameraFov: number; // XR 카메라의 fov
 }
 
@@ -181,10 +183,9 @@ function renderSceneForCapture(
 /* --------------------------------------------------
    Scene, UIOverlay, CameraUpdater 등: Canvas 내부 로직
    -------------------------------------------------- */
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale, char }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
-  const { char } = useParams();
   // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
@@ -258,12 +259,12 @@ function UIOverlay({
   circleY,
   circleR,
   correctPose,
+  char,
 }: UIOverlayProps) {
   const [init, setInit] = useState(false);
   const [radius, setRadius] = useState(circleR); // 반지름 상태 관리c
   const [scale, setScale] = useState(1); // 반지름 상태 관리c
 
-  const { char } = useParams();
   // 핀치 제스처로 반지름 조정
   const bind = usePinch((state) => {
     if (char == 'moons') {
@@ -272,6 +273,9 @@ function UIOverlay({
       setScale(scale * state.offset[0]);
     }
   });
+
+  console.log('??SDFLDS', scale, domHeight, char, domWidth, circleX, circleY, circleR);
+
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
@@ -311,7 +315,7 @@ function UIOverlay({
           left: '50%',
           transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
-          zIndex: 0,
+          zIndex: 9999999,
         }}
       >
         {char == 'moons' ? (
@@ -328,8 +332,11 @@ function UIOverlay({
           </svg>
         ) : (
           <svg
+            id="tree"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 595.28 841.89"
+            width={domWidth}
+            height={domHeight}
             style={{ transform: `scale(${scale})` }} // 제스처로 조절된 전체 스케일 적용
           >
             <path
@@ -462,6 +469,7 @@ const ARCanvasCore: React.FC<any> = (props) => {
       <XR store={props.xrStoreRef.current}>
         <XROrigin position={[0, 0.5, 0]} />
         <Scene
+          char={props.char}
           visible={props.show}
           glRef={props.glRef}
           addGl={(gl: any) => {
@@ -476,6 +484,7 @@ const ARCanvasCore: React.FC<any> = (props) => {
         />
         <XRDomOverlay>
           <UIOverlay
+            char={props.char}
             modalIsOpen={props.modalIsOpen}
             fotoUrl={''}
             correctPose={() => {
@@ -552,6 +561,7 @@ const IOSARCanvasCore: React.FC<any> = (props) => {
       <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
       <DeviceOrientationController />
       <Scene
+        char={props.char}
         visible={props.show}
         glRef={props.glRef}
         addGl={(gl: any) => {
@@ -699,6 +709,7 @@ const IOSARCanvas: React.FC<any> = (props) => {
         <IOSARCanvasCore {...props} glRef={glRef} latestCameraTransformRef={latestCameraTransformRef} />
       </Canvas>
       <UIOverlay
+        char={props.char}
         modalIsOpen={props.modalIsOpen}
         fotoUrl={''}
         correctPose={() => {
@@ -939,6 +950,7 @@ export default function BasicApp() {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [show, setShow] = useState(false);
+  const { char } = useParams();
 
   const streamRef = useRef<MediaStream | null>(null);
   const [isMount, setIsMount] = useState(false);
@@ -1159,6 +1171,7 @@ export default function BasicApp() {
             calibrationMatrixRef={calibrationMatrixRef}
             rabbitPosition={rabbitPosition}
             latestCameraTransformRef={latestCameraTransform}
+            char={char}
           />
         ) : (
           <ARCanvas
@@ -1171,6 +1184,7 @@ export default function BasicApp() {
               setIsOpen(false);
               setShow(false);
             }}
+            char={char}
             closeSaveModal={handleCloseSaveModal}
             setShow={setShow}
             correctPose={correctPose}
