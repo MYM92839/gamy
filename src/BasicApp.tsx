@@ -1124,8 +1124,8 @@ interface DeviceOrientationControllerProps {
 
 function DeviceOrientationController({
   isPermissionGranted,
-  target,
-  distance = 15,
+  // target,
+  // distance = 15,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
