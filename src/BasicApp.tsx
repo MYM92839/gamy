@@ -393,12 +393,10 @@ function DeviceOrientationController({ isPermissionGranted }: { isPermissionGran
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
       const { alpha, beta, gamma } = event;
-      // degree -> radian 변환
       const radAlpha = THREE.MathUtils.degToRad(alpha || 0);
       const radBeta = THREE.MathUtils.degToRad(beta || 0);
       const radGamma = THREE.MathUtils.degToRad(gamma || 0);
-      // 수정: 회전값 반전 처리 (모든 각도에 -1을 곱함)
-      const euler = new THREE.Euler(-radBeta, -radAlpha, radGamma, 'YXZ');
+      const euler = new THREE.Euler(radBeta, radAlpha, -radGamma, 'YXZ');
       camera.quaternion.setFromEuler(euler);
     }
     if (isPermissionGranted) {
