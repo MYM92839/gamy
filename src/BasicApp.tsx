@@ -1072,7 +1072,7 @@ export default function BasicApp() {
         if ((window as any).showDirectoryPicker) {
           // 사용자가 저장할 디렉터리를 선택 (예: 'pictures' 폴더를 시작 위치로 제안)
           const directoryHandle = await (window as any).showDirectoryPicker({
-            startIn: 'Pictures',
+            startIn: 'pictures',
           });
           // 선택한 디렉터리 내에 'capture.png' 파일 핸들을 가져오거나, 파일이 없으면 생성
           const fileHandle = await directoryHandle.getFileHandle(`gamyoungar-${new Date().getTime()}.png`, {
