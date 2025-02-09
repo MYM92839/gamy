@@ -1158,13 +1158,28 @@ function DeviceOrientationController({
   }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
-    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
-    const offset = new THREE.Vector3(0, 0, distance);
-    offset.applyQuaternion(camera.quaternion);
-    // 기존에는 add(offset) 했던 부분을 sub(offset)으로 변경
-    camera.position.copy(targetVec).add(offset);
+    // PERFECT
+    // const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    // const offset = new THREE.Vector3(0, 0, distance);
+    // offset.x = -offset.x;
+    // offset.applyQuaternion(camera.quaternion);
+    // camera.position.copy(targetVec).add(offset);
 
-    // camera.lookAt(targetVec);
+    // 대상 오브젝트의 위치를 구합니다.
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+
+    // 카메라의 quaternion에서 Euler 각도로 변환합니다.
+    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    // 좌우 회전(yaw)만 반전합니다.
+    euler.y = -euler.y;
+    // 수정된 Euler 각도로부터 새로운 quaternion을 생성합니다.
+    const flippedQuat = new THREE.Quaternion().setFromEuler(euler);
+
+    // (0, 0, distance) 벡터를 flippedQuat로 회전시켜 offset을 구합니다.
+    const offset = new THREE.Vector3(0, 0, distance).applyQuaternion(flippedQuat);
+
+    // 대상 위치에 offset을 더해 카메라의 최종 위치를 결정합니다.
+    camera.position.copy(targetVec).add(offset);
   });
 
   return null;
