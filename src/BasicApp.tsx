@@ -27,6 +27,7 @@ interface SavedObjectData {
 
 interface SceneProps {
   oposition: any;
+  char: string;
   sposition: any;
   scale: number;
   cposition: any;
@@ -51,6 +52,7 @@ interface UIOverlayProps {
   circleY: number;
   circleR: number;
   circleColor: string;
+  char: string;
   fotoUrl: string;
   cameraFov: number; // XR 카메라의 fov
 }
@@ -183,10 +185,9 @@ function renderSceneForCapture(
 /* --------------------------------------------------
    Scene, UIOverlay, CameraUpdater 등: Canvas 내부 로직
    -------------------------------------------------- */
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, scale }: SceneProps) {
+function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
-  const { char } = useParams();
   // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
@@ -262,15 +263,22 @@ function UIOverlay({
   circleX,
   circleY,
   circleR,
+  char,
   correctPose,
 }: UIOverlayProps) {
   const [init, setInit] = useState(false);
   const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
+  const [scale, setScale] = useState(1); // 반지름 상태 관리c
 
-  // 핀치 제스처로 반지름을 조정
+  // 핀치 제스처로 반지름 조정
   const bind = usePinch((state) => {
-    setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
+    if (char == 'moons') {
+      setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
+    } else {
+      setScale(scale * state.offset[0]);
+    }
   });
+
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
@@ -314,17 +322,40 @@ function UIOverlay({
           zIndex: 0,
         }}
       >
-        <svg width={domWidth} height={domHeight}>
-          <circle
-            cx={circleX}
-            cy={circleY}
-            r={radius} // 반지름을 상태로 업데이트
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeDasharray="4, 4" // 점선으로 만들기 위한 설정
-          />
-        </svg>
+        {char == 'moons' ? (
+          <svg width={domWidth} height={domHeight}>
+            <circle
+              cx={circleX}
+              cy={circleY}
+              r={radius} // 반지름을 상태로 업데이트
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeDasharray="4, 4" // 점선으로 만들기 위한 설정
+            />
+          </svg>
+        ) : (
+          <svg
+            id="tree"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 595.28 841.89"
+            width={domWidth}
+            height={domHeight}
+            style={{ transform: `scale(${scale})` }} // 제스처로 조절된 전체 스케일 적용
+          >
+            <path
+              id="Layer_2"
+              fill="none"
+              stroke="#fff"
+              strokeDasharray="1,5,0,0,1,0"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeMiterlimit="10"
+              strokeWidth="2"
+              d="M204.7 125.49c-3.04 7.21.52 7.8 0 31.4-.58 26.31-1.15 51.75-16.09 62.04-8.43 5.81-14.84 2.25-23.74 10.72-1.79 1.7-10.77 10.25-9.96 20.68.88 11.38 12.54 13.64 20.68 27.57 5.62 9.63 4.1 15.48 6.13 33.7 4.27 38.34 13.81 37.4 13.79 62.81-.01 8.73-3.58 22.93-10.72 51.32-6.98 27.74-10.82 36.13-13.02 40.6-7.19 14.58-12.83 26-25.28 34.47-12.82 8.73-24.24 8.44-25.28 15.32-.8 5.33 5.18 11.32 10.72 13.79 6.1 2.72 10.96.87 26.04-2.3 4.49-.94 15.81-3.32 26.04-4.6 16.46-2.06 24.7-3.08 32.94 0 11.81 4.42 11.69 11.7 25.28 19.91 10.52 6.36 20.13 7.77 29.87 9.19 4.81.7 29.1 3.92 57.45-6.89 10.88-4.15 4.77-3.66 35.23-19.91 19.38-10.34 27.54-13.57 29.11-21.45.71-3.57-2.08-9.78-7.66-22.21-5.91-13.15-8.47-16.02-9.96-23.74-1.42-7.38-.69-13.19 0-18.38 3.49-26.18 5.24-39.27 6.89-46.72 11.48-51.71 5.86-48.74 13.79-70.47 5.54-15.19 11.61-25.7 23.74-46.72 2.38-4.12 7.9-13.54 28.34-44.43 19.16-28.94 27.64-30.36 28.34-42.13 1.25-21-19.86-43.68-32.94-41.36-2.44.43-4.69 1.75-16.09 17.62-10.54 14.67-13.63 20.52-20.68 30.64-13.37 19.18-14.72 16.03-23.74 30.64-7.34 11.88-6.86 14.64-16.85 30.64-6.25 10.01-9.5 15.14-15.32 20.68-9.88 9.41-13.39 7.25-20.68 15.32-6.39 7.07-8.73 14.3-13.02 27.57-5.08 15.71-2.8 26.11-6.13 26.81-3.05.64-7.52-7.24-9.96-13.02-2.24-5.33-7.55-20.25.77-58.98 2.59-12.05 4.28-19.94 8.43-30.64 9.82-25.34 17.79-26.18 24.51-48.26 1.08-3.54 5.37-18.31 4.6-37.53-.28-6.91-.63-14.16-3.83-22.98 0 0-4.85-13.35-15.32-23.74-26.33-26.14-103.07-18.64-116.42 13.02"
+            ></path>
+          </svg>
+        )}
       </div>
 
       <Button
@@ -420,6 +451,7 @@ function ARCanvasCore(props: any) {
           oposition={oposition}
           cposition={cposition}
           scale={sscale}
+          char={props.char}
         />
         <XRDomOverlay>
           <UIOverlay
@@ -443,6 +475,7 @@ function ARCanvasCore(props: any) {
             circleR={props.circleR}
             circleColor={props.circleColor}
             cameraFov={props.cameraFov}
+            char={props.char}
           />
           <div className="fixed top-0 bottom-0 z-[99999999]">
             <Leva collapsed={false} />
@@ -751,7 +784,7 @@ export default function BasicApp() {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [show, setShow] = useState(false);
-
+  const { char } = useParams();
   const streamRef = useRef<MediaStream | null>(null);
   const [isMount, setIsMount] = useState(false);
   const [offscreenCanvas, setOffscreenCanvas] = useState<HTMLCanvasElement | null>(null);
@@ -965,6 +998,7 @@ export default function BasicApp() {
           circleX={circleX}
           circleY={circleY}
           circleR={circleR}
+          char={char}
           circleColor="blue"
           setOffscreenCanvas={setOffscreenCanvas}
           logDebug={logDebug}
