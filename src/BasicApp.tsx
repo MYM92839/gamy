@@ -315,7 +315,7 @@ function UIOverlay({
       <button
         style={{
           position: 'fixed',
-          top: '25%',
+          top: '30%',
           right: '24px',
           background: 'rgba(0,0,0,0.5)',
           borderRadius: '8px',
@@ -1465,7 +1465,7 @@ function UIOverlayIOS({
       <button
         style={{
           position: 'fixed',
-          top: '25%',
+          top: '30%',
           right: '24px',
           background: 'rgba(0,0,0,0.5)',
           borderRadius: '8px',
