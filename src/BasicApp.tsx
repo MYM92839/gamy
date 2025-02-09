@@ -1079,17 +1079,26 @@ export default function BasicApp() {
           };
           const handle = await (window as any).showSaveFilePicker(opts);
           const writable = await handle.createWritable();
-          await writable.write(foto);
+          // 만약 foto의 타입이 올바르지 않다면, 올바른 MIME 타입을 지정한 Blob으로 감싸줍니다.
+          const blob =
+            foto.type && foto.type !== ''
+              ? foto
+              : new Blob([foto], { type: 'image/png' });
+          await writable.write(blob);
           await writable.close();
         }
         // 2. File System Access API가 없으면 Web Share API 사용 (파일 공유 지원 여부 확인)
         else if (
           navigator.canShare &&
           navigator.canShare({
-            files: [new File([foto], 'capture.png', { type: foto.type })],
+            files: [new File([foto], 'capture.png', { type: foto.type || 'image/png' })],
           })
         ) {
-          const file = new File([foto], `capture-${new Date().getTime()}.png`, { type: 'image/png' });
+          const file = new File(
+            [foto],
+            `capture-${new Date().getTime()}.png`,
+            { type: foto.type || 'image/png' }
+          );
           await navigator.share({
             files: [file],
             title: 'My Captured Image',

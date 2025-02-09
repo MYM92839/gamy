@@ -494,15 +494,6 @@ export function Box({
             <primitive object={nodes.Root_M} />
           </group>
         </group>
-        <mesh
-          name="L_Iris_GEO"
-          castShadow
-          receiveShadow
-          geometry={nodes.L_Iris_GEO.geometry}
-          material={materials.Motion_Iris_M_BLNN}
-          position={[0, 1.844, -26.939]}
-          scale={7.71}
-        />
       </group>
     </group>
   );
