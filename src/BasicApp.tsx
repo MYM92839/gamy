@@ -1092,7 +1092,7 @@ interface DeviceOrientationControllerProps {
 
 function DeviceOrientationController({ isPermissionGranted, target, distance = 10 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
-  // sensor의 pitch와 roll만 저장하는 ref (yaw는 0으로 유지)
+  // sensor의 pitch와 roll만 저장하는 ref (yaw는 나중에 lookAt에서 결정)
   const sensorPitchRollRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
 
   useEffect(() => {
@@ -1104,16 +1104,18 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
 
       // 센서 값으로 Euler 생성 (YXZ 순서)
       const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-      // iOS 센서 좌표계 보정을 위해, X축을 기준으로 +90° 회전
-      const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       const sensorQuat = new THREE.Quaternion().setFromEuler(euler);
+
+      // iOS 센서 좌표계 보정을 위해 X축을 기준으로 +90° 회전
+      const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       sensorQuat.multiply(correctionQuat);
 
-      // sensorQuat를 Euler로 변환한 후, yaw는 무시(0)하고 pitch와 roll만 저장
+      // sensorQuat를 Euler로 변환하고, 여기서 pitch와 roll만 저장 (yaw는 무시)
       const sensorEuler = new THREE.Euler().setFromQuaternion(sensorQuat, 'YXZ');
       sensorPitchRollRef.current.x = sensorEuler.x; // pitch
       sensorPitchRollRef.current.z = sensorEuler.z; // roll
-      sensorPitchRollRef.current.y = 0;             // yaw 무시
+      // yaw는 lookAt에서 결정하므로 0으로 둡니다.
+      sensorPitchRollRef.current.y = 0;
     }
     if (isPermissionGranted) {
       window.addEventListener('deviceorientation', handleOrientation, true);
@@ -1124,34 +1126,34 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
   }, [isPermissionGranted]);
 
   useFrame(() => {
-    // 대상(토끼) 위치 계산
+    // 대상(토끼) 위치
     const targetVec = Array.isArray(target)
-      ? new THREE.Vector3(target[0], target[1], target[2])
+      ? new THREE.Vector3(...target)
       : target;
 
-    // 먼저 lookAt을 사용해, 카메라 yaw(대상의 방향)는 고정
+    // 먼저 lookAt으로 대상 쪽의 yaw(방향)를 맞춥니다.
     camera.lookAt(targetVec);
+    // lookAt 후, 카메라의 현재 Euler 값을 추출 (이때 yaw는 대상 방향으로 설정됨)
+    const currentEuler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    const currentYaw = currentEuler.y;
 
-    // offset 계산: 카메라의 yaw만 사용하도록
-    const baseQuat = camera.quaternion.clone(); // lookAt 후의 회전 (yaw 포함)
-    // Euler로 변환 후 pitch, roll 제거 → yaw만 남김
-    const eulerYaw = new THREE.Euler().setFromQuaternion(baseQuat, 'YXZ');
-    eulerYaw.x = 0;
-    eulerYaw.z = 0;
-    const yawQuat = new THREE.Quaternion().setFromEuler(eulerYaw);
-    // offset 방향: 기본 forward 벡터 (0, 0, distance)를 yawQuat로 회전
+    // lookAt에서 결정된 yaw는 그대로 유지하고, sensor의 pitch와 roll을 덮어씁니다.
+    currentEuler.x = sensorPitchRollRef.current.x; // sensor의 pitch 적용
+    currentEuler.z = sensorPitchRollRef.current.z; // sensor의 roll 적용
+    camera.quaternion.setFromEuler(currentEuler);
+
+    // offset 계산은 오직 yaw만 사용하도록:
+    // lookAt에서 설정된 yaw만 남기기 위해 pitch와 roll 0으로 만든 Euler
+    const yawEuler = new THREE.Euler(0, currentYaw, 0, 'YXZ');
+    const yawQuat = new THREE.Quaternion().setFromEuler(yawEuler);
     const offset = new THREE.Vector3(0, 0, distance).applyQuaternion(yawQuat);
-    // 카메라 위치 = 대상 위치에서 offset 만큼 떨어진 곳
-    camera.position.copy(targetVec).add(offset);
 
-    // 이제 lookAt으로 정해진 yaw는 그대로 유지하고, sensor의 pitch/roll 보정만 적용
-    const pitchRollQuat = new THREE.Quaternion().setFromEuler(sensorPitchRollRef.current);
-    camera.quaternion.multiply(pitchRollQuat);
+    // 카메라 위치 = 대상 위치에서 offset만큼 떨어진 곳 (즉, 대상의 정면)
+    camera.position.copy(targetVec).add(offset);
   });
 
   return null;
 }
-
 
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
