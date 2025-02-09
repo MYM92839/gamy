@@ -34,6 +34,7 @@ interface SceneProps {
   addGl: any;
   visible: boolean;
   glRef: any;
+  cscale: number;
   calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
   rabbitPosition: [number, number, number]; // 토끼 위치
 }
@@ -185,7 +186,18 @@ function renderSceneForCapture(
 /* --------------------------------------------------
    Scene, UIOverlay, CameraUpdater 등: Canvas 내부 로직
    -------------------------------------------------- */
-function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
+function Scene({
+  visible,
+  glRef,
+  cscale,
+  rabbitPosition,
+  oposition,
+  cposition,
+  sposition,
+  addGl,
+  char,
+  scale,
+}: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -231,7 +243,7 @@ function Scene({ visible, glRef, rabbitPosition, oposition, cposition, sposition
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
           rotation={[0, -Math.PI / 4, 0]}
-          scale={[0.5, 0.5, 0.5]}
+          scale={cscale}
           visible={visible}
         >
           {visible && (
@@ -445,6 +457,7 @@ function ARCanvasCore(props: any) {
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
   const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
+  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
 
   // LEVA 세팅
   const initialValues = useMemo(() => {
@@ -458,13 +471,15 @@ function ARCanvasCore(props: any) {
       sx !== undefined ||
       sy !== undefined ||
       sz !== undefined ||
-      ss !== undefined
+      ss !== undefined ||
+      cs !== undefined
     ) {
       return {
         oposition: { x: ox, y: oy, z: oz },
         sposition: { x: sx, y: sy, z: sz },
         cposition: { x: cx, y: cy, z: cz },
         sscale: ss,
+        cscale: cs,
       };
     } else if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('levaValues');
@@ -481,6 +496,7 @@ function ARCanvasCore(props: any) {
       sposition: { x: 0, y: 0, z: 0 },
       cposition: { x: 0, y: 0, z: 0 },
       sscale: 0.5,
+      cscale: 1,
     };
   }, []);
   const { oposition, sposition, cposition } = useControls({
@@ -488,8 +504,9 @@ function ARCanvasCore(props: any) {
     sposition: { value: initialValues.sposition, step: 0.1 },
     cposition: { value: initialValues.cposition, step: 0.1 },
   });
-  const { sscale } = useControls({
+  const { sscale, cscale } = useControls({
     sscale: initialValues.sscale || 0.5,
+    cscale: initialValues.cscale || 1,
   });
 
   useEffect(() => {
@@ -518,6 +535,7 @@ function ARCanvasCore(props: any) {
           oposition={oposition}
           cposition={cposition}
           scale={sscale}
+          cscale={cscale}
           char={props.char}
         />
         <XRDomOverlay>
@@ -1334,7 +1352,18 @@ function DeviceOrientationController({
   return null;
 }
 
-function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
+function SceneIOS({
+  visible,
+  glRef,
+  cscale,
+  rabbitPosition,
+  oposition,
+  cposition,
+  sposition,
+  addGl,
+  char,
+  scale,
+}: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   useFrame(() => {
@@ -1369,7 +1398,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
           rotation={[Math.PI, -Math.PI / 4, 0]}
-          scale={[0.5, 0.5, 0.5]}
+          scale={cscale}
           visible={visible}
         >
           {visible &&
@@ -1555,6 +1584,7 @@ function IOSARCanvasCore(props: any) {
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
   const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
+  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
 
   const initialValues = useMemo(() => {
     const saved = localStorage.getItem('levaValues');
@@ -1568,13 +1598,15 @@ function IOSARCanvasCore(props: any) {
       sx !== undefined ||
       sy !== undefined ||
       sz !== undefined ||
-      ss !== undefined
+      ss !== undefined ||
+      cs !== undefined
     ) {
       return {
         oposition: { x: ox, y: oy, z: oz },
         sposition: { x: sx, y: sy, z: sz },
         cposition: { x: cx, y: cy, z: cz },
         sscale: ss,
+        cscale: cs,
       };
     } else if (saved) {
       try {
@@ -1588,6 +1620,7 @@ function IOSARCanvasCore(props: any) {
       sposition: { x: 0, y: 0, z: 0 },
       cposition: { x: 0, y: 0, z: 0 },
       sscale: 0.5,
+      cscale: 1,
     };
   }, []);
   const { oposition, sposition, cposition } = useControls({
@@ -1595,7 +1628,10 @@ function IOSARCanvasCore(props: any) {
     sposition: { value: initialValues.sposition, step: 0.1 },
     cposition: { value: initialValues.cposition, step: 0.1 },
   });
-  const { sscale } = useControls({ sscale: initialValues.sscale || 0.5 });
+  const { sscale, cscale } = useControls({
+    sscale: initialValues.sscale || 0.5,
+    cscale: initialValues.cscale || 1,
+  });
   useEffect(() => {
     localStorage.setItem('levaValues', JSON.stringify({ oposition, sposition, cposition, sscale }));
   }, [oposition, sposition, cposition, sscale]);
@@ -1620,6 +1656,7 @@ function IOSARCanvasCore(props: any) {
         cposition={cposition}
         scale={sscale}
         char={props.char}
+        cscale={cscale}
       />
     </>
   );

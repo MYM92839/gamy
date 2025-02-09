@@ -14,6 +14,7 @@ export default function PhotoTreeT() {
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
   const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
+  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
 
   const requestDeviceOrientation = async () => {
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
@@ -39,7 +40,7 @@ export default function PhotoTreeT() {
     <div className="w-full h-full relative">
       <PhotoPara title={`보호수를 배경으로 강원 관찰사와 함께 \n 사진을 찍을 수 있어요!`}>
         <Link
-          to={`/pl/trees?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}`}
+          to={`/pl/trees?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}}&cs=${cs}`}
         >
           <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={requestDeviceOrientation} />
         </Link>
