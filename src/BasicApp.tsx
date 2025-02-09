@@ -1481,7 +1481,7 @@ function UIOverlayIOS({
       <button
         style={{
           position: 'fixed',
-          bottom: '65px',
+          bottom: '41px',
           left: '24px',
           background: 'transparent',
           border: 'none',
@@ -1498,7 +1498,7 @@ function UIOverlayIOS({
       <button
         style={{
           position: 'fixed',
-          bottom: '48px',
+          bottom: '24px',
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'transparent',
