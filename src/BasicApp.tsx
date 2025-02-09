@@ -1090,7 +1090,7 @@ interface DeviceOrientationControllerProps {
   distance?: number; // 대상과 카메라 사이의 고정 거리 (기본값 10)
 }
 
-function DeviceOrientationController({ isPermissionGranted, target, distance = -11 }: DeviceOrientationControllerProps) {
+function DeviceOrientationController({ isPermissionGranted, target, distance = -30 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
 
   useEffect(() => {
