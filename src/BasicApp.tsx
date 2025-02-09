@@ -1132,7 +1132,7 @@ interface DeviceOrientationControllerProps {
 
 function DeviceOrientationController({
   isPermissionGranted,
-  target,
+  // target,
   // distance = -20,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
