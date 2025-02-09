@@ -1481,7 +1481,7 @@ function UIOverlayIOS({
       <button
         style={{
           position: 'fixed',
-          bottom: '41px',
+          bottom: '21px',
           left: '24px',
           background: 'transparent',
           border: 'none',
@@ -1498,7 +1498,7 @@ function UIOverlayIOS({
       <button
         style={{
           position: 'fixed',
-          bottom: '24px',
+          bottom: '0px',
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'transparent',
@@ -1565,7 +1565,7 @@ function UIOverlayIOS({
         title={
           init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
         }
-        className="z-[9999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+        className="z-[9999] fixed bottom-[108px] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
     </div>
   );
