@@ -294,11 +294,11 @@ function UIOverlay({
     const saved = localStorage.getItem('levaValues');
     if (saved) {
       const base = char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
-      const { oposition, sposition, cposition, sscale } = JSON.parse(saved!);
+      const { oposition, sposition, cposition, sscale, cscale } = JSON.parse(saved!);
 
       const text =
         base +
-        `?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}`;
+        `?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}&cs=${cscale}`;
 
       navigator.clipboard
         .writeText(text)
@@ -1444,11 +1444,11 @@ function UIOverlayIOS({
     const saved = localStorage.getItem('levaValues');
     if (saved) {
       const base = char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
-      const { oposition, sposition, cposition, sscale } = JSON.parse(saved!);
+      const { oposition, sposition, cposition, sscale, cscale } = JSON.parse(saved!);
 
       const text =
         base +
-        `?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}`;
+        `?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}&cs=${cscale}`;
 
       navigator.clipboard
         .writeText(text)
