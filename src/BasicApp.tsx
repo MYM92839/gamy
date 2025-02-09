@@ -877,7 +877,7 @@ export default function BasicApp() {
       // 예시:
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      const offset = new THREE.Vector3(0, 0, -21);
+      const offset = new THREE.Vector3(0, 0, -11);
       offset.applyQuaternion(cameraQuat);
       const newPosition = cameraPos.add(offset);
 
@@ -1203,7 +1203,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
         <group
           ref={groupRef}
           position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[Math.PI / 2, -Math.PI / 4, 0]}
+          rotation={[0, -Math.PI / 4, 0]}
           scale={[0.5, 0.5, 0.5]}
           visible={visible}
         >
