@@ -1129,37 +1129,45 @@ function DeviceOrientationController({
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
-      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
-      const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
-      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+      // 이미 타임아웃이 설정되어 있다면 업데이트를 건너뛰어 빈도를 제한합니다.
+      if (timeoutRef.current) return;
 
-      // 센서 값으로 Euler 생성 (YXZ 순서)
-      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-      const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null;
 
-      // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
-      const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-      deviceQuaternion.multiply(correctionQuaternion);
+        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
-      camera.up.set(0, 1, 0);
-      camera.quaternion.copy(deviceQuaternion);
+        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+        const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
+
+        // iOS 센서 보정 (X축 기준 +90° 회전)
+        const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+        deviceQuaternion.multiply(correctionQuaternion);
+
+        camera.up.set(0, 1, 0);
+        camera.quaternion.copy(deviceQuaternion);
+      }, 100); // 100ms 간격으로 업데이트 (원하는 값으로 조정)
     }
 
     if (isPermissionGranted) {
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
     return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-    // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
-  }, [camera, isPermissionGranted, resetTrigger]);
+  }, [camera, isPermissionGranted, resetTrigger]); // resetTrigger 변경 시에도 재설정
 
   useFrame(() => {
-    // 최신 카메라 방향에 따라 대상(target)에서 일정 거리(distance) 떨어진 위치 계산
-    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    const targetVec = Array.isArray(target)
+      ? new THREE.Vector3(target[0], target[1], target[2])
+      : target;
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
