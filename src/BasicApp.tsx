@@ -1174,7 +1174,9 @@ function DeviceOrientationController({
 
   useFrame(() => {
     // target이 배열이면 Vector3로 변환
-    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    const targetVec = Array.isArray(target)
+      ? new THREE.Vector3(target[0], target[1], target[2])
+      : target;
 
     // offset 계산 (여기서는 별도의 회전 보간 없이 현재 쿼터니언에 따라 적용)
     const offset = new THREE.Vector3(0, 0, distance);
@@ -1187,6 +1189,7 @@ function DeviceOrientationController({
 
   return null;
 }
+
 
 function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposition, addGl, char, scale }: SceneProps) {
   const { gl, camera, scene } = useThree();
