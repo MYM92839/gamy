@@ -1149,7 +1149,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
         rabbitPosition[1] + cposition.y,
         rabbitPosition[2] + cposition.z
       );
-      groupRef.current.rotation.set(0, -Math.PI / 4, 0);
+      //    groupRef.current.rotation.set(0, -Math.PI / 4, 0);
     }
   }, [visible, rabbitPosition, cposition]);
   return (
