@@ -10,7 +10,7 @@ import * as THREE from 'three';
 // 예: 기존 컴포넌트들 (Box, Back, Capture, Button, NftAppT3 ...)은
 // 실제 경로에 따라 import 조정
 import { usePinch } from '@use-gesture/react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Box, Tree } from './ArApp';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
@@ -398,10 +398,28 @@ function CameraUpdater({
 */
 function ARCanvasCore(props: any) {
   const { latestCameraTransformRef } = props;
+  const [searchParams] = useSearchParams();
+  const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
+  const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
+  const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
+  const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
+  const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
+  const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
+  const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
+  const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
+  const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
+  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
 
   // LEVA 세팅
   const initialValues = useMemo(() => {
-    if (typeof window !== 'undefined') {
+    if (ox || oy || oz || cx || cy || cz || sx || sy || sz) {
+      return {
+        oposition: { x: ox, y: oy, z: oz },
+        sposition: { x: sx, y: sy, z: sz },
+        cposition: { x: cx, y: cy, z: cz },
+        sscale: ss,
+      };
+    } else if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('levaValues');
       if (saved) {
         try {
@@ -1441,9 +1459,28 @@ function UIOverlayIOS({
 
 function IOSARCanvasCore(props: any) {
   const { latestCameraTransformRef, orientationEnabled } = props;
+  const [searchParams] = useSearchParams();
+  const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
+  const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
+  const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
+  const cx = searchParams.get('cx') ? parseFloat(searchParams.get('cx')!) : 0;
+  const cy = searchParams.get('cy') ? parseFloat(searchParams.get('cy')!) : 0;
+  const cz = searchParams.get('cz') ? parseFloat(searchParams.get('cz')!) : 0;
+  const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
+  const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
+  const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
+  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
+
   const initialValues = useMemo(() => {
     const saved = localStorage.getItem('levaValues');
-    if (saved) {
+    if (ox || oy || oz || cx || cy || cz || sx || sy || sz || ss) {
+      return {
+        oposition: { x: ox, y: oy, z: oz },
+        sposition: { x: sx, y: sy, z: sz },
+        cposition: { x: cx, y: cy, z: cz },
+        sscale: ss,
+      };
+    } else if (saved) {
       try {
         return JSON.parse(saved);
       } catch (error) {
