@@ -367,7 +367,9 @@ function UIOverlay({
             setShow(true);
           }, 0);
         }}
-        title={init ? '토끼 다시 부르기' : '토끼 부르기'}
+        title={
+          init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
+        }
         className="z-[9999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
     </div>
@@ -1417,7 +1419,9 @@ function UIOverlayIOS({
           setShow(false);
           setTimeout(() => setShow(true), 0);
         }}
-        title={init ? '토끼 다시 부르기' : '토끼 부르기'}
+        title={
+          init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
+        }
         className="z-[9999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
       />
     </div>
