@@ -862,7 +862,6 @@ export default function BasicApp() {
   // "토끼 부르기" 로직
   const correctPose = (glRefObj: any) => {
     if (!glRefObj) return;
-
     if (latestCameraTransform.current) {
       let pos = { x: 0, y: 0, z: 0 };
       const saved = localStorage.getItem('levaValues');
@@ -1118,16 +1117,12 @@ function DeviceOrientationController({ isPermissionGranted, target, distance = 1
     };
   }, [camera, isPermissionGranted]);
 
-  // 매 프레임마다 카메라의 위치를 대상의 위치와 카메라의 회전에 기반하여 업데이트합니다.
   useFrame(() => {
-    // 로컬 공간에서 (0, 0, distance) 벡터를 생성 (카메라로부터 대상까지의 오프셋)
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     const offset = new THREE.Vector3(0, 0, distance);
-    // 카메라의 현재 회전(쿼터니언)을 적용하여 월드 오프셋을 계산
     offset.applyQuaternion(camera.quaternion);
-    // 카메라의 위치를 대상의 위치 + 오프셋으로 설정
-    camera.position.copy(target).add(offset);
-    // 항상 대상을 바라보도록 설정
-    camera.lookAt(target);
+    camera.position.copy(targetVec).add(offset);
+    camera.lookAt(targetVec);
   });
 
   return null;
