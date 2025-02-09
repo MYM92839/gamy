@@ -1171,9 +1171,9 @@ function DeviceOrientationController({
 
   useFrame(() => {
     // target이 배열이면 Vector3로 변환
-    const targetVec = Array.isArray(target)
-      ? new THREE.Vector3(target[0], target[1], target[2])
-      : target;
+    // const targetVec = Array.isArray(target)
+    //   ? new THREE.Vector3(target[0], target[1], target[2])
+    //   : target;
 
     // 만약 카메라 위치 업데이트를 하지 않고 device orientation에 따른 회전만 유지하고 싶다면,
     // useFrame 내에서 카메라 위치 업데이트 코드를 제거합니다.
