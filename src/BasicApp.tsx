@@ -1124,8 +1124,8 @@ interface DeviceOrientationControllerProps {
 
 function DeviceOrientationController({
   isPermissionGranted,
-  // target,
-  // distance = 15,
+  target,
+  distance = 15,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
@@ -1157,16 +1157,16 @@ function DeviceOrientationController({
     // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
   }, [camera, isPermissionGranted, resetTrigger]);
 
-  // useFrame(() => {
-  //   const targetVec = Array.isArray(target)
-  //     ? new THREE.Vector3(target[0], target[1], target[2])
-  //     : target;
-  //   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  //   // 좌우 성분(x)만 반전시키고 스케일링 팩터를 적용합니다.
-  //   const factor = 0.1; // 원하는 민감도에 따라 조정하세요.
-  //   forward.x = -forward.x * factor;
-  //   camera.position.copy(targetVec).sub(forward.multiplyScalar(distance));
-  // });
+  useFrame(() => {
+    const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
+    const offset = new THREE.Vector3(0, 0, distance);
+    offset.applyQuaternion(camera.quaternion);
+    // 기존에는 add(offset) 했던 부분을 sub(offset)으로 변경
+    camera.position.copy(targetVec).sub(offset);
+
+    // camera.lookAt(targetVec);
+  });
+
   return null;
 }
 
@@ -1373,32 +1373,6 @@ function IOSARCanvas(props: any) {
   const glRef = useRef<any>(null);
   const latestCameraTransformRef = props.latestCameraTransformRef;
   const [orientationEnabled] = useState(true);
-  // const requestDeviceOrientation = async () => {
-  //   if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-  //     try {
-  //       const response = await (DeviceOrientationEvent as any).requestPermission();
-  //       if (response === 'granted') {
-  //         setOrientationEnabled(true);
-  //         props.logDebug('DeviceOrientation permission granted (iOS).');
-  //       } else {
-  //         alert('WHY');
-  //         props.logDebug('DeviceOrientation permission not granted.');
-  //       }
-  //     } catch (err) {
-  //       alert('WHY2 :' + err);
-
-  //       console.error('DeviceOrientation permission error:', err);
-  //     }
-  //   } else {
-  //     setOrientationEnabled(true);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   if (init && !orientationEnabled) {
-  //     requestDeviceOrientation();
-  //   }
-  // }, [init]);
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
