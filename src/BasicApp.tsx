@@ -1163,7 +1163,6 @@ function DeviceOrientationController({
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
-
     // camera.lookAt(targetVec);
   });
 
@@ -1199,7 +1198,7 @@ function SceneIOS({ visible, glRef, rabbitPosition, oposition, cposition, sposit
   }, [visible, rabbitPosition, cposition]);
   return (
     <>
-      <ambientLight intensity={5} />
+      <ambientLight intensity={3} />
       <Suspense fallback={null}>
         <group
           ref={groupRef}
