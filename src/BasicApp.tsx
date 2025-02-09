@@ -1160,6 +1160,7 @@ function DeviceOrientationController({
   useFrame(() => {
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     const offset = new THREE.Vector3(0, 0, distance);
+    offset.x = -offset.x;
     offset.applyQuaternion(camera.quaternion);
     // 기존에는 add(offset) 했던 부분을 sub(offset)으로 변경
     camera.position.copy(targetVec).add(offset);
