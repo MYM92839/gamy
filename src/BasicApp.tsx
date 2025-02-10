@@ -465,6 +465,7 @@ function ARCanvasCore(props: any) {
   const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
   const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
 
+  const cv = searchParams.get('cv');
   // LEVA 세팅
   const initialValues = useMemo(() => {
     if (
@@ -568,9 +569,11 @@ function ARCanvasCore(props: any) {
             cameraFov={props.cameraFov}
             char={props.char}
           />
-          <div className="fixed top-0 bottom-0 z-[99999999]">
-            <Leva collapsed={false} />
-          </div>
+          {cv && (
+            <div className="fixed top-0 bottom-0 z-[99999999]">
+              <Leva collapsed={false} />
+            </div>
+          )}
         </XRDomOverlay>
       </XR>
     </>
@@ -1679,6 +1682,8 @@ function IOSARCanvas(props: any) {
   const glRef = useRef<any>(null);
   const latestCameraTransformRef = props.latestCameraTransformRef;
   const [orientationEnabled] = useState(true);
+  const [searchParams] = useSearchParams();
+  const cv = searchParams.get('cv');
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
@@ -1727,9 +1732,11 @@ function IOSARCanvas(props: any) {
         cameraFov={props.cameraFov}
         char={props.char}
       />
-      <div style={{ position: 'fixed', top: 0, zIndex: 99999999 }}>
-        <Leva collapsed={false} />
-      </div>
+      {cv && (
+        <div style={{ position: 'fixed', top: 0, zIndex: 99999999 }}>
+          <Leva collapsed={false} />
+        </div>
+      )}
     </div>
   );
 }
