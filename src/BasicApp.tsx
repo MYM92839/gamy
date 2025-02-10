@@ -1449,6 +1449,9 @@ function UIOverlayIOS({
       setScale(scale * state.offset[0]);
     }
   });
+  const [searchParams] = useSearchParams();
+  const cv = searchParams.get('cv');
+
   const getPosition = () => {
     const saved = localStorage.getItem('levaValues');
     if (saved) {
@@ -1471,22 +1474,24 @@ function UIOverlayIOS({
   };
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
-      <button
-        style={{
-          position: 'fixed',
-          top: '30%',
-          right: '24px',
-          background: 'rgba(0,0,0,0.5)',
-          borderRadius: '8px',
-          color: 'white',
-          padding: '1rem',
-          border: 'none',
-          zIndex: 99999,
-        }}
-        onClick={getPosition}
-      >
-        위치저장
-      </button>
+      {cv && (
+        <button
+          style={{
+            position: 'fixed',
+            top: '30%',
+            right: '24px',
+            background: 'rgba(0,0,0,0.5)',
+            borderRadius: '8px',
+            color: 'white',
+            padding: '1rem',
+            border: 'none',
+            zIndex: 99999,
+          }}
+          onClick={getPosition}
+        >
+          위치저장
+        </button>
+      )}
       <button
         style={{
           position: 'fixed',
@@ -1732,11 +1737,10 @@ function IOSARCanvas(props: any) {
         cameraFov={props.cameraFov}
         char={props.char}
       />
-      {cv && (
-        <div style={{ position: 'fixed', top: 0, zIndex: 99999999 }}>
-          <Leva collapsed={false} />
-        </div>
-      )}
+
+      <div style={{ position: 'fixed', display: cv ? 'block' : 'none', top: 0, zIndex: 99999999 }}>
+        <Leva collapsed={false} />
+      </div>
     </div>
   );
 }
