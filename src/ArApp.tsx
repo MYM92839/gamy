@@ -168,7 +168,7 @@ export function Tree({
     <group
       ref={modelRef}
       scale={sscale ? [4 * sscale, 4 * sscale, 4 * sscale] : [4, 4, 4]}
-      position={oposition ? (oposition as [number, number, number]) : [1, 1, 1]}
+      position={oposition as [number, number, number]}
       rotation={[0, Math.PI / 4, 0]}
       {...props}
       dispose={null}
