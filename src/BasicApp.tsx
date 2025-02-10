@@ -389,7 +389,7 @@ function UIOverlay({
             viewBox="0 0 595.28 841.89"
             width={domWidth}
             height={domHeight}
-            style={{ transform: `scale(${scale}) translateY(0%)` }} // 제스처로 조절된 전체 스케일 적용
+            style={{ transform: `scale(${scale * 0.8}) translateY(0%)` }} // 제스처로 조절된 전체 스케일 적용
           >
             <g id="Layer_2_00000049944092468416363100000003561816792095906952_">
               <path
@@ -1545,7 +1545,7 @@ function UIOverlayIOS({
             viewBox="0 0 595.28 841.89"
             width={domWidth}
             height={domHeight}
-            style={{ transform: `scale(${scale}) translateY(0%)` }} // 제스처로 조절된 전체 스케일 적용
+            style={{ transform: `scale(${scale * 0.8}) translateY(0%)` }} // 제스처로 조절된 전체 스케일 적용
           >
             <g id="Layer_2_00000049944092468416363100000003561816792095906952_">
               <path
