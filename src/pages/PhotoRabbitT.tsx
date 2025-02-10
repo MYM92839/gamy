@@ -16,6 +16,8 @@ export default function PhotoRabbitT() {
   const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
   const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
 
+  const cv = searchParams.get('cv');
+
   const requestDeviceOrientation = async () => {
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
@@ -40,7 +42,7 @@ export default function PhotoRabbitT() {
     <div className="w-full h-full relative">
       <PhotoPara title={`달조명을 배경으로 토끼와 함께 \n 사진을 찍을 수 있어요!`}>
         <Link
-          to={`/pl/moons?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}&cs=${cs}`}
+          to={`/pl/moons?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}&cs=${cs}&cv=${!!cv}`}
         >
           <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={requestDeviceOrientation} />
         </Link>
