@@ -945,11 +945,11 @@ export default function BasicApp() {
     console.log('Calibration ref in BasicApp:', calibrationMatrixRef.current);
   }, []);
 
-  const domWidth = 500;
-  const domHeight = 900;
+  const domWidth = 700;
+  const domHeight = 1100;
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
-  const circleR = 100;
+  const circleR = 140;
   // const circleColor = 'blue';
 
   // 최신 카메라 변환
