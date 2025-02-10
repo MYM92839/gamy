@@ -281,7 +281,8 @@ function UIOverlay({
   const [init, setInit] = useState(false);
   const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
   const [scale, setScale] = useState(0.7); // 반지름 상태 관리c
-
+  const [searchParams] = useSearchParams();
+  const cv = searchParams.get('cv');
   // 핀치 제스처로 반지름을 조정
   const bind = usePinch((state) => {
     if (char == 'moons') {
@@ -312,22 +313,24 @@ function UIOverlay({
   };
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
-      <button
-        style={{
-          position: 'fixed',
-          top: '30%',
-          right: '24px',
-          background: 'rgba(0,0,0,0.5)',
-          borderRadius: '8px',
-          color: 'white',
-          padding: '1rem',
-          border: 'none',
-          zIndex: 99999,
-        }}
-        onClick={getPosition}
-      >
-        위치저장
-      </button>
+      {cv && (
+        <button
+          style={{
+            position: 'fixed',
+            top: '30%',
+            right: '24px',
+            background: 'rgba(0,0,0,0.5)',
+            borderRadius: '8px',
+            color: 'white',
+            padding: '1rem',
+            border: 'none',
+            zIndex: 99999,
+          }}
+          onClick={getPosition}
+        >
+          위치저장
+        </button>
+      )}
       <button
         style={{
           position: 'fixed',
