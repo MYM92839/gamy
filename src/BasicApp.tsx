@@ -281,8 +281,6 @@ function UIOverlay({
   const [init, setInit] = useState(false);
   const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
   const [scale, setScale] = useState(0.7); // 반지름 상태 관리c
-  const [searchParams] = useSearchParams();
-  const cv = searchParams.get('cv');
   // 핀치 제스처로 반지름을 조정
   const bind = usePinch((state) => {
     if (char == 'moons') {
@@ -315,7 +313,6 @@ function UIOverlay({
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
         style={{
-          display: cv ? 'block' : 'none',
           position: 'fixed',
           top: '30%',
           right: '24px',
@@ -331,6 +328,134 @@ function UIOverlay({
         위치저장
       </button>
 
+      <button
+        style={{
+          position: 'fixed',
+          bottom: '65px',
+          left: '24px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 99999,
+        }}
+        onClick={() => {
+          // 예시 링크
+          window.location.href =
+            char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
+        }}
+      >
+        <Back />
+      </button>
+      <button
+        style={{
+          position: 'fixed',
+          bottom: '48px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'transparent',
+          border: 'none',
+          padding: '1rem',
+          zIndex: 99999,
+        }}
+        onClick={openModal}
+      >
+        <Capture />
+      </button>
+      <div
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      >
+        {char == 'moons' ? (
+          <svg width={domWidth} height={domHeight}>
+            <circle
+              cx={circleX}
+              cy={circleY}
+              r={radius} // 반지름을 상태로 업데이트
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeDasharray="4, 4" // 점선으로 만들기 위한 설정
+            />
+          </svg>
+        ) : (
+          <svg
+            id="tree"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 595.28 841.89"
+            width={domWidth}
+            height={domHeight}
+            style={{ transform: `scale(${scale * 0.7}) translateY(0%)` }} // 제스처로 조절된 전체 스케일 적용
+          >
+            <g id="Layer_2_00000049944092468416363100000003561816792095906952_">
+              <path
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeMiterlimit="10"
+                strokeDasharray="1,5,0,0,1,0"
+                d="M167,128.3l-17-5h-15h-15l-10,12l-10,37v23l7,17l16,22l10.5,10l14.5,28l5,28l5,27.2l1,21.8l2,24l6,37l7,34
+           l-6,25v21l1,16c0,0-9,14-11,18s-16,34-16,34l-11,18l-5,25l-4,13l-16,26l-15,18l-11,14l-16,8l-16,11v8l25,6h21h26c0,0,15-15,20-16
+           s23-4,23-4l20,12l23,1c0,0,15-13,23-13s22,7,28,10s28,19,28,19l35,10.6l15,9.4h21h38h45l25-14l31-16l19-8l9-22l-5-21l-25-40l-4-21
+           l-11-33l-10-14l-11-12l-12-15l4-14l1-20v-21l-3-20l-1-14.5l3-11.5l-2-15l8-12l-3-20l-1-11l-1-23.9l11-14.1l8-7l5-11l2-13l11-14v-14
+           l9-15l8-22l4-8l5-11l4-19l6-7l14-17l-11-20l-12-20l-28-13h-24l-15,22l-15,16l-11,19l-13,14l-2,16l-4,20l-10,21l-12,16l-13,11l-2-30
+           v-18c0,0,1-20,3-25s7-26,7-26l7-14l4-15l-14-27c0,0-26-21-29-21s-57-8-57-8h-37l-30.9,16.3l-10.7,5.6l-15.4,8.1L167,128.3z"
+              />
+            </g>
+          </svg>
+        )}
+      </div>
+
+      <Button
+        onClick={() => {
+          if (!init) setInit(true);
+          correctPose();
+          setShow(false);
+          setTimeout(() => {
+            setShow(true);
+          }, 0);
+        }}
+        title={
+          init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
+        }
+        className="z-[9999] fixed bottom-[20%] left-1/2 -translate-x-1/2 w-max mx-auto p-4 h-fit"
+      />
+    </div>
+  );
+}
+
+function UIOverlay2({
+  openModal,
+  setShow,
+  domWidth,
+  domHeight,
+  circleX,
+  circleY,
+  circleR,
+  char,
+  correctPose,
+}: UIOverlayProps) {
+  const [init, setInit] = useState(false);
+  const [radius, setRadius] = useState(circleR); // 반지름 상태 관리
+  const [scale, setScale] = useState(0.7); // 반지름 상태 관리c
+
+  // 핀치 제스처로 반지름을 조정
+  const bind = usePinch((state) => {
+    if (char == 'moons') {
+      setRadius(circleR * state.offset[0]); // 원의 반지름을 핀치 크기에 맞춰 조정
+    } else {
+      setScale(scale * state.offset[0]);
+    }
+  });
+
+  return (
+    <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
         style={{
           position: 'fixed',
@@ -524,7 +649,7 @@ function ARCanvasCore(props: any) {
     localStorage.setItem('levaValues', JSON.stringify(data));
   }, [oposition, sposition, cposition, sscale, cscale]);
 
-  return (
+  return cv ? (
     <>
       <PointerEvents />
       <OrbitHandles />
@@ -550,6 +675,61 @@ function ARCanvasCore(props: any) {
         />
         <XRDomOverlay>
           <UIOverlay
+            modalIsOpen={props.modalIsOpen}
+            fotoUrl={''}
+            correctPose={() => {
+              props.correctPose(props.glRef.current);
+            }}
+            openModal={() => {
+              // openModalHandler
+              props.openModal(props.glRef.current);
+            }}
+            closeModal={props.closeModal}
+            closeSaveModal={props.closeSaveModal}
+            show={props.show}
+            setShow={props.setShow}
+            domWidth={props.domWidth}
+            domHeight={props.domHeight}
+            circleX={props.circleX}
+            circleY={props.circleY}
+            circleR={props.circleR}
+            circleColor={props.circleColor}
+            cameraFov={props.cameraFov}
+            char={props.char}
+          />
+
+          <div style={{ display: cv ? 'block' : 'none' }} className="fixed top-0 bottom-0 z-[99999999]">
+            <Leva collapsed={false} />
+          </div>
+        </XRDomOverlay>
+      </XR>
+    </>
+  ) : (
+    <>
+      <PointerEvents />
+      <OrbitHandles />
+      <CameraUpdater latestCameraTransformRef={latestCameraTransformRef} />
+
+      {/* XR 영역 */}
+      <XR store={props.xrStoreRef.current}>
+        <XROrigin position={[0, 0.5, 0]} />
+        <Scene
+          visible={props.show}
+          glRef={props.glRef}
+          addGl={(gl: any) => {
+            props.glRef.current = gl;
+          }}
+          calibrationMatrixRef={props.calibrationMatrixRef}
+          rabbitPosition={props.rabbitPosition}
+          sposition={sposition}
+          oposition={oposition}
+          cposition={cposition}
+          scale={sscale}
+          cscale={cscale}
+          char={props.char}
+        />
+        <XRDomOverlay>
+          <UIOverlay2
             modalIsOpen={props.modalIsOpen}
             fotoUrl={''}
             correctPose={() => {
