@@ -313,24 +313,24 @@ function UIOverlay({
   };
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
-      {cv && (
-        <button
-          style={{
-            position: 'fixed',
-            top: '30%',
-            right: '24px',
-            background: 'rgba(0,0,0,0.5)',
-            borderRadius: '8px',
-            color: 'white',
-            padding: '1rem',
-            border: 'none',
-            zIndex: 99999,
-          }}
-          onClick={getPosition}
-        >
-          위치저장
-        </button>
-      )}
+      <button
+        style={{
+          display: cv ? 'block' : 'none',
+          position: 'fixed',
+          top: '30%',
+          right: '24px',
+          background: 'rgba(0,0,0,0.5)',
+          borderRadius: '8px',
+          color: 'white',
+          padding: '1rem',
+          border: 'none',
+          zIndex: 99999,
+        }}
+        onClick={getPosition}
+      >
+        위치저장
+      </button>
+
       <button
         style={{
           position: 'fixed',
@@ -572,11 +572,10 @@ function ARCanvasCore(props: any) {
             cameraFov={props.cameraFov}
             char={props.char}
           />
-          {cv && (
-            <div className="fixed top-0 bottom-0 z-[99999999]">
-              <Leva collapsed={false} />
-            </div>
-          )}
+
+          <div style={{ display: cv ? 'block' : 'none' }} className="fixed top-0 bottom-0 z-[99999999]">
+            <Leva collapsed={false} />
+          </div>
         </XRDomOverlay>
       </XR>
     </>
