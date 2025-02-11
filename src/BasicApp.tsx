@@ -1878,11 +1878,16 @@ function UIOverlayIOS({
       <Button
         onClick={() => {
           if (!init) {
-            setInit(true);
+            correctPose();
+            setTimeout(() => {
+              correctPose();
+              setInit(true);
+            }, 1000);
+          } else {
+            correctPose();
+            setShow(false);
+            setTimeout(() => setShow(true), 0);
           }
-          correctPose();
-          setShow(false);
-          setTimeout(() => setShow(true), 0);
         }}
         title={
           init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
