@@ -239,29 +239,50 @@ function Scene({
       <ambientLight intensity={3} />
       <pointLight position={[10, 10, 10]} />
       <Suspense fallback={null}>
-        <group
-          ref={groupRef}
-          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[0, -Math.PI / 4, 0]}
-          scale={cscale}
-          visible={visible}
-        >
-          {visible && (
-            <>
-              {char == 'moons' ? (
+        {visible && (
+          <>
+            {char == 'moons' ? (
+              <group
+                ref={groupRef}
+                position={[
+                  rabbitPosition[0] + cposition.x,
+                  rabbitPosition[1] + cposition.y - 0.5,
+                  rabbitPosition[2] + cposition.z,
+                ]}
+                rotation={[0, -Math.PI / 4, 0]}
+                scale={cscale * 0.5}
+                visible={visible}
+              >
                 <Box
                   sposition={[sposition.x, sposition.y, sposition.z]}
-                  oposition={[oposition.x, oposition.y, oposition.z]}
-                  sscale={scale}
+                  oposition={[oposition.x, oposition.y - 3, oposition.z]}
+                  sscale={scale * 0.7}
                   on
                   onRenderEnd={() => {}}
                 />
-              ) : (
-                <Tree oposition={[oposition.x, oposition.y, oposition.z]} sscale={scale} on onRenderEnd={() => {}} />
-              )}
-            </>
-          )}
-        </group>
+              </group>
+            ) : (
+              <group
+                ref={groupRef}
+                position={[
+                  rabbitPosition[0] + cposition.x,
+                  rabbitPosition[1] + cposition.y - 1.5,
+                  rabbitPosition[2] + cposition.z,
+                ]}
+                rotation={[0, -Math.PI / 4, 0]}
+                scale={cscale}
+                visible={visible}
+              >
+                <Tree
+                  oposition={[oposition.x, oposition.y, oposition.z]}
+                  sscale={scale * 0.9}
+                  on
+                  onRenderEnd={() => {}}
+                />
+              </group>
+            )}
+          </>
+        )}
       </Suspense>
     </>
   );
@@ -590,8 +611,8 @@ function ARCanvasCore(props: any) {
   const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
-  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
-  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
+  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 1;
+  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 1;
 
   const cv = searchParams.get('cv');
   // LEVA 세팅
@@ -640,7 +661,7 @@ function ARCanvasCore(props: any) {
     cposition: { value: initialValues.cposition, step: 0.1 },
   });
   const { sscale, cscale } = useControls({
-    sscale: initialValues.sscale || 0.5,
+    sscale: initialValues.sscale || 1,
     cscale: initialValues.cscale || 1,
   });
 
@@ -1585,26 +1606,47 @@ function SceneIOS({
     <>
       <ambientLight intensity={3} />
       <Suspense fallback={null}>
-        <group
-          ref={groupRef}
-          position={[rabbitPosition[0] + cposition.x, rabbitPosition[1] + cposition.y, rabbitPosition[2] + cposition.z]}
-          rotation={[Math.PI, -Math.PI / 4, 0]}
-          scale={cscale}
-          visible={visible}
-        >
-          {visible &&
-            (char === 'moons' ? (
+        {visible &&
+          (char === 'moons' ? (
+            <group
+              ref={groupRef}
+              position={[
+                rabbitPosition[0] + cposition.x,
+                rabbitPosition[1] + cposition.y + 0.2,
+                rabbitPosition[2] + cposition.z,
+              ]}
+              rotation={[Math.PI, -Math.PI / 4, 0]}
+              scale={cscale * 0.25}
+              visible={visible}
+            >
               <Box
                 sposition={[sposition.x, sposition.y, sposition.z]}
-                oposition={[oposition.x, oposition.y, oposition.z]}
-                sscale={scale}
+                oposition={[oposition.x, oposition.y - 3.5, oposition.z]}
+                sscale={scale * 0.85}
                 on
                 onRenderEnd={() => {}}
               />
-            ) : (
-              <Tree oposition={[oposition.x, oposition.y, oposition.z]} sscale={scale} on onRenderEnd={() => {}} />
-            ))}
-        </group>
+            </group>
+          ) : (
+            <group
+              ref={groupRef}
+              position={[
+                rabbitPosition[0] + cposition.x,
+                rabbitPosition[1] + cposition.y + 1,
+                rabbitPosition[2] + cposition.z,
+              ]}
+              rotation={[Math.PI, -Math.PI / 4, 0]}
+              scale={cscale * 0.5}
+              visible={visible}
+            >
+              <Tree
+                oposition={[oposition.x, oposition.y, oposition.z]}
+                sscale={scale * 0.6}
+                on
+                onRenderEnd={() => {}}
+              />{' '}
+            </group>
+          ))}
       </Suspense>
     </>
   );
@@ -1785,8 +1827,8 @@ function IOSARCanvasCore(props: any) {
   const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
-  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
-  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
+  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 1;
+  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 1;
 
   const initialValues = useMemo(() => {
     const saved = localStorage.getItem('levaValues');
@@ -1831,7 +1873,7 @@ function IOSARCanvasCore(props: any) {
     cposition: { value: initialValues.cposition, step: 0.1 },
   });
   const { sscale, cscale } = useControls({
-    sscale: initialValues.sscale || 0.5,
+    sscale: initialValues.sscale || 1,
     cscale: initialValues.cscale || 1,
   });
   useEffect(() => {

@@ -13,8 +13,8 @@ export default function PhotoRabbitT() {
   const sx = searchParams.get('sx') ? parseFloat(searchParams.get('sx')!) : 0;
   const sy = searchParams.get('sy') ? parseFloat(searchParams.get('sy')!) : 0;
   const sz = searchParams.get('sz') ? parseFloat(searchParams.get('sz')!) : 0;
-  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 0.5;
-  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 0.5;
+  const ss = searchParams.get('ss') ? parseFloat(searchParams.get('ss')!) : 1;
+  const cs = searchParams.get('cs') ? parseFloat(searchParams.get('cs')!) : 1;
 
   const cv = searchParams.get('cv');
 
