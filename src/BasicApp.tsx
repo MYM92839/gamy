@@ -247,7 +247,11 @@ function Scene({
 
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
+      camera.lookAt(
+        rabbitPosition[0] + cposition.x,
+        rabbitPosition[1] + cposition.y - 0.5,
+        rabbitPosition[2] + cposition.z
+      );
       camera.updateProjectionMatrix();
 
       if (groupRef.current && glRef.current && glRef.current.camera) {
