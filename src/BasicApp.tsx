@@ -1883,8 +1883,10 @@ function UIOverlayIOS({
 
               setTimeout(() => {
                 correctPose();
+                setShow(false);
+                setTimeout(() => setShow(true), 0);
                 setInit(true);
-              }, 500)
+              }, 500);
             }, 1000);
           } else {
             correctPose();
