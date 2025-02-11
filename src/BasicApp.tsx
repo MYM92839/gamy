@@ -651,7 +651,7 @@ function ARCanvasCore(props: any) {
       oposition: { x: 0, y: 0, z: 0 },
       sposition: { x: 0, y: 0, z: 0 },
       cposition: { x: 0, y: 0, z: 0 },
-      sscale: 0.5,
+      sscale: 1,
       cscale: 1,
     };
   }, []);
@@ -1644,7 +1644,7 @@ function SceneIOS({
                 sscale={scale * 0.6}
                 on
                 onRenderEnd={() => {}}
-              />{' '}
+              />
             </group>
           ))}
       </Suspense>
@@ -1863,7 +1863,7 @@ function IOSARCanvasCore(props: any) {
       oposition: { x: 0, y: 0, z: 0 },
       sposition: { x: 0, y: 0, z: 0 },
       cposition: { x: 0, y: 0, z: 0 },
-      sscale: 0.5,
+      sscale: 1,
       cscale: 1,
     };
   }, []);
