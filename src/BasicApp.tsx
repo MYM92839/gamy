@@ -220,7 +220,19 @@ function Scene({
   // // rabbitPosition에 맞춰 토끼를 카메라 방향 보정
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
+      if (char === 'moons') {
+        camera.lookAt(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y - 0.5,
+          rabbitPosition[2] + cposition.z
+        );
+      } else {
+        camera.lookAt(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y - 1.5,
+          rabbitPosition[2] + cposition.z
+        );
+      }
       camera.updateProjectionMatrix();
 
       if (groupRef.current && glRef.current && glRef.current.camera) {
@@ -231,7 +243,7 @@ function Scene({
         groupRef.current.quaternion.multiply(offsetQuat);
       }
     }
-  }, [visible, camera, rabbitPosition, glRef]);
+  }, [visible, rabbitPosition, glRef, camera]);
 
   // useEffect(() => {
   //   if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
