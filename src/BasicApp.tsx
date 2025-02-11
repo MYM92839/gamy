@@ -218,32 +218,49 @@ function Scene({
   }, [camera, gl, glRef, scene]);
 
   // // rabbitPosition에 맞춰 토끼를 카메라 방향 보정
+  // useEffect(() => {
+  //   if (visible && groupRef.current && camera) {
+  //     if (char === 'moons') {
+  //       camera.lookAt(
+  //         rabbitPosition[0] + cposition.x,
+  //         rabbitPosition[1] + cposition.y - 0.5,
+  //         rabbitPosition[2] + cposition.z
+  //       );
+  //     } else {
+  //       camera.lookAt(
+  //         rabbitPosition[0] + cposition.x,
+  //         rabbitPosition[1] + cposition.y - 1.5,
+  //         rabbitPosition[2] + cposition.z
+  //       );
+  //     }
+  //     camera.updateProjectionMatrix();
+
+  //     if (groupRef.current && glRef.current && glRef.current.camera) {
+  //       groupRef.current.lookAt(glRef.current.camera.position);
+
+  //       const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+  //       const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+  //       groupRef.current.quaternion.multiply(offsetQuat);
+  //     }
+  //   }
+  // }, [visible, rabbitPosition, glRef, camera]);
+
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      if (char === 'moons') {
-        camera.lookAt(
-          rabbitPosition[0] + cposition.x,
-          rabbitPosition[1] + cposition.y - 0.5,
-          rabbitPosition[2] + cposition.z
-        );
-      } else {
-        camera.lookAt(
-          rabbitPosition[0] + cposition.x,
-          rabbitPosition[1] + cposition.y - 1.5,
-          rabbitPosition[2] + cposition.z
-        );
-      }
+      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
 
       if (groupRef.current && glRef.current && glRef.current.camera) {
+        // 그룹 회전을 먼저 초기화하거나 재설정
+        groupRef.current.rotation.set(0, 0, 0);
         groupRef.current.lookAt(glRef.current.camera.position);
-
-        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        groupRef.current.quaternion.multiply(offsetQuat);
+        // 오프셋 적용
+        groupRef.current.rotateY(-Math.PI / 4);
+        // quaternion 정규화 (누적 오차 방지)
+        groupRef.current.quaternion.normalize();
       }
     }
-  }, [visible, rabbitPosition, glRef, camera]);
+  }, [visible, camera, rabbitPosition]);
 
   // useEffect(() => {
   //   if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
