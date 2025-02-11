@@ -1878,10 +1878,13 @@ function UIOverlayIOS({
       <Button
         onClick={() => {
           if (!init) {
-            correctPose();
             setTimeout(() => {
               correctPose();
-              setInit(true);
+
+              setTimeout(() => {
+                correctPose();
+                setInit(true);
+              }, 500)
             }, 1000);
           } else {
             correctPose();
