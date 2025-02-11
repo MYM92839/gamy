@@ -1742,6 +1742,10 @@ function UIOverlayIOS({
         });
     }
   };
+
+  useEffect(() => {
+    correctPose();
+  }, []);
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       {cv && (
@@ -1849,7 +1853,6 @@ function UIOverlayIOS({
         onClick={() => {
           if (!init) {
             setInit(true);
-            correctPose();
           }
           correctPose();
           setShow(false);
