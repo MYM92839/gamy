@@ -362,11 +362,6 @@ function UIOverlay({
     }
   };
 
-  useEffect(() => {
-    if (correctPose) {
-      correctPose();
-    }
-  }, [correctPose]);
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
@@ -1335,30 +1330,32 @@ export default function BasicApp() {
         setIsOpen(true);
       }
     } else {
-      correctPose(gl);
+      requestAnimationFrame(() => {
+        correctPose(gl);
 
-      // XRFrame → projectionMatrix → FOV 추출
-      const xrFrame = gl.gl.xr.getFrame?.();
-      const refSpace = gl.gl.xr.getReferenceSpace?.();
-      if (xrFrame && refSpace) {
-        const pose = xrFrame.getViewerPose(refSpace);
-        if (pose && pose.views.length > 0) {
-          const newFov = extractFovFromProjectionMatrix(pose.views[0].projectionMatrix);
-          setCameraFov(newFov);
-          logDebug('Captured FOV from XRFrame:', newFov);
+        // XRFrame → projectionMatrix → FOV 추출
+        const xrFrame = gl.gl.xr.getFrame?.();
+        const refSpace = gl.gl.xr.getReferenceSpace?.();
+        if (xrFrame && refSpace) {
+          const pose = xrFrame.getViewerPose(refSpace);
+          if (pose && pose.views.length > 0) {
+            const newFov = extractFovFromProjectionMatrix(pose.views[0].projectionMatrix);
+            setCameraFov(newFov);
+            logDebug('Captured FOV from XRFrame:', newFov);
+          }
         }
-      }
 
-      captureARContent(gl);
+        captureARContent(gl);
 
-      if (xrStoreRef.current) {
-        xrStoreRef.current.getState().session?.end();
-        xrStoreRef.current.destroy();
-        xrStoreRef.current = null;
-      }
-      setMount(false);
+        if (xrStoreRef.current) {
+          xrStoreRef.current.getState().session?.end();
+          xrStoreRef.current.destroy();
+          xrStoreRef.current = null;
+        }
+        setMount(false);
 
-      setIsOpen(true);
+        setIsOpen(true);
+      });
     }
   };
 
