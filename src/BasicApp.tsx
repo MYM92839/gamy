@@ -361,6 +361,12 @@ function UIOverlay({
         });
     }
   };
+
+  useEffect(() => {
+    if (correctPose) {
+      correctPose();
+    }
+  }, [correctPose]);
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       <button
