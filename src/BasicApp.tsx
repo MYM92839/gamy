@@ -1270,32 +1270,7 @@ export default function BasicApp() {
       // 토끼 부르기마다 resetTrigger 증가하여 DeviceOrientationController를 리셋
       setResetTrigger((prev) => prev + 1);
     } else {
-      if (!glRefObj) return;
-      if (latestCameraTransform.current) {
-        let pos = { x: 0, y: 0, z: 0 };
-        const saved = localStorage.getItem('levaValues');
-        if (saved) {
-          try {
-            const s = JSON.parse(saved);
-            pos = s.cposition;
-          } catch (error) {
-            console.error('levaValues parse fail:', error);
-          }
-        }
-        const cameraPos = latestCameraTransform.current.position.clone();
-        const cameraQuat = latestCameraTransform.current.quaternion.clone();
-        const offset = new THREE.Vector3(0, 0, -11);
-        offset.applyQuaternion(cameraQuat);
-        const newPosition = cameraPos.add(offset);
-        if (char === 'moons') {
-          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 0.5, newPosition.z + pos.z]);
-        } else {
-          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 1.5, newPosition.z + pos.z]);
-        }
 
-        logDebug('Rabbit position updated:', newPosition);
-      }
-    }
   };
 
   /** ★ 수정: openModalHandler에서 XRFrame으로부터 FOV 추출 후 setCameraFov(newFov) */
@@ -1743,9 +1718,6 @@ function UIOverlayIOS({
     }
   };
 
-  useEffect(() => {
-    correctPose();
-  }, []);
   return (
     <div {...bind()} style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 99999 }}>
       {cv && (
