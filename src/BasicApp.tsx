@@ -1271,30 +1271,42 @@ export default function BasicApp() {
       setResetTrigger((prev) => prev + 1);
     } else {
       if (!glRefObj) return;
-      if (latestCameraTransform.current) {
-        let pos = { x: 0, y: 0, z: 0 };
-        const saved = localStorage.getItem('levaValues');
-        if (saved) {
-          try {
-            const s = JSON.parse(saved);
-            pos = s.cposition;
-          } catch (error) {
-            console.error('levaValues parse fail:', error);
-          }
-        }
-        const cameraPos = latestCameraTransform.current.position.clone();
-        const cameraQuat = latestCameraTransform.current.quaternion.clone();
-        const offset = new THREE.Vector3(0, 0, -11);
-        offset.applyQuaternion(cameraQuat);
-        const newPosition = cameraPos.add(offset);
-        if (char === 'moons') {
-          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 0.5, newPosition.z + pos.z]);
-        } else {
-          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 1.5, newPosition.z + pos.z]);
-        }
 
-        logDebug('Rabbit position updated:', newPosition);
+      // XR 세션 카메라가 최신 상태임을 보장
+      glRefObj.camera.updateMatrixWorld(true);
+
+      // 저장된 오프셋 값 불러오기
+      let pos = { x: 0, y: 0, z: 0 };
+      const saved = localStorage.getItem('levaValues');
+      if (saved) {
+        try {
+          const s = JSON.parse(saved);
+          pos = s.cposition;
+        } catch (error) {
+          console.error('levaValues parse fail:', error);
+        }
       }
+
+      // glRefObj.camera를 직접 사용하여 최신 카메라 변환값 얻기
+      const cameraPos = glRefObj.camera.position.clone();
+      const cameraQuat = glRefObj.camera.quaternion.clone();
+
+      // non-iOS의 경우 오프셋은 (0, 0, -11)로 적용
+      const offset = new THREE.Vector3(0, 0, -11);
+      offset.applyQuaternion(cameraQuat);
+      const newPosition = cameraPos.add(offset);
+
+      // char 값에 따라 약간의 y축 보정 적용
+      if (char === 'moons') {
+        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 0.5, newPosition.z + pos.z]);
+      } else {
+        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 1.5, newPosition.z + pos.z]);
+      }
+
+      logDebug('Rabbit position updated:', newPosition);
+
+      // 필요한 경우 DeviceOrientationController 등을 리셋하기 위한 트리거 업데이트
+      setResetTrigger((prev) => prev + 1);
     }
   };
 
