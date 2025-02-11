@@ -200,7 +200,7 @@ function Scene({
 }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
-
+  const [finRabbit, setFinRabbit] = useState(rabbitPosition);
   // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
@@ -238,11 +238,7 @@ function Scene({
   useEffect(() => {
     if (visible && groupRef.current && camera) {
       if (char === 'moons') {
-        camera.lookAt(
-          rabbitPosition[0] + cposition.x,
-          rabbitPosition[1] + cposition.y - 0.5,
-          rabbitPosition[2] + cposition.z
-        );
+        camera.lookAt(...finRabbit);
         camera.updateProjectionMatrix();
 
         if (groupRef.current && glRef.current && glRef.current.camera) {
@@ -253,11 +249,7 @@ function Scene({
           groupRef.current.quaternion.multiply(offsetQuat);
         }
       } else {
-        camera.lookAt(
-          rabbitPosition[0] + cposition.x,
-          rabbitPosition[1] + cposition.y - 1.5,
-          rabbitPosition[2] + cposition.z
-        );
+        camera.lookAt(...finRabbit);
         camera.updateProjectionMatrix();
 
         if (groupRef.current && glRef.current && glRef.current.camera) {
@@ -269,7 +261,23 @@ function Scene({
         }
       }
     }
-  }, [rabbitPosition]);
+  }, [finRabbit]);
+
+  useEffect(() => {
+    if (char === 'moons') {
+      setFinRabbit([
+        rabbitPosition[0] + cposition.x,
+        rabbitPosition[1] + cposition.y - 0.5,
+        rabbitPosition[2] + cposition.z,
+      ]);
+    } else {
+      setFinRabbit([
+        rabbitPosition[0] + cposition.x,
+        rabbitPosition[1] + cposition.y - 1.5,
+        rabbitPosition[2] + cposition.z,
+      ]);
+    }
+  }, [rabbitPosition, cposition]);
 
   return (
     <>
@@ -281,11 +289,7 @@ function Scene({
             {char == 'moons' ? (
               <group
                 ref={groupRef}
-                position={[
-                  rabbitPosition[0] + cposition.x,
-                  rabbitPosition[1] + cposition.y - 0.5,
-                  rabbitPosition[2] + cposition.z,
-                ]}
+                position={finRabbit}
                 rotation={[0, -Math.PI / 4, 0]}
                 scale={cscale * 0.5}
                 visible={visible}
@@ -301,11 +305,7 @@ function Scene({
             ) : (
               <group
                 ref={groupRef}
-                position={[
-                  rabbitPosition[0] + cposition.x,
-                  rabbitPosition[1] + cposition.y - 1.5,
-                  rabbitPosition[2] + cposition.z,
-                ]}
+                position={finRabbit}
                 rotation={[0, -Math.PI / 4, 0]}
                 scale={cscale * 0.5}
                 visible={visible}
