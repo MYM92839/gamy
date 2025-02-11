@@ -226,9 +226,11 @@ function Scene({
       if (groupRef.current && glRef.current && glRef.current.camera) {
         groupRef.current.lookAt(glRef.current.camera.position);
 
-        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        groupRef.current.quaternion.multiply(offsetQuat);
+        groupRef.current.rotation.set(0, 0, 0);
+        // const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+        // const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+        // groupRef.current.quaternion.multiply(offsetQuat);
+        groupRef.current.rotateY(-Math.PI / 4);
       }
     }
   }, [visible, camera, rabbitPosition]);
@@ -603,8 +605,7 @@ function CameraUpdater({
 }: {
   latestCameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion }>;
 }) {
-  const { camera } = useThree();
-  useFrame(() => {
+  useFrame(({ camera }) => {
     latestCameraTransformRef.current.position.copy(camera.position);
     latestCameraTransformRef.current.quaternion.copy(camera.quaternion);
   });
