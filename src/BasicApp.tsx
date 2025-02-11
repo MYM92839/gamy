@@ -226,14 +226,12 @@ function Scene({
       if (groupRef.current && glRef.current && glRef.current.camera) {
         groupRef.current.lookAt(glRef.current.camera.position);
 
-        groupRef.current.rotation.set(0, 0, 0);
-        // const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        // const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        // groupRef.current.quaternion.multiply(offsetQuat);
-        groupRef.current.rotateY(-Math.PI / 4);
+        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+        groupRef.current.quaternion.multiply(offsetQuat);
       }
     }
-  }, [visible, camera, rabbitPosition]);
+  }, [visible, camera, rabbitPosition, glRef]);
 
   // useEffect(() => {
   //   if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
