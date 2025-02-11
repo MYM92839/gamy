@@ -1287,9 +1287,9 @@ export default function BasicApp() {
         offset.applyQuaternion(cameraQuat);
         const newPosition = cameraPos.add(offset);
         if (char === 'moons') {
-          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 0.5, newPosition.z + pos.z]);
+          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         } else {
-          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 1.5, newPosition.z + pos.z]);
+          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         }
 
         logDebug('Rabbit position updated:', newPosition);
