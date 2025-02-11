@@ -1594,14 +1594,23 @@ function SceneIOS({
   // iOS에서는 센서(DeviceOrientation)로 회전 업데이트되므로, 오브젝트 위치와 고정 회전만 설정
   useEffect(() => {
     if (visible && groupRef.current) {
-      groupRef.current.position.set(
-        rabbitPosition[0] + cposition.x,
-        rabbitPosition[1] + cposition.y,
-        rabbitPosition[2] + cposition.z
-      );
+      if (char === 'moons') {
+        groupRef.current.position.set(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y + 0.2,
+          rabbitPosition[2] + cposition.z
+        );
+      } else {
+        groupRef.current.position.set(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y + 1,
+          rabbitPosition[2] + cposition.z
+        );
+      }
       //    groupRef.current.rotation.set(0, -Math.PI / 4, 0);
     }
   }, [visible, rabbitPosition, cposition]);
+
   return (
     <>
       <ambientLight intensity={3} />
