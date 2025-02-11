@@ -625,7 +625,8 @@ function UIOverlay2({
           if (!init) {
             setTimeout(() => {
               correctPose();
-
+              setShow(false);
+              setTimeout(() => setShow(true), 0);
               setTimeout(() => {
                 correctPose();
                 setShow(false);
