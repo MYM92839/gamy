@@ -247,11 +247,7 @@ function Scene({
 
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      camera.lookAt(
-        rabbitPosition[0] + cposition.x,
-        rabbitPosition[1] + cposition.y - 0.5,
-        rabbitPosition[2] + cposition.z
-      );
+      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
 
       if (groupRef.current && glRef.current && glRef.current.camera) {
@@ -488,12 +484,22 @@ function UIOverlay({
 
       <Button
         onClick={() => {
-          if (!init) setInit(true);
-          correctPose();
-          setShow(false);
-          setTimeout(() => {
-            setShow(true);
-          }, 0);
+          if (!init) {
+            setTimeout(() => {
+              correctPose();
+
+              setTimeout(() => {
+                correctPose();
+                setShow(false);
+                setTimeout(() => setShow(true), 0);
+                setInit(true);
+              }, 500);
+            }, 1000);
+          } else {
+            correctPose();
+            setShow(false);
+            setTimeout(() => setShow(true), 0);
+          }
         }}
         title={
           init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
@@ -616,12 +622,22 @@ function UIOverlay2({
 
       <Button
         onClick={() => {
-          if (!init) setInit(true);
-          correctPose();
-          setShow(false);
-          setTimeout(() => {
-            setShow(true);
-          }, 0);
+          if (!init) {
+            setTimeout(() => {
+              correctPose();
+
+              setTimeout(() => {
+                correctPose();
+                setShow(false);
+                setTimeout(() => setShow(true), 0);
+                setInit(true);
+              }, 500);
+            }, 1000);
+          } else {
+            correctPose();
+            setShow(false);
+            setTimeout(() => setShow(true), 0);
+          }
         }}
         title={
           init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
@@ -1882,16 +1898,7 @@ function UIOverlayIOS({
       <Button
         onClick={() => {
           if (!init) {
-            setTimeout(() => {
-              correctPose();
-
-              setTimeout(() => {
-                correctPose();
-                setShow(false);
-                setTimeout(() => setShow(true), 0);
-                setInit(true);
-              }, 500);
-            }, 1000);
+            setInit(true);
           } else {
             correctPose();
             setShow(false);
