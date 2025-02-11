@@ -234,32 +234,18 @@ function Scene({
   //   }
   // }, [visible, camera, rabbitPosition]);
 
-  // rabbitPosition에 맞춰 토끼를 카메라 방향 보정
   useEffect(() => {
-    if (visible && groupRef.current && camera) {
-      if (char === 'moons') {
-        camera.lookAt(...finRabbit);
-        camera.updateProjectionMatrix();
+    if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
+      // 카메라가 finRabbit(토끼 위치)을 바라보도록 설정
+      camera.lookAt(...finRabbit);
+      camera.updateProjectionMatrix();
 
-        if (groupRef.current && glRef.current && glRef.current.camera) {
-          groupRef.current.lookAt(glRef.current.camera.position);
-
-          const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-          const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-          groupRef.current.quaternion.multiply(offsetQuat);
-        }
-      } else {
-        camera.lookAt(...finRabbit);
-        camera.updateProjectionMatrix();
-
-        if (groupRef.current && glRef.current && glRef.current.camera) {
-          groupRef.current.lookAt(glRef.current.camera.position);
-
-          const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-          const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-          groupRef.current.quaternion.multiply(offsetQuat);
-        }
-      }
+      // 그룹의 회전을 초기화
+      groupRef.current.rotation.set(0, 0, 0);
+      // 그룹이 카메라 방향을 바라보게 설정 (즉, 토끼가 카메라를 바라봄)
+      groupRef.current.lookAt(glRef.current.camera.position);
+      // 원하는 오프셋 회전을 한 번 적용 (누적되지 않도록)
+      groupRef.current.rotateY(-Math.PI / 4);
     }
   }, [finRabbit]);
 
