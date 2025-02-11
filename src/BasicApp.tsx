@@ -237,6 +237,11 @@ function Scene({
   useEffect(() => {
     if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
       // 카메라가 finRabbit(토끼 위치)을 바라보도록 설정
+      if (char === 'moons') {
+        camera.position.y -= 0.5;
+      } else {
+        camera.position.y -= 1.5;
+      }
       camera.lookAt(...finRabbit);
       camera.updateProjectionMatrix();
 
