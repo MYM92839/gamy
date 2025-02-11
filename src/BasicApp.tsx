@@ -200,7 +200,6 @@ function Scene({
 }: SceneProps) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
-  const [finRabbit, setFinRabbit] = useState(rabbitPosition);
   // 매 프레임: glRef 갱신
   useFrame(() => {
     if (glRef.current) {
@@ -219,56 +218,40 @@ function Scene({
   }, [camera, gl, glRef, scene]);
 
   // // rabbitPosition에 맞춰 토끼를 카메라 방향 보정
-  // useEffect(() => {
-  //   if (visible && groupRef.current && camera) {
-  //     camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
-  //     camera.updateProjectionMatrix();
-
-  //     if (groupRef.current && glRef.current && glRef.current.camera) {
-  //       groupRef.current.lookAt(glRef.current.camera.position);
-
-  //       const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-  //       const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-  //       groupRef.current.quaternion.multiply(offsetQuat);
-  //     }
-  //   }
-  // }, [visible, camera, rabbitPosition]);
-
   useEffect(() => {
-    if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
-      // 카메라가 finRabbit(토끼 위치)을 바라보도록 설정
-      if (char === 'moons') {
-        camera.position.y -= 0.5;
-      } else {
-        camera.position.y -= 1.5;
-      }
-      camera.lookAt(...finRabbit);
+    if (visible && groupRef.current && camera) {
+      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
       camera.updateProjectionMatrix();
 
-      // 그룹의 회전을 초기화
-      groupRef.current.rotation.set(0, 0, 0);
-      // 그룹이 카메라 방향을 바라보게 설정 (즉, 토끼가 카메라를 바라봄)
-      groupRef.current.lookAt(glRef.current.camera.position);
-      // 원하는 오프셋 회전을 한 번 적용 (누적되지 않도록)
-      groupRef.current.rotateY(-Math.PI / 4);
-    }
-  }, [finRabbit]);
+      if (groupRef.current && glRef.current && glRef.current.camera) {
+        groupRef.current.lookAt(glRef.current.camera.position);
 
-  useEffect(() => {
-    if (char === 'moons') {
-      setFinRabbit([
-        rabbitPosition[0] + cposition.x,
-        rabbitPosition[1] + cposition.y - 0.5,
-        rabbitPosition[2] + cposition.z,
-      ]);
-    } else {
-      setFinRabbit([
-        rabbitPosition[0] + cposition.x,
-        rabbitPosition[1] + cposition.y - 1.5,
-        rabbitPosition[2] + cposition.z,
-      ]);
+        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+        groupRef.current.quaternion.multiply(offsetQuat);
+      }
     }
-  }, [rabbitPosition, cposition]);
+  }, [visible, camera, rabbitPosition]);
+
+  // useEffect(() => {
+  //   if (visible && groupRef.current && camera && glRef.current && glRef.current.camera) {
+  //     // 카메라가 finRabbit(토끼 위치)을 바라보도록 설정
+  //     if (char === 'moons') {
+  //       camera.position.y -= 0.5;
+  //     } else {
+  //       camera.position.y -= 1.5;
+  //     }
+  //     camera.lookAt(...finRabbit);
+  //     camera.updateProjectionMatrix();
+
+  //     // 그룹의 회전을 초기화
+  //     groupRef.current.rotation.set(0, 0, 0);
+  //     // 그룹이 카메라 방향을 바라보게 설정 (즉, 토끼가 카메라를 바라봄)
+  //     groupRef.current.lookAt(glRef.current.camera.position);
+  //     // 원하는 오프셋 회전을 한 번 적용 (누적되지 않도록)
+  //     groupRef.current.rotateY(-Math.PI / 4);
+  //   }
+  // }, [finRabbit]);
 
   return (
     <>
@@ -280,7 +263,11 @@ function Scene({
             {char == 'moons' ? (
               <group
                 ref={groupRef}
-                position={finRabbit}
+                position={[
+                  rabbitPosition[0] + cposition.x,
+                  rabbitPosition[1] + cposition.y - 0.5,
+                  rabbitPosition[2] + cposition.z,
+                ]}
                 rotation={[0, -Math.PI / 4, 0]}
                 scale={cscale * 0.5}
                 visible={visible}
@@ -296,7 +283,11 @@ function Scene({
             ) : (
               <group
                 ref={groupRef}
-                position={finRabbit}
+                position={[
+                  rabbitPosition[0] + cposition.x,
+                  rabbitPosition[1] + cposition.y - 1.5,
+                  rabbitPosition[2] + cposition.z,
+                ]}
                 rotation={[0, -Math.PI / 4, 0]}
                 scale={cscale * 0.5}
                 visible={visible}
@@ -1284,8 +1275,12 @@ export default function BasicApp() {
         const offset = new THREE.Vector3(0, 0, -11);
         offset.applyQuaternion(cameraQuat);
         const newPosition = cameraPos.add(offset);
+        if (char === 'moons') {
+          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 0.5, newPosition.z + pos.z]);
+        } else {
+          setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y - 1.5, newPosition.z + pos.z]);
+        }
 
-        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         logDebug('Rabbit position updated:', newPosition);
       }
     }
