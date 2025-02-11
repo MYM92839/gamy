@@ -221,18 +221,39 @@ function Scene({
   // rabbitPosition에 맞춰 토끼를 카메라 방향 보정
   useEffect(() => {
     if (visible && groupRef.current && camera) {
-      camera.lookAt(rabbitPosition[0], rabbitPosition[1], rabbitPosition[2]);
-      camera.updateProjectionMatrix();
+      if (char === 'moons') {
+        camera.lookAt(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y - 0.5,
+          rabbitPosition[2] + cposition.z
+        );
+        camera.updateProjectionMatrix();
 
-      if (groupRef.current && glRef.current && glRef.current.camera) {
-        groupRef.current.lookAt(glRef.current.camera.position);
+        if (groupRef.current && glRef.current && glRef.current.camera) {
+          groupRef.current.lookAt(glRef.current.camera.position);
 
-        const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
-        const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
-        groupRef.current.quaternion.multiply(offsetQuat);
+          const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+          const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+          groupRef.current.quaternion.multiply(offsetQuat);
+        }
+      } else {
+        camera.lookAt(
+          rabbitPosition[0] + cposition.x,
+          rabbitPosition[1] + cposition.y - 1.5,
+          rabbitPosition[2] + cposition.z
+        );
+        camera.updateProjectionMatrix();
+
+        if (groupRef.current && glRef.current && glRef.current.camera) {
+          groupRef.current.lookAt(glRef.current.camera.position);
+
+          const offsetEuler = new THREE.Euler(0, -Math.PI / 4, 0, 'XYZ');
+          const offsetQuat = new THREE.Quaternion().setFromEuler(offsetEuler);
+          groupRef.current.quaternion.multiply(offsetQuat);
+        }
       }
     }
-  }, [visible, camera, rabbitPosition]);
+  }, [visible, camera, rabbitPosition, cposition]);
 
   return (
     <>
