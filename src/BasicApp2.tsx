@@ -504,7 +504,7 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   target,
-  distance = -15,
+  distance = -5,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
@@ -575,7 +575,27 @@ function SceneIOS({
       addGl(glRef.current);
     }
   }, [camera, gl, glRef, scene]);
+
   // iOS에서는 센서(DeviceOrientation)로 회전 업데이트되므로, 오브젝트 위치와 고정 회전만 설정
+  // useEffect(() => {
+  //   if (visible && groupRef.current) {
+  //     if (char === 'moons') {
+  //       groupRef.current.position.set(
+  //         rabbitPosition[0] + cposition.x,
+  //         rabbitPosition[1] + cposition.y + 0.2,
+  //         rabbitPosition[2] + cposition.z
+  //       );
+  //     } else {
+  //       groupRef.current.position.set(
+  //         rabbitPosition[0] + cposition.x,
+  //         rabbitPosition[1] + cposition.y + 1,
+  //         rabbitPosition[2] + cposition.z
+  //       );
+  //     }
+  //     //    groupRef.current.rotation.set(0, -Math.PI / 4, 0);
+  //   }
+  // }, [visible, rabbitPosition, cposition]);
+
   useEffect(() => {
     if (visible && groupRef.current) {
       if (char === 'moons') {
@@ -591,7 +611,8 @@ function SceneIOS({
           rabbitPosition[2] + cposition.z
         );
       }
-      //    groupRef.current.rotation.set(0, -Math.PI / 4, 0);
+      // 기존 회전에 Y축 180도 추가
+      groupRef.current.rotation.set(0, Math.PI, 0);
     }
   }, [visible, rabbitPosition, cposition]);
 
