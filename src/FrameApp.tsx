@@ -24,6 +24,7 @@ const customStyles = {
 };
 
 Modal.setAppElement('#root');
+const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
 
 interface FrameAppProps {
   frameOpacity?: number;
@@ -302,7 +303,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     if (overlayVideoRef.current) {
       // 애니메이션 영상 재생이 끝나면 우선 일시정지 후 idle 영상 소스로 변경
       overlayVideoRef.current.pause();
-      overlayVideoRef.current.src = `//${char}_idle.mp4`;
+      overlayVideoRef.current.src = isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`;
       overlayVideoRef.current.loop = true;
       overlayVideoRef.current.load(); // 새 소스를 명시적으로 로드
 
@@ -357,7 +358,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
             onEnded={handleVideoEnded} // 여기에서 onEnded 이벤트 핸들러를 붙입니다.
           >
             <source
-              src={`//${char}_anim.mp4`}
+              src={isIOS ? `/${char}_anim.mp4` : `/${char}_anim.webm`}
               type="video/mp4"
               onError={(e) => {
                 console.error('Overlay video error:', e);
