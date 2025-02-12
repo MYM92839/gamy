@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import Capture from "./assets/icons/Capture";
-import Back from "./assets/icons/Back";
-import { useParams } from "react-router-dom";
-import Modal from "react-modal";
+import { useEffect, useRef, useState } from 'react';
+import Capture from './assets/icons/Capture';
+import Back from './assets/icons/Back';
+import { useParams } from 'react-router-dom';
+import Modal from 'react-modal';
 
 const customStyles = {
   overlay: {
@@ -23,7 +23,7 @@ const customStyles = {
   },
 };
 
-Modal.setAppElement("#root");
+Modal.setAppElement('#root');
 
 interface FrameAppProps {
   frameOpacity?: number;
@@ -37,14 +37,14 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const overlayVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<string>('');
   const [dimensions, setDimensions] = useState({
     width: document.documentElement.clientWidth,
     height: document.documentElement.clientHeight,
   });
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
-  const [fotoUrl, setFotoUrl] = useState<string>("");
+  const [fotoUrl, setFotoUrl] = useState<string>('');
 
   function openModal() {
     setIsOpen(true);
@@ -63,13 +63,13 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   useEffect(() => {
     const startCamera = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setError("getUserMedia가 지원되지 않는 브라우저입니다.");
+        setError('getUserMedia가 지원되지 않는 브라우저입니다.');
         return;
       }
 
       try {
         const constraints = {
-          video: { facingMode: "environment" },
+          video: { facingMode: 'environment' },
           audio: false,
         };
 
@@ -79,12 +79,12 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
           videoRef.current.play().catch((err) => {
-            console.error("Error playing camera video:", err);
+            console.error('Error playing camera video:', err);
           });
         }
       } catch (err) {
-        setError("카메라 초기화 실패.");
-        console.error("Camera initialization error:", err);
+        setError('카메라 초기화 실패.');
+        console.error('Camera initialization error:', err);
       }
     };
 
@@ -110,25 +110,25 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch((err) => {
-          console.error("Error playing camera video after resize:", err);
+          console.error('Error playing camera video after resize:', err);
         });
       }
 
       if (overlayVideoRef.current) {
         overlayVideoRef.current.play().catch((err) => {
-          console.error("Error playing overlay video after resize:", err);
+          console.error('Error playing overlay video after resize:', err);
         });
       }
     };
 
     handleResize();
 
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, [stream]);
 
@@ -138,43 +138,43 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         if (videoRef.current && stream) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch((err) => {
-            console.error("Error playing camera video on visibility change:", err);
+            console.error('Error playing camera video on visibility change:', err);
           });
         }
 
         if (overlayVideoRef.current) {
           overlayVideoRef.current.play().catch((err) => {
-            console.error("Error playing overlay video on visibility change:", err);
+            console.error('Error playing overlay video on visibility change:', err);
           });
         }
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [stream]);
 
   const shareOrDownloadImage = (blob: Blob): void => {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], "test.png", { type: blob.type })] })) {
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'test.png', { type: blob.type })] })) {
       const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
-        type: "image/png",
+        type: 'image/png',
       });
 
       navigator
         .share({
           files: [file],
-          title: "My Captured Image",
-          text: "Check out this captured photo!",
+          title: 'My Captured Image',
+          text: 'Check out this captured photo!',
         })
         .catch((error) => {
-          console.error("Sharing failed:", error);
+          console.error('Sharing failed:', error);
         });
     } else {
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.download = `camera-frame-${new Date().getTime()}.png`;
       link.href = url;
       link.click();
@@ -189,7 +189,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const canvas = canvasRef.current;
 
     if (!container || !cameraVideo || !canvas) {
-      console.warn("Required elements not ready");
+      console.warn('Required elements not ready');
       return;
     }
 
@@ -202,16 +202,12 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     canvas.width = containerWidth * devicePixelRatio;
     canvas.height = containerHeight * devicePixelRatio;
 
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext('2d');
     if (context) {
       // 고해상도 지원
       context.scale(devicePixelRatio, devicePixelRatio);
 
-      const calculateDrawParams = (
-        video: HTMLVideoElement,
-        objectFit: "cover" | "contain",
-        bottomOffset?: number
-      ) => {
+      const calculateDrawParams = (video: HTMLVideoElement, objectFit: 'cover' | 'contain', bottomOffset?: number) => {
         const videoWidth = video.videoWidth;
         const videoHeight = video.videoHeight;
 
@@ -225,7 +221,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         let offsetX = 0;
         let offsetY = 0;
 
-        if (objectFit === "cover") {
+        if (objectFit === 'cover') {
           if (videoAspectRatio > containerAspectRatio) {
             drawWidth = containerHeight * videoAspectRatio;
             offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
@@ -233,7 +229,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
             drawHeight = containerWidth / videoAspectRatio;
             offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
           }
-        } else if (objectFit === "contain") {
+        } else if (objectFit === 'contain') {
           if (videoAspectRatio > containerAspectRatio) {
             drawHeight = containerWidth / videoAspectRatio;
             offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
@@ -251,7 +247,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       };
 
       // 카메라 비디오 그리기
-      const cameraParams = calculateDrawParams(cameraVideo, "cover");
+      const cameraParams = calculateDrawParams(cameraVideo, 'cover');
       if (cameraParams) {
         context.drawImage(
           cameraVideo,
@@ -267,7 +263,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         const computedStyle = window.getComputedStyle(overlayVideo);
         const bottom = parseFloat(computedStyle.bottom) || 0;
 
-        const overlayParams = calculateDrawParams(overlayVideo, "contain", bottom);
+        const overlayParams = calculateDrawParams(overlayVideo, 'contain', bottom);
         if (overlayParams) {
           context.drawImage(
             overlayVideo,
@@ -284,7 +280,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         if (blob) {
           setFoto(blob);
         }
-      }, "image/png");
+      }, 'image/png');
     }
   };
 
@@ -301,6 +297,23 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   if (error) {
     return <div className="text-red-500 p-4">{error}</div>;
   }
+  // 컴포넌트 내에 handleVideoEnded 함수를 정의합니다.
+  const handleVideoEnded = () => {
+    if (overlayVideoRef.current) {
+      // 애니메이션 영상 재생이 끝나면 우선 일시정지 후 idle 영상 소스로 변경
+      overlayVideoRef.current.pause();
+      overlayVideoRef.current.src = `//${char}_idle.mp4`;
+      overlayVideoRef.current.loop = true;
+      overlayVideoRef.current.load(); // 새 소스를 명시적으로 로드
+
+      // idle 영상이 로드되어 재생 가능해지면 onCanPlay 이벤트가 발생합니다.
+      overlayVideoRef.current.oncanplay = () => {
+        overlayVideoRef.current?.play().catch((err) => console.error('Error playing idle video:', err));
+        // 한 번 실행 후 이벤트 핸들러를 초기화합니다.
+        overlayVideoRef.current!.oncanplay = null;
+      };
+    }
+  };
 
   return (
     <div className="relative w-full h-full flex flex-col justify-center items-center">
@@ -326,6 +339,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           autoPlay
           playsInline
           muted
+          preload="auto"
           controls={false}
           className="absolute inset-0 w-auto h-full object-cover bg-black"
         />
@@ -335,42 +349,35 @@ const FrameApp: React.FC<FrameAppProps> = () => {
             playsInline
             muted
             autoPlay
-            preload="metadata"
+            preload="auto"
             controls={false}
             crossOrigin="anonymous"
             className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
             // anim 영상이 끝나면 idle 영상으로 전환
-            onEnded={() => {
-              if (overlayVideoRef.current) {
-                // idle 영상으로 소스 변경
-                overlayVideoRef.current.src = `/${char}_idle.mp4`;
-                // idle 영상은 무한 루프로 재생
-                overlayVideoRef.current.loop = true;
-                overlayVideoRef.current.play().catch((err) =>
-                  console.error("Error playing idle video:", err)
-                );
-              }
-            }}
+            onEnded={handleVideoEnded} // 여기에서 onEnded 이벤트 핸들러를 붙입니다.
           >
             <source
-              src={`/${char}_anim.mp4`}
+              src={`//${char}_anim.mp4`}
               type="video/mp4"
               onError={(e) => {
-                console.error("Overlay video error:", e);
+                console.error('Overlay video error:', e);
               }}
             />
           </video>
         )}
       </div>
 
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {!modalIsOpen && (
         <>
           <button className="fixed bottom-16 left-4 bg-transparent p-4 z-50" onClick={() => window.history.back()}>
             <Back />
           </button>
-          <button className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-transparent p-4 z-50" onClick={openModal}>
+          <button
+            className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-transparent p-4 z-50"
+            onClick={openModal}
+          >
             <Capture />
           </button>
         </>
