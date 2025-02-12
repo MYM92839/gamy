@@ -946,14 +946,28 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
+    // 먼저 사용 가능한 비디오 입력 장치를 열거
+    navigator.mediaDevices.enumerateDevices()
+      .then((devices) => {
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        // 라벨에 'back' 또는 'environment'가 포함된 장치를 우선 선택 (없는 경우 첫번째 장치 선택)
+        const environmentDevice = videoDevices.find(device =>
+          device.label.toLowerCase().includes('back') ||
+          device.label.toLowerCase().includes('env')
+        ) || videoDevices[0];
+
+        if (!environmentDevice) {
+          throw new Error("No video input device found");
+        }
+
+        return navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: environmentDevice.deviceId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
       })
       .then((stream) => {
         if (videoRef.current) {
@@ -995,6 +1009,60 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     />
   );
 }
+
+// function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
+//   const videoRef = useRef<HTMLVideoElement>(null);
+
+//   useEffect(() => {
+//     navigator.mediaDevices
+//       .getUserMedia({
+//         video: {
+//           facingMode: { ideal: 'environment' },
+//           width: { ideal: 1920 },
+//           height: { ideal: 1080 },
+//         },
+//         audio: false,
+//       })
+//       .then((stream) => {
+//         if (videoRef.current) {
+//           videoRef.current.srcObject = stream;
+//           streamRef.current = stream;
+//           videoRef.current.onloadeddata = () => {
+//             videoRef.current?.play().catch((err) => logDebug('Video play error: ' + err));
+//             setIsMount(true);
+//           };
+//         }
+//       })
+//       .catch((err) => logDebug('getUserMedia error: ' + err));
+
+//     return () => {
+//       if (streamRef.current) {
+//         streamRef.current.getTracks().forEach((track: any) => track.stop());
+//         streamRef.current = null;
+//       }
+//     };
+//   }, []);
+
+//   return (
+//     <video
+//       id="three-video"
+//       ref={videoRef}
+//       style={{
+//         position: 'absolute',
+//         top: 0,
+//         left: 0,
+//         width: '100vw',
+//         height: '100vh',
+//         objectFit: 'cover',
+//         zIndex: 0,
+//       }}
+//       autoPlay
+//       playsInline
+//       muted
+//       loop
+//     />
+//   );
+// }
 
 /*
   ModalU: 배경 비디오 + offscreenCanvas(3D) 합성
