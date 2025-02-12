@@ -608,7 +608,7 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y + 0.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[Math.PI, -Math.PI / 4, 0]}
+              rotation={[0, -Math.PI / 4, 0]}
               scale={cscale * 0.25}
               visible={visible}
             >
@@ -672,7 +672,7 @@ function UIOverlayIOS({
   const getPosition = () => {
     const saved = localStorage.getItem('levaValues');
     if (saved) {
-      const base = char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
+      const base = char == 'moons' ? 'https://gamy-six.vercel.app/test3' : 'https://gamy-six.vercel.app/test4';
       const { oposition, sposition, cposition, sscale, cscale } = JSON.parse(saved!);
 
       const text =
