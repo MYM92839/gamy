@@ -504,10 +504,11 @@ interface DeviceOrientationControllerProps {
 function DeviceOrientationController({
   isPermissionGranted,
   target,
-  distance = -5,
+  distance = 15,
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
+  const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent); // iOS 판별
 
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
@@ -515,16 +516,21 @@ function DeviceOrientationController({
       const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
       const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
-      // 센서 값으로 Euler 생성 (YXZ 순서)
-      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-      const deviceQuaternion = new THREE.Quaternion().setFromEuler(euler);
+      const euler = new THREE.Euler();
 
-      // 보정: iOS 센서 좌표계 보정 (X축 기준 +90° 회전)
-      const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-      deviceQuaternion.multiply(correctionQuaternion);
+      if (isIOS) {
+        // iOS 전용 보정
+        euler.set(beta, alpha, -gamma, 'YXZ');
+        const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+        camera.quaternion.setFromEuler(euler);
+        camera.quaternion.multiply(correctionQuaternion);
+      } else {
+        // Android 보정 (X축과 Y축을 다르게 적용)
+        euler.set(-beta, alpha, gamma, 'YXZ'); // 안드로이드에서는 beta와 gamma 조정
+        camera.quaternion.setFromEuler(euler);
+      }
 
       camera.up.set(0, 1, 0);
-      camera.quaternion.copy(deviceQuaternion);
     }
 
     if (isPermissionGranted) {
@@ -533,20 +539,18 @@ function DeviceOrientationController({
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-    // resetTrigger를 의존성 배열에 추가하여, 값이 바뀔 때마다 이벤트 핸들러를 재설정함
   }, [camera, isPermissionGranted, resetTrigger]);
 
   useFrame(() => {
-    // PERFECT
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
     const offset = new THREE.Vector3(0, 0, distance);
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
-    // 대상 오브젝트의 위치 (예: 토끼 위치)
   });
 
   return null;
 }
+
 
 function SceneIOS({
   visible,
@@ -575,27 +579,7 @@ function SceneIOS({
       addGl(glRef.current);
     }
   }, [camera, gl, glRef, scene]);
-
   // iOS에서는 센서(DeviceOrientation)로 회전 업데이트되므로, 오브젝트 위치와 고정 회전만 설정
-  // useEffect(() => {
-  //   if (visible && groupRef.current) {
-  //     if (char === 'moons') {
-  //       groupRef.current.position.set(
-  //         rabbitPosition[0] + cposition.x,
-  //         rabbitPosition[1] + cposition.y + 0.2,
-  //         rabbitPosition[2] + cposition.z
-  //       );
-  //     } else {
-  //       groupRef.current.position.set(
-  //         rabbitPosition[0] + cposition.x,
-  //         rabbitPosition[1] + cposition.y + 1,
-  //         rabbitPosition[2] + cposition.z
-  //       );
-  //     }
-  //     //    groupRef.current.rotation.set(0, -Math.PI / 4, 0);
-  //   }
-  // }, [visible, rabbitPosition, cposition]);
-
   useEffect(() => {
     if (visible && groupRef.current) {
       if (char === 'moons') {
@@ -611,8 +595,7 @@ function SceneIOS({
           rabbitPosition[2] + cposition.z
         );
       }
-      // 기존 회전에 Y축 180도 추가
-      groupRef.current.rotation.set(0, Math.PI, 0);
+      //    groupRef.current.rotation.set(0, -Math.PI / 4, 0);
     }
   }, [visible, rabbitPosition, cposition]);
 
@@ -649,7 +632,7 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y + 1,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[-Math.PI, 0, 0]}
+              rotation={[-Math.PI, Math.PI / 4, 0]}
               scale={cscale * 0.5}
               visible={visible}
             >
@@ -743,7 +726,7 @@ function UIOverlayIOS({
         onClick={() => {
           // 예시 링크
           window.location.href =
-            char == 'moons' ? 'https://gamy-six.vercel.app/test3' : 'https://gamy-six.vercel.app/test4';
+            char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
         }}
       >
         <Back />
