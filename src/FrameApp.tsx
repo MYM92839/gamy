@@ -320,7 +320,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               crossOrigin="anonymous"
               className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
-              style={{ transition: 'opacity 0.5s ease', opacity: isCrossfade ? 0 : 1 }}
+              style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
             >
               <source
@@ -343,7 +343,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               loop
               crossOrigin="anonymous"
               className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
-              style={{ transition: 'opacity 0.5s ease', opacity: isCrossfade ? 1 : 0 }}
+              style={{ opacity: isCrossfade ? 1 : 0 }}
             >
               <source
                 src={isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`}
