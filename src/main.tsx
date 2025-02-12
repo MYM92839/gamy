@@ -15,6 +15,8 @@ import PhotoRabbitT from './pages/PhotoRabbitT.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
 import PhotoTreeT from './pages/PhotoTreeT.tsx';
 import IApp from './IApp.tsx';
+import PhotoTreeTT from './pages/PhotoTreeTT.tsx';
+import BasicApp2 from './BasicApp2.tsx';
 
 const router = createBrowserRouter(
   [
@@ -52,8 +54,20 @@ const router = createBrowserRouter(
           element: <PhotoTreeT />,
         },
         {
+          path: 'test3',
+          element: <PhotoRabbitT />,
+        },
+        {
+          path: 'test4',
+          element: <PhotoTreeTT />,
+        },
+        {
           path: 'pl/:char',
           element: <BasicApp />,
+        },
+        {
+          path: 'pl2/:char',
+          element: <BasicApp2 />,
         },
         {
           path: 'frame/:char',

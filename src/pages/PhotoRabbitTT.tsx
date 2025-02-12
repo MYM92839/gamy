@@ -6,7 +6,7 @@ export default function PhotoRabbitTT() {
   return (
     <div className="w-full h-full relative">
       <PhotoPara title={`달조명을 배경으로 토끼와 함께 \n 사진을 찍을 수 있어요!`} >
-        <Link to={'/ple'}> <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={()=>{}} /></Link>
+        <Link to={'/pl2/moons'}> <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={()=>{}} /></Link>
       </PhotoPara>
     </div>
   )
