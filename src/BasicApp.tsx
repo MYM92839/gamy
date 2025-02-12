@@ -1900,11 +1900,10 @@ function UIOverlayIOS({
         onClick={() => {
           if (!init) {
             setInit(true);
-          } else {
-            correctPose();
-            setShow(false);
-            setTimeout(() => setShow(true), 0);
           }
+          correctPose();
+          setShow(false);
+          setTimeout(() => setShow(true), 0);
         }}
         title={
           init ? `${char == 'moons' ? '토끼' : '관찰사'} 다시 부르기` : `${char == 'moons' ? '토끼' : '관찰사'}  부르기`
