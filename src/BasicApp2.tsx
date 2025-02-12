@@ -530,7 +530,7 @@ function DeviceOrientationController({
         camera.quaternion.setFromEuler(euler);
 
         // 🔹 **Y축(좌우 회전) 보정 추가**
-        const yCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+        const yCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI);
         camera.quaternion.multiply(yCorrection); // 180도 회전해서 정면을 바라보게 함
 
         // 🔹 **X축 추가 보정 (상하 반전 해결)**
