@@ -519,18 +519,22 @@ function DeviceOrientationController({
       const euler = new THREE.Euler();
 
       if (isIOS) {
-        // iOS 전용 보정
+        // iOS 보정 (기존 로직 유지)
         euler.set(beta, alpha, -gamma, 'YXZ');
         const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
         camera.quaternion.setFromEuler(euler);
         camera.quaternion.multiply(correctionQuaternion);
       } else {
-        // Android 보정 (X축과 Y축을 다르게 적용)
-        euler.set(-beta, alpha, gamma, 'YXZ'); // 안드로이드에서는 beta와 gamma 조정
+        // **Android 보정** (방향 반전 및 추가 회전 적용)
+        euler.set(-beta, alpha, gamma, 'YXZ'); // beta 반전 (발바닥 문제 해결)
         camera.quaternion.setFromEuler(euler);
+
+        // 🔹 추가 보정: 정면을 바라보도록 Z축 보정
+        const zCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+        camera.quaternion.multiply(zCorrection);
       }
 
-      // camera.up.set(0, 1, 0);
+      camera.up.set(0, 1, 0);
     }
 
     if (isPermissionGranted) {
@@ -550,6 +554,7 @@ function DeviceOrientationController({
 
   return null;
 }
+
 
 
 function SceneIOS({
