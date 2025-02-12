@@ -58,6 +58,14 @@ const router = createBrowserRouter(
           path: 'frame/:char',
           element: <FrameApp />,
         },
+        {
+          path: 'wall',
+          element: (
+            <div className='w-screen h-screen'>
+              <iframe src='https://mymkim.8thwall.app/button/' width="100%" frameBorder="0"/>
+            </div>
+          ),
+        },
       ],
     },
   ],
