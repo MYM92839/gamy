@@ -14,6 +14,7 @@ import PhotoRabbit from './pages/PhotoRabbit.tsx';
 import PhotoRabbitT from './pages/PhotoRabbitT.tsx';
 import PhotoTree from './pages/PhotoTree.tsx';
 import PhotoTreeT from './pages/PhotoTreeT.tsx';
+import IApp from './IApp.tsx';
 
 const router = createBrowserRouter(
   [
@@ -60,11 +61,7 @@ const router = createBrowserRouter(
         },
         {
           path: 'wall',
-          element: (
-            <div className='w-screen h-screen'>
-              <iframe src='https://mymkim.8thwall.app/button/' width="100%" frameBorder="0"/>
-            </div>
-          ),
+          element: <IApp />,
         },
       ],
     },
