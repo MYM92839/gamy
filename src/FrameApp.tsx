@@ -325,7 +325,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
                   // 예: 영상 시작 시간을 3초로 설정
-                  animVideoRef.current.currentTime = 0.5;
+                  animVideoRef.current.currentTime = 0.1;
                 }
               }}
               onSeeked={() => {
