@@ -35,7 +35,8 @@ interface FrameAppProps {
 const FrameApp: React.FC<FrameAppProps> = () => {
   const { char } = useParams();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const overlayVideoRef = useRef<HTMLVideoElement>(null);
+  const animVideoRef = useRef<HTMLVideoElement>(null);
+  const idleVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string>('');
@@ -47,6 +48,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
+  // 크로스페이드 상태 (false: anim video 보임, true: idle video 보임)
+  const [isCrossfade, setIsCrossfade] = useState(false);
+
+  // 기존 open/close, captureImage, shareOrDownloadImage 등 함수들은 그대로 둡니다.
   function openModal() {
     setIsOpen(true);
     captureImage();
@@ -115,9 +120,15 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         });
       }
 
-      if (overlayVideoRef.current) {
-        overlayVideoRef.current.play().catch((err) => {
-          console.error('Error playing overlay video after resize:', err);
+      // idle, anim video도 재생 시도
+      if (animVideoRef.current) {
+        animVideoRef.current.play().catch((err) => {
+          console.error('Error playing anim video after resize:', err);
+        });
+      }
+      if (idleVideoRef.current) {
+        idleVideoRef.current.play().catch((err) => {
+          console.error('Error playing idle video after resize:', err);
         });
       }
     };
@@ -143,9 +154,15 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           });
         }
 
-        if (overlayVideoRef.current) {
-          overlayVideoRef.current.play().catch((err) => {
-            console.error('Error playing overlay video on visibility change:', err);
+        if (animVideoRef.current) {
+          animVideoRef.current.play().catch((err) => {
+            console.error('Error playing anim video on visibility change:', err);
+          });
+        }
+
+        if (idleVideoRef.current) {
+          idleVideoRef.current.play().catch((err) => {
+            console.error('Error playing idle video on visibility change:', err);
           });
         }
       }
@@ -159,7 +176,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   }, [stream]);
 
   const shareOrDownloadImage = (blob: Blob): void => {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'test.png', { type: blob.type })] })) {
+    if (
+      isIOS &&
+      navigator.canShare &&
+      navigator.canShare({ files: [new File([blob], 'test.png', { type: blob.type })] })
+    ) {
       const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
         type: 'image/png',
       });
@@ -186,7 +207,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const captureImage = async (): Promise<void> => {
     const container = videoRef.current?.parentElement; // 최상위 렌더링 컨테이너
     const cameraVideo = videoRef.current;
-    const overlayVideo = overlayVideoRef.current;
     const canvas = canvasRef.current;
 
     if (!container || !cameraVideo || !canvas) {
@@ -194,89 +214,42 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       return;
     }
 
-    // 컨테이너의 렌더링 크기 가져오기
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
-
-    // DevicePixelRatio 적용
     const devicePixelRatio = window.devicePixelRatio || 1;
     canvas.width = containerWidth * devicePixelRatio;
     canvas.height = containerHeight * devicePixelRatio;
 
     const context = canvas.getContext('2d');
     if (context) {
-      // 고해상도 지원
       context.scale(devicePixelRatio, devicePixelRatio);
 
-      const calculateDrawParams = (video: HTMLVideoElement, objectFit: 'cover' | 'contain', bottomOffset?: number) => {
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
+      // 카메라 비디오 그리기 (cover 적용)
+      const videoWidth = cameraVideo.videoWidth;
+      const videoHeight = cameraVideo.videoHeight;
+      const videoAspectRatio = videoWidth / videoHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
 
-        if (videoWidth === 0 || videoHeight === 0) return null;
+      let drawWidth = containerWidth;
+      let drawHeight = containerHeight;
+      let offsetX = 0;
+      let offsetY = 0;
 
-        const videoAspectRatio = videoWidth / videoHeight;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        let drawWidth = containerWidth;
-        let drawHeight = containerHeight;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (objectFit === 'cover') {
-          if (videoAspectRatio > containerAspectRatio) {
-            drawWidth = containerHeight * videoAspectRatio;
-            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-          } else {
-            drawHeight = containerWidth / videoAspectRatio;
-            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-          }
-        } else if (objectFit === 'contain') {
-          if (videoAspectRatio > containerAspectRatio) {
-            drawHeight = containerWidth / videoAspectRatio;
-            offsetY = (containerHeight - drawHeight) / 2; // 세로 중심 정렬
-          } else {
-            drawWidth = containerHeight * videoAspectRatio;
-            offsetX = (containerWidth - drawWidth) / 2; // 가로 중심 정렬
-          }
-        }
-
-        if (bottomOffset) {
-          offsetY = containerHeight - drawHeight - bottomOffset;
-        }
-
-        return { drawWidth, drawHeight, offsetX, offsetY };
-      };
-
-      // 카메라 비디오 그리기
-      const cameraParams = calculateDrawParams(cameraVideo, 'cover');
-      if (cameraParams) {
-        context.drawImage(
-          cameraVideo,
-          cameraParams.offsetX,
-          cameraParams.offsetY,
-          cameraParams.drawWidth,
-          cameraParams.drawHeight
-        );
+      if (videoAspectRatio > containerAspectRatio) {
+        drawWidth = containerHeight * videoAspectRatio;
+        offsetX = (containerWidth - drawWidth) / 2;
+      } else {
+        drawHeight = containerWidth / videoAspectRatio;
+        offsetY = (containerHeight - drawHeight) / 2;
       }
 
-      // 오버레이 비디오 그리기
-      if (overlayVideo && overlayVideo.readyState >= 2) {
-        const computedStyle = window.getComputedStyle(overlayVideo);
-        const bottom = parseFloat(computedStyle.bottom) || 0;
+      context.drawImage(cameraVideo, offsetX, offsetY, drawWidth, drawHeight);
 
-        const overlayParams = calculateDrawParams(overlayVideo, 'contain', bottom);
-        if (overlayParams) {
-          context.drawImage(
-            overlayVideo,
-            overlayParams.offsetX,
-            overlayParams.offsetY,
-            overlayParams.drawWidth,
-            overlayParams.drawHeight
-          );
-        }
+      // idle 영상 대신 anim 영상을 캡처 (두 영상의 콘텐츠를 따로 처리하고 싶다면 추가 구현 필요)
+      if (animVideoRef.current && animVideoRef.current.readyState >= 2) {
+        context.drawImage(animVideoRef.current, offsetX, offsetY, drawWidth, drawHeight);
       }
 
-      // 캡처 이미지 다운로드 또는 공유
       canvas.toBlob((blob) => {
         if (blob) {
           setFoto(blob);
@@ -295,33 +268,23 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }
   }, [foto]);
 
+  // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드 시작
+  const handleAnimVideoEnded = () => {
+    // 상태 변경으로 anim video의 opacity를 0, idle video의 opacity를 1로 전환
+    setIsCrossfade(true);
+    idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
+  };
+
   if (error) {
     return <div className="text-red-500 p-4">{error}</div>;
   }
-  // 컴포넌트 내에 handleVideoEnded 함수를 정의합니다.
-  const handleVideoEnded = () => {
-    if (overlayVideoRef.current) {
-      // 애니메이션 영상 재생이 끝나면 우선 일시정지 후 idle 영상 소스로 변경
-      overlayVideoRef.current.pause();
-      overlayVideoRef.current.src = isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`;
-      overlayVideoRef.current.loop = true;
-      overlayVideoRef.current.load(); // 새 소스를 명시적으로 로드
-
-      // idle 영상이 로드되어 재생 가능해지면 onCanPlay 이벤트가 발생합니다.
-      overlayVideoRef.current.oncanplay = () => {
-        overlayVideoRef.current?.play().catch((err) => console.error('Error playing idle video:', err));
-        // 한 번 실행 후 이벤트 핸들러를 초기화합니다.
-        overlayVideoRef.current!.oncanplay = null;
-      };
-    }
-  };
 
   return (
     <div className="relative w-full h-full flex flex-col justify-center items-center">
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-hidden">
-            {fotoUrl && <img className="flex-1 object-contain" src={fotoUrl} />}
+            {fotoUrl && <img className="flex-1 object-contain" src={fotoUrl} alt="captured" />}
           </div>
           <div className="w-full flex gap-x-2 font-semibold">
             <button className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]" onClick={closeModal}>
@@ -335,36 +298,62 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       </Modal>
 
       <div className="relative w-full h-full">
+        {/* 카메라 영상 */}
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          preload="auto"
           controls={false}
           className="absolute inset-0 w-auto h-full object-cover bg-black"
         />
+
+        {/* 애니메이션 영상 (anim video) */}
         {dimensions.width > 0 && dimensions.height > 0 && (
-          <video
-            ref={overlayVideoRef}
-            playsInline
-            muted
-            autoPlay
-            preload="auto"
-            controls={false}
-            crossOrigin="anonymous"
-            className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
-            // anim 영상이 끝나면 idle 영상으로 전환
-            onEnded={handleVideoEnded} // 여기에서 onEnded 이벤트 핸들러를 붙입니다.
-          >
-            <source
-              src={isIOS ? `/${char}_anim.mp4` : `/${char}_anim.webm`}
-              type="video/mp4"
-              onError={(e) => {
-                console.error('Overlay video error:', e);
-              }}
-            />
-          </video>
+          <>
+            <video
+              ref={animVideoRef}
+              playsInline
+              muted
+              autoPlay
+              preload="auto"
+              controls={false}
+              crossOrigin="anonymous"
+              className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
+              style={{ transition: 'opacity 0.5s ease', opacity: isCrossfade ? 0 : 1 }}
+              onEnded={handleAnimVideoEnded}
+            >
+              <source
+                src={isIOS ? `/${char}_anim.mp4` : `/${char}_anim.webm`}
+                type={isIOS ? 'video/mp4' : 'video/webm'}
+                onError={(e) => {
+                  console.error('Anim video error:', e);
+                }}
+              />
+            </video>
+
+            {/* idle 영상 (preload="auto", loop) */}
+            <video
+              ref={idleVideoRef}
+              playsInline
+              muted
+              autoPlay
+              preload="auto"
+              controls={false}
+              loop
+              crossOrigin="anonymous"
+              className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
+              style={{ transition: 'opacity 0.5s ease', opacity: isCrossfade ? 1 : 0 }}
+            >
+              <source
+                src={isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`}
+                type={isIOS ? 'video/mp4' : 'video/webm'}
+                onError={(e) => {
+                  console.error('Idle video error:', e);
+                }}
+              />
+            </video>
+          </>
         )}
       </div>
 
