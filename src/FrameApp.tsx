@@ -322,6 +322,12 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
+              onLoadedMetadata={() => {
+                if (animVideoRef.current && char === 'cat') {
+                  // 예: 영상 시작 시간을 3초로 설정
+                  animVideoRef.current.currentTime = 2.5;
+                }
+              }}
             >
               <source
                 src={isIOS ? `/${char}_anim.mp4` : `/${char}_anim.webm`}
