@@ -530,7 +530,7 @@ function DeviceOrientationController({
         camera.quaternion.setFromEuler(euler);
       }
 
-      camera.up.set(0, 1, 0);
+      // camera.up.set(0, 1, 0);
     }
 
     if (isPermissionGranted) {
