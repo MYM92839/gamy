@@ -534,7 +534,7 @@ function DeviceOrientationController({
         camera.quaternion.multiply(yCorrection); // 180도 회전해서 정면을 바라보게 함
 
         // 🔹 **X축 추가 보정 (상하 반전 해결)**
-        const xCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+        const xCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
         camera.quaternion.multiply(xCorrection);
       }
 
@@ -558,7 +558,6 @@ function DeviceOrientationController({
 
   return null;
 }
-
 
 function SceneIOS({
   visible,
