@@ -722,7 +722,7 @@ function UIOverlayIOS({
         onClick={() => {
           // 예시 링크
           window.location.href =
-            char == 'moons' ? 'https://gamy-six.vercel.app/test' : 'https://gamy-six.vercel.app/test2';
+            char == 'moons' ? 'https://gamy-six.vercel.app/test3' : 'https://gamy-six.vercel.app/test4';
         }}
       >
         <Back />
