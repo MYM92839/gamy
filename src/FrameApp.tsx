@@ -328,6 +328,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
                   animVideoRef.current.currentTime = 2.5;
                 }
               }}
+              onSeeked={() => {
+                // seek가 완료되면 즉시 재생
+                animVideoRef.current?.play().catch((err) => console.error('Error playing anim video after seek:', err));
+              }}
             >
               <source
                 src={isIOS ? `/${char}_anim.mp4` : `/${char}_anim.webm`}
