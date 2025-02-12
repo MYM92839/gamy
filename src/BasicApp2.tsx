@@ -519,19 +519,23 @@ function DeviceOrientationController({
       const euler = new THREE.Euler();
 
       if (isIOS) {
-        // iOS 보정 (기존 로직 유지)
+        // ✅ **iOS 보정 (기존 로직 유지)**
         euler.set(beta, alpha, -gamma, 'YXZ');
         const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
         camera.quaternion.setFromEuler(euler);
         camera.quaternion.multiply(correctionQuaternion);
       } else {
-        // **Android 보정** (방향 반전 및 추가 회전 적용)
-        euler.set(-beta, alpha, gamma, 'YXZ'); // beta 반전 (발바닥 문제 해결)
+        // ✅ **Android 보정**
+        euler.set(-beta, -alpha, gamma, 'YXZ'); // `-beta` 적용 (발바닥 문제 해결)
         camera.quaternion.setFromEuler(euler);
 
-        // 🔹 추가 보정: 정면을 바라보도록 Z축 보정
-        const zCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
-        camera.quaternion.multiply(zCorrection);
+        // 🔹 **Y축(좌우 회전) 보정 추가**
+        const yCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+        camera.quaternion.multiply(yCorrection); // 180도 회전해서 정면을 바라보게 함
+
+        // 🔹 **X축 추가 보정 (상하 반전 해결)**
+        const xCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+        camera.quaternion.multiply(xCorrection);
       }
 
       camera.up.set(0, 1, 0);
@@ -554,7 +558,6 @@ function DeviceOrientationController({
 
   return null;
 }
-
 
 
 function SceneIOS({
