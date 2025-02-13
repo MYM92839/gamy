@@ -397,7 +397,7 @@ function SceneIOS({
         } else {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y-1.2,
+            rabbitPosition[1] + cposition.y - 1.2,
             rabbitPosition[2] + cposition.z
           );
         }
@@ -481,7 +481,7 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y-1.2,
+                rabbitPosition[1] + cposition.y - 1.2,
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[0, Math.PI / 4, 0]}
@@ -862,25 +862,50 @@ export default function BasicApp() {
 
   const [resetTrigger, setResetTrigger] = useState(0);
   const correctPose = (glRefObj: any) => {
-    if (!glRefObj) return;
-    let pos = { x: 0, y: 0, z: 0 };
-    const saved = localStorage.getItem('levaValues');
-    if (saved) {
-      try {
-        const s = JSON.parse(saved);
-        pos = s.cposition;
-      } catch (error) {
-        console.error('levaValues parse fail:', error);
+    if (isIOS) {
+      if (!glRefObj) return;
+      let pos = { x: 0, y: 0, z: 0 };
+      const saved = localStorage.getItem('levaValues');
+      if (saved) {
+        try {
+          const s = JSON.parse(saved);
+          pos = s.cposition;
+        } catch (error) {
+          console.error('levaValues parse fail:', error);
+        }
       }
-    }
-    const cameraPos = latestCameraTransform.current.position.clone();
-    const cameraQuat = latestCameraTransform.current.quaternion.clone();
-    const offset = new THREE.Vector3(0, 0, 0);
-    offset.applyQuaternion(cameraQuat);
-    const newPosition = cameraPos.add(offset);
-    setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-    logDebug('Rabbit position updated:', newPosition);
-    setResetTrigger((prev) => prev + 1);
+      const cameraPos = latestCameraTransform.current.position.clone();
+      const cameraQuat = latestCameraTransform.current.quaternion.clone();
+      const offset = new THREE.Vector3(0, 0, 0);
+      offset.applyQuaternion(cameraQuat);
+      const newPosition = cameraPos.add(offset);
+      setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+      logDebug('Rabbit position updated:', newPosition);
+      setResetTrigger((prev) => prev + 1);
+    } else {
+      if (!glRefObj) return;
+      let pos = { x: 0, y: 0, z: 0 };
+      const saved = localStorage.getItem('levaValues');
+      if (saved) {
+        try {
+          const s = JSON.parse(saved);
+          pos = s.cposition;
+        } catch (error) {
+          console.error('levaValues parse fail:', error);
+        }
+      }
+      const distance = 5; // 원하는 거리
+      const offset = new THREE.Vector3(0, 0, -distance);
+
+      // 최신 센서 값을 바로 읽어와서 offset 계산
+      const currentQuat = latestCameraTransform.current.quaternion.clone();
+      offset.applyQuaternion(currentQuat);
+
+      // 최신 위치를 복제해서 사용
+      const currentPos = latestCameraTransform.current.position.clone();
+      const newPosition = currentPos.add(offset);
+      setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+        }
   };
 
   const openModalHandler = () => {
