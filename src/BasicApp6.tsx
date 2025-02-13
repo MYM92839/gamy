@@ -433,7 +433,7 @@ function UIOverlayIOS({
   const getPosition = () => {
     const saved = localStorage.getItem('levaValues');
     if (saved) {
-      const base = char === 'moons' ? 'https://gamy-six.vercel.app/test3' : 'https://gamy-six.vercel.app/test4';
+      const base = char === 'moons' ? 'https://gamy-six.vercel.app/rabbit' : 'https://gamy-six.vercel.app/tree';
       const { oposition, sposition, cposition, sscale, cscale } = JSON.parse(saved);
       const text = `${base}?ox=${oposition.x}&oy=${oposition.y}&oz=${oposition.z}&cx=${cposition.x}&cy=${cposition.y}&cz=${cposition.z}&sx=${sposition.x}&sy=${sposition.y}&sz=${sposition.z}&ss=${sscale}&cs=${cscale}`;
       navigator.clipboard
@@ -473,7 +473,7 @@ function UIOverlayIOS({
         }}
         onClick={() => {
           window.location.href =
-            char === 'moons' ? 'https://gamy-six.vercel.app/test3' : 'https://gamy-six.vercel.app/test4';
+            char === 'moons' ? 'https://gamy-six.vercel.app/rabbit' : 'https://gamy-six.vercel.app/tree';
         }}
       >
         <Back />
