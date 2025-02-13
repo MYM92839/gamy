@@ -403,6 +403,7 @@ function SceneIOS({
         }
       }
     }
+    //
   }, [visible, rabbitPosition, cposition]);
   return isIOS ? (
     <>
