@@ -118,7 +118,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         top: 0,
         left: 0,
         width: '100vw',
-        height: '100vh',
+        height: '100dvh',
         objectFit: 'cover',
         zIndex: 0,
       }}
@@ -368,7 +368,7 @@ function SceneIOS({
         if (char === 'moons') {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y -0.2,
+            rabbitPosition[1] + cposition.y - 0.2,
             rabbitPosition[2] + cposition.z
           );
         } else {
@@ -740,7 +740,7 @@ function IOSARCanvas(props: any) {
   const [searchParams] = useSearchParams();
   const cv = searchParams.get('cv');
   return (
-    <div style={{ position: 'absolute', inset: 0 }}>
+    <div style={{ position: 'absolute', inset: 0, overflowY: 'hidden' }}>
       <BackgroundVideo streamRef={props.streamRef} setIsMount={props.setIsMount} logDebug={props.logDebug} />
       <Canvas
         id="three-canvas"
@@ -919,6 +919,9 @@ export default function BasicApp() {
     }
     setIsOpen(false);
   };
+  useEffect(() => {
+    window.scrollTo({top:0, left:0, behavior:'instant'});
+  }, []);
 
   return (
     <>
