@@ -979,9 +979,8 @@ export default function BasicApp() {
       logDebug('iOS Rabbit position updated:', newPosition);
       setResetTrigger((prev) => prev + 1);
     } else {
-      // non-iOS: 카메라의 forward(수평) 방향과 yaw값만 남긴 회전을 계산
-      // non-iOS: 카메라의 수평 forward 방향을 기준으로 위치와 회전을 보정
-      setTimeout(() => {
+      // non-iOS: 보정을 반복 시도하여 토끼가 카메라를 바라보도록 함
+      const attemptCorrection = (attempt = 1) => {
         if (!glRefObj) return;
         let pos = { x: 0, y: 0, z: 0 };
         const saved = localStorage.getItem('levaValues');
@@ -995,7 +994,7 @@ export default function BasicApp() {
         }
         const distance = 5;
         const currentPos = latestCameraTransform.current.position.clone();
-        // 카메라의 월드 forward 방향 (수평만 사용)
+        // 카메라의 forward (수평) 방향 계산
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(latestCameraTransform.current.quaternion);
         forward.y = 0;
         forward.normalize();
@@ -1004,15 +1003,34 @@ export default function BasicApp() {
         setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         console.log('non-iOS Rabbit position updated:', newPosition);
 
-        // 토끼의 회전: 토끼 위치에서 카메라 위치를 바라보도록 계산
+        // 토끼 회전: 토끼 위치에서 카메라 위치를 바라보도록
         const cameraPos = latestCameraTransform.current.position.clone();
-        // LookAt 행렬을 사용하여 회전 Quaternion 계산 (모델의 기본 전방에 맞게 보정 필요시 추가 offset 적용)
-        const mat = new THREE.Matrix4().lookAt(newPosition, cameraPos, new THREE.Vector3(0, 1, 0));
-        const q = new THREE.Quaternion().setFromRotationMatrix(mat);
-        setRabbitRotation(new THREE.Euler().setFromQuaternion(q, 'YXZ'));
+        const lookAtMatrix = new THREE.Matrix4().lookAt(newPosition, cameraPos, new THREE.Vector3(0, 1, 0));
+        const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookAtMatrix);
+        const targetEuler = new THREE.Euler().setFromQuaternion(targetQuat, 'YXZ');
+        // rabbitRotation을 업데이트
+        setRabbitRotation(targetEuler);
 
-        setResetTrigger((prev) => prev + 1);
-      }, 30); // 30ms 딜레이 (필요시 조정)
+        // 재시도 여부 확인: 토끼의 전방(객체의 z축)와 카메라에서 바라보는 방향 사이의 각도를 계산
+        // 토끼의 전방 벡터 (기본적으로 (0,0,-1))를 targetQuat에 적용
+        const rabbitForward = new THREE.Vector3(0, 0, -1).applyQuaternion(targetQuat);
+        // 카메라에서 토끼로 향하는 벡터
+        const toRabbit = new THREE.Vector3().subVectors(newPosition, cameraPos).normalize();
+        const angleDiff = rabbitForward.angleTo(toRabbit);
+        console.log(`Attempt ${attempt}: angleDiff = ${angleDiff}`);
+        if (angleDiff > ANGLE_THRESHOLD && attempt < MAX_ATTEMPTS) {
+          // 약간의 딜레이 후 재시도
+          setTimeout(() => {
+            attemptCorrection(attempt + 1);
+          }, 50);
+        } else {
+          console.log('Correct pose finalized at attempt', attempt);
+          setResetTrigger((prev) => prev + 1);
+        }
+      };
+      setTimeout(() => {
+        attemptCorrection(1);
+      }, 30);
     }
   };
 
