@@ -281,7 +281,7 @@ function DeviceOrientationController({
         camera.quaternion.multiply(correctionQuaternion);
       } else {
         euler.set(beta, alpha, -gamma, 'YXZ');
-        camera.quaternion.setFromEuler(euler);
+        // camera.quaternion.setFromEuler(euler);
         const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
         camera.quaternion.setFromEuler(euler);
         camera.quaternion.multiply(correctionQuaternion);
@@ -397,7 +397,7 @@ function SceneIOS({
         } else {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 1.2,
+            rabbitPosition[1] + cposition.y-2,
             rabbitPosition[2] + cposition.z
           );
         }
@@ -481,10 +481,10 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y - 1.2,
+                rabbitPosition[1] + cposition.y-1.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[0, Math.PI / 4, 0]}
+              rotation={[0, Math.PI - Math.PI / 5, 0]}
               scale={cscale * 0.5}
               visible={visible}
             >
@@ -972,7 +972,6 @@ export default function BasicApp() {
         streamRef={streamRef}
         setIsMount={setIsMount}
       />
-
       {!mount && (
         <ModalU
           isMount={isMount}
