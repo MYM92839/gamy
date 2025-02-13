@@ -1,9 +1,11 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button';
 import PhotoPara from '../components/photo/PhotoPara';
+import { useEffect, useState } from 'react';
 
 export default function PhotoRabbitO() {
   const [searchParams] = useSearchParams();
+  const [init, setOrientationEnabled] = useState(false);
   const ox = searchParams.get('ox') ? parseFloat(searchParams.get('ox')!) : 0;
   const oy = searchParams.get('oy') ? parseFloat(searchParams.get('oy')!) : 0;
   const oz = searchParams.get('oz') ? parseFloat(searchParams.get('oz')!) : 0;
@@ -33,20 +35,25 @@ export default function PhotoRabbitO() {
         console.error('DeviceOrientation permission error:', err);
       }
     } else {
-      // setOrientationEnabled(true);
+      setOrientationEnabled(true);
     }
   };
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    if (init) {
+      alert('a?dfsa/')
+      navigate(
+        `/t/moons?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}&cs=${cs}${
+          cv ? '&cv=true' : ''
+        }`
+      );
+    }
+  }, [init]);
   return (
     <div className="w-full h-full relative">
       <PhotoPara title={`달조명을 배경으로 토끼와 함께 \n 사진을 찍을 수 있어요!`}>
-        <Link
-          to={`/t/moons?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}&cs=${cs}${
-            cv ? '&cv=true' : ''
-          }`}
-        >
-          <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={requestDeviceOrientation} />
-        </Link>
+        <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={requestDeviceOrientation} />
       </PhotoPara>
     </div>
   );

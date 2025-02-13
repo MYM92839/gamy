@@ -3,7 +3,6 @@ import { noEvents } from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-
 import { usePinch } from '@use-gesture/react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Box, Tree } from './ArApp';
@@ -12,39 +11,6 @@ import Capture from './assets/icons/Capture';
 import Button from './components/Button';
 
 const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
-
-interface SceneProps {
-  oposition: any;
-  char: string;
-  sposition: any;
-  scale: number;
-  cposition: any;
-  addGl: any;
-  visible: boolean;
-  glRef: any;
-  cscale: number;
-  calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
-  rabbitPosition: [number, number, number];
-}
-
-interface UIOverlayProps {
-  correctPose: any;
-  modalIsOpen: boolean;
-  openModal: () => void;
-  closeModal: () => void;
-  closeSaveModal: () => void;
-  show: boolean;
-  setShow: (v: boolean) => void;
-  domWidth: number;
-  domHeight: number;
-  circleX: number;
-  circleY: number;
-  circleR: number;
-  circleColor: string;
-  char: string;
-  fotoUrl: string;
-  cameraFov: number;
-}
 
 /* -------------- 유틸 함수 ----------------- */
 function calcCover(srcWidth: number, srcHeight: number, destWidth: number, destHeight: number) {
@@ -83,6 +49,14 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    // 카메라 권한 상태를 확인 (navigator.permissions가 지원되는 경우)
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'camera' as PermissionName }).then((status) => {
+        if (status.state !== 'granted') {
+          console.warn('Camera permission is not granted.');
+        }
+      });
+    }
     navigator.mediaDevices
       .getUserMedia({
         video: {
@@ -97,16 +71,13 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
           videoRef.current.onloadeddata = () => {
-            videoRef.current?.play().catch((err) => {
-              return logDebug('Video play error: ' + err);
-            });
+            videoRef.current?.play().catch((err) => logDebug('Video play error: ' + err));
             setIsMount(true);
           };
         }
-        //
       })
       .catch((err) => {
-        return logDebug('getUserMedia error: ' + err);
+        logDebug('getUserMedia error: ' + err);
       });
   }, [logDebug, setIsMount, streamRef]);
 
@@ -132,19 +103,12 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
 }
 
 /* --- ModalU --- */
-const ModalU = function ({
-  closeModal,
-  closeSaveModal,
-  setFoto,
-  offscreenCanvas,
-  isMount,
-  cameraFov,
-}: UIOverlayProps & any) {
+const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas, isMount, cameraFov }: any) {
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
     if (isMount) {
-      const timeoutId = setTimeout(captureComposite, 100);
+      const timeoutId = setTimeout(captureComposite, 500);
       return () => clearTimeout(timeoutId);
     }
   }, [isMount, offscreenCanvas, cameraFov, setFoto]);
@@ -204,7 +168,6 @@ const ModalU = function ({
   };
 
   const handleClose = () => {
-    // captureComposite();
     closeModal();
   };
 
@@ -266,11 +229,10 @@ const ModalU = function ({
 /* --- iOS 전용 DeviceOrientationController --- */
 interface DeviceOrientationControllerProps {
   isPermissionGranted: boolean;
-  target: THREE.Vector3;
+  target: THREE.Vector3 | [number, number, number];
   distance?: number;
   resetTrigger: number;
 }
-
 function DeviceOrientationController({
   isPermissionGranted,
   target,
@@ -278,7 +240,9 @@ function DeviceOrientationController({
   resetTrigger,
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
-  const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
+  const [permissionGranted, setPermissionGranted] = useState(isPermissionGranted);
+
+  // 센서 권한 요청 (iOS 13+ 등에서 필요)
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
       const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
@@ -292,23 +256,38 @@ function DeviceOrientationController({
         camera.quaternion.multiply(correctionQuaternion);
       } else {
         euler.set(-beta, -alpha, gamma, 'YXZ');
-        // const correctionQuaternion = new THREE.Quaternion()
-        //   // X축 +90도 회전 (머리가 위로)
-        //   .setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)
-        //   // Y축 -90도 회전 (앞면이 보이도록)
-        //   .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
-        // camera.quaternion.setFromEuler(euler);
-        // camera.quaternion.multiply(correctionQuaternion);
+        camera.quaternion.setFromEuler(euler);
       }
       camera.up.set(0, 1, 0);
     }
-    if (isPermissionGranted) {
-      window.addEventListener('deviceorientation', handleOrientation, true);
+
+    // 만약 requestPermission 함수를 지원한다면 권한 요청
+    if (
+      typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof (DeviceOrientationEvent as any).requestPermission === 'function'
+    ) {
+      (DeviceOrientationEvent as any)
+        .requestPermission()
+        .then((response: any) => {
+          if (response === 'granted') {
+            setPermissionGranted(true);
+            window.addEventListener('deviceorientation', handleOrientation, true);
+          } else {
+            console.warn('DeviceOrientation permission not granted.');
+          }
+        })
+        .catch((error: any) => {
+          console.error('DeviceOrientation permission request error:', error);
+        });
+    } else {
+      if (permissionGranted) {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+      }
     }
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true);
     };
-  }, [camera, isPermissionGranted, resetTrigger]);
+  }, [camera, permissionGranted, resetTrigger]);
 
   useFrame(() => {
     const targetVec = Array.isArray(target) ? new THREE.Vector3(target[0], target[1], target[2]) : target;
@@ -320,6 +299,19 @@ function DeviceOrientationController({
 }
 
 /* --- SceneIOS --- */
+interface SceneProps {
+  oposition: any;
+  char: string;
+  sposition: any;
+  scale: number;
+  cposition: any;
+  addGl: any;
+  visible: boolean;
+  glRef: any;
+  cscale: number;
+  calibrationMatrixRef: React.MutableRefObject<THREE.Matrix4 | null>;
+  rabbitPosition: [number, number, number];
+}
 function SceneIOS({
   visible,
   glRef,
@@ -480,6 +472,24 @@ function SceneIOS({
 }
 
 /* --- UIOverlayIOS --- */
+interface UIOverlayProps {
+  correctPose: any;
+  modalIsOpen: boolean;
+  openModal: () => void;
+  closeModal: () => void;
+  closeSaveModal: () => void;
+  show: boolean;
+  setShow: (v: boolean) => void;
+  domWidth: number;
+  domHeight: number;
+  circleX: number;
+  circleY: number;
+  circleR: number;
+  circleColor: string;
+  char: string;
+  fotoUrl: string;
+  cameraFov: number;
+}
 function UIOverlayIOS({
   openModal,
   setShow,
@@ -615,22 +625,11 @@ function UIOverlayIOS({
       <Button
         onClick={() => {
           if (!init) {
-            setTimeout(() => {
-              correctPose();
-              setShow(false);
-              setTimeout(() => setShow(true), 0);
-              setTimeout(() => {
-                correctPose();
-                setShow(false);
-                setTimeout(() => setShow(true), 0);
-                setInit(true);
-              }, 500);
-            }, 1000);
-          } else {
-            correctPose();
-            setShow(false);
-            setTimeout(() => setShow(true), 0);
+            setInit(true);
           }
+          correctPose();
+          setShow(false);
+          setTimeout(() => setShow(true), 0);
         }}
         title={
           init
@@ -832,15 +831,6 @@ export default function BasicApp() {
     setMount(true);
   }, []);
 
-  // const onTest = () => {
-  //   if (xrStoreRef.current) {
-  //     xrStoreRef.current.getState().session?.end();
-  //     xrStoreRef.current.destroy();
-  //     xrStoreRef.current = null;
-  //   }
-  //   xrStoreRef.current = createXRStore();
-  // };
-
   const [resetTrigger, setResetTrigger] = useState(0);
   const correctPose = (glRefObj: any) => {
     if (!glRefObj) return;
@@ -954,7 +944,6 @@ export default function BasicApp() {
         setIsMount={setIsMount}
       />
 
-      {/* <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} /> */}
       {!mount && (
         <ModalU
           isMount={isMount}
