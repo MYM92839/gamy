@@ -944,29 +944,34 @@ export default function BasicApp() {
   }, []);
 
   const [resetTrigger, setResetTrigger] = useState(0);
-  const correctPose = (glRefObj: any) => {
-    if (isIOS) {
-      if (!glRefObj) return;
-      let pos = { x: 0, y: 0, z: 0 };
-      const saved = localStorage.getItem('levaValues');
-      if (saved) {
-        try {
-          const s = JSON.parse(saved);
-          pos = s.cposition;
-        } catch (error) {
-          console.error('levaValues parse fail:', error);
-        }
+
+
+
+const correctPose = (glRefObj: any) => {
+  if (isIOS) {
+    if (!glRefObj) return;
+    let pos = { x: 0, y: 0, z: 0 };
+    const saved = localStorage.getItem('levaValues');
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        pos = s.cposition;
+      } catch (error) {
+        console.error('levaValues parse fail:', error);
       }
-      const cameraPos = latestCameraTransform.current.position.clone();
-      const cameraQuat = latestCameraTransform.current.quaternion.clone();
-      // iOS에서는 기존 로직 사용
-      const offset = new THREE.Vector3(0, 0, 0);
-      offset.applyQuaternion(cameraQuat);
-      const newPosition = cameraPos.add(offset);
-      setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-      logDebug('iOS Rabbit position updated:', newPosition);
-      setResetTrigger((prev) => prev + 1);
-    } else {
+    }
+    const cameraPos = latestCameraTransform.current.position.clone();
+    const cameraQuat = latestCameraTransform.current.quaternion.clone();
+    // iOS에서는 기존 로직 사용
+    const offset = new THREE.Vector3(0, 0, 0);
+    offset.applyQuaternion(cameraQuat);
+    const newPosition = cameraPos.add(offset);
+    setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+    logDebug('iOS Rabbit position updated:', newPosition);
+    setResetTrigger((prev) => prev + 1);
+  } else {
+    // non-iOS: requestAnimationFrame을 사용해 최신 카메라 값 반영
+    requestAnimationFrame(() => {
       if (!glRefObj) return;
       let pos = { x: 0, y: 0, z: 0 };
       const saved = localStorage.getItem('levaValues');
@@ -981,7 +986,7 @@ export default function BasicApp() {
       const distance = 5;
       const currentPos = latestCameraTransform.current.position.clone();
       const currentQuat = latestCameraTransform.current.quaternion.clone();
-      // Euler로 변환한 후 x와 z 회전을 제거하여 수평 방향(yaw)만 남김
+      // Euler로 변환한 후 x, z 회전을 제거해 수평(yaw)만 남김
       const euler = new THREE.Euler().setFromQuaternion(currentQuat, 'YXZ');
       euler.x = 0;
       euler.z = 0;
@@ -992,8 +997,10 @@ export default function BasicApp() {
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
       logDebug('non-iOS Rabbit position updated:', newPosition);
       setResetTrigger((prev) => prev + 1);
-    }
-  };
+    });
+  }
+};
+
 
 
   const openModalHandler = () => {
