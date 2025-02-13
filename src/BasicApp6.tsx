@@ -429,7 +429,8 @@ function SceneIOS({
   // non-iOS: 한 번만 rabbitRotation을 적용
   useEffect(() => {
     if (!isIOS && visible && groupRef.current && rabbitRotation) {
-      groupRef.current.rotation.copy(rabbitRotation);
+      // Euler로 저장된 회전값을 Quaternion으로 변환해서 적용
+      groupRef.current.quaternion.copy(new THREE.Quaternion().setFromEuler(rabbitRotation));
     }
   }, [visible, rabbitRotation]);
 
