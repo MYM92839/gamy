@@ -484,7 +484,7 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y-1.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[0, Math.PI - Math.PI / 5, 0]}
+              rotation={[0, Math.PI / 4, 0]}
               scale={cscale * 0.5}
               visible={visible}
             >
