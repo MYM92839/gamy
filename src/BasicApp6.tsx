@@ -96,7 +96,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
       id="three-video"
       ref={videoRef}
       style={{
-        backgroundColor: 'red',
         position: 'absolute',
         width: '100%',
         height: '100%',
