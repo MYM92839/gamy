@@ -292,13 +292,13 @@ function DeviceOrientationController({
         camera.quaternion.multiply(correctionQuaternion);
       } else {
         euler.set(-beta, -alpha, gamma, 'YXZ');
-        const correctionQuaternion = new THREE.Quaternion()
-          // X축 -90도 회전 (머리가 위로)
-          .setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)
-          // Y축 -90도 회전 (앞면이 보이도록)
-          .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
-        camera.quaternion.setFromEuler(euler);
-        camera.quaternion.multiply(correctionQuaternion);
+        // const correctionQuaternion = new THREE.Quaternion()
+        //   // X축 +90도 회전 (머리가 위로)
+        //   .setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)
+        //   // Y축 -90도 회전 (앞면이 보이도록)
+        //   .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
+        // camera.quaternion.setFromEuler(euler);
+        // camera.quaternion.multiply(correctionQuaternion);
       }
       camera.up.set(0, 1, 0);
     }
@@ -424,7 +424,7 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y + 0.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[-Math.PI, -Math.PI / 4, 0]}
+              rotation={[0, -Math.PI / 4, 0]}
               scale={cscale * 0.25}
               visible={visible}
             >
