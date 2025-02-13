@@ -397,7 +397,7 @@ function SceneIOS({
         } else {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 1.5,
+            rabbitPosition[1] + cposition.y - 1.2,
             rabbitPosition[2] + cposition.z
           );
         }
@@ -481,7 +481,7 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y - 1.5,
+                rabbitPosition[1] + cposition.y - 1.2,
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[0, Math.PI / 4, 0]}
