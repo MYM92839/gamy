@@ -47,6 +47,22 @@ function CameraUpdater({
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (videoRef.current && videoRef.current.paused) {
+        videoRef.current.play().catch((err) => {
+          console.error('Failed to play stream:', err);
+        });
+      }
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+
+
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && videoRef.current && streamRef.current) {
@@ -308,6 +324,7 @@ function DeviceOrientationController({
     offset.applyQuaternion(camera.quaternion);
     camera.position.copy(targetVec).add(offset);
   });
+
   return null;
 }
 
@@ -352,6 +369,8 @@ function SceneIOS({
       addGl(glRef.current);
     }
   }, [camera, gl, glRef, scene]);
+
+
   useEffect(() => {
     if (isIOS) {
       if (visible && groupRef.current) {
