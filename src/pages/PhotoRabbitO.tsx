@@ -1,7 +1,7 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button';
 import PhotoPara from '../components/photo/PhotoPara';
-import { useEffect, useState } from 'react';
 
 export default function PhotoRabbitO() {
   const [searchParams] = useSearchParams();
