@@ -142,7 +142,6 @@ const ModalU = function ({
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
-
     if (isMount) {
       const timeoutId = setTimeout(captureComposite, 100);
       return () => clearTimeout(timeoutId);
@@ -348,19 +347,37 @@ function SceneIOS({
     }
   }, [camera, gl, glRef, scene]);
   useEffect(() => {
-    if (visible && groupRef.current) {
-      if (char === 'moons') {
-        groupRef.current.position.set(
-          rabbitPosition[0] + cposition.x,
-          rabbitPosition[1] + cposition.y + 0.2,
-          rabbitPosition[2] + cposition.z
-        );
-      } else {
-        groupRef.current.position.set(
-          rabbitPosition[0] + cposition.x,
-          rabbitPosition[1] + cposition.y + 1,
-          rabbitPosition[2] + cposition.z
-        );
+    if (isIOS) {
+      if (visible && groupRef.current) {
+        if (char === 'moons') {
+          groupRef.current.position.set(
+            rabbitPosition[0] + cposition.x,
+            rabbitPosition[1] + cposition.y + 0.2,
+            rabbitPosition[2] + cposition.z
+          );
+        } else {
+          groupRef.current.position.set(
+            rabbitPosition[0] + cposition.x,
+            rabbitPosition[1] + cposition.y + 1,
+            rabbitPosition[2] + cposition.z
+          );
+        }
+      }
+    } else {
+      if (visible && groupRef.current) {
+        if (char === 'moons') {
+          groupRef.current.position.set(
+            rabbitPosition[0] + cposition.x,
+            rabbitPosition[1] + cposition.y -0.2,
+            rabbitPosition[2] + cposition.z
+          );
+        } else {
+          groupRef.current.position.set(
+            rabbitPosition[0] + cposition.x,
+            rabbitPosition[1] + cposition.y - 1,
+            rabbitPosition[2] + cposition.z
+          );
+        }
       }
     }
   }, [visible, rabbitPosition, cposition]);
@@ -421,7 +438,7 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y + 0.2,
+                rabbitPosition[1] + cposition.y - 0.2,
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[0, -Math.PI / 4, 0]}
@@ -441,10 +458,10 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y+1,
+                rabbitPosition[1] + cposition.y - 1,
                 rabbitPosition[2] + cposition.z,
               ]}
-             rotation={[0, -Math.PI / 4, 0]}
+              rotation={[0, -Math.PI / 4, 0]}
               scale={cscale * 0.5}
               visible={visible}
             >
