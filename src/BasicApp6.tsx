@@ -83,19 +83,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && videoRef.current) {
-        videoRef.current.play().catch((err) => console.log('Error re-playing video:', err));
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-
-  useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({
         video: {
@@ -127,7 +114,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   return (
     <video
       id="three-video"
-      className="w-screen h-screen"
       ref={videoRef}
       style={{
         position: 'absolute',
@@ -969,7 +955,7 @@ export default function BasicApp() {
         setIsMount={setIsMount}
       />
 
-      <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
+      {/* <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} /> */}
       {!mount && (
         <ModalU
           isMount={isMount}
