@@ -18,6 +18,7 @@ import IApp from './IApp.tsx';
 import PhotoTreeTT from './pages/PhotoTreeTT.tsx';
 import BasicApp2 from './BasicApp2.tsx';
 import PhotoRabbitTT from './pages/PhotoRabbitTT.tsx';
+import BasicApp5 from './BasicApp5.tsx';
 
 const router = createBrowserRouter(
   [
@@ -56,10 +57,14 @@ const router = createBrowserRouter(
         },
         {
           path: 'test3',
-          element: <PhotoRabbitTT/>,
+          element: <PhotoRabbitTT />,
         },
         {
           path: 'test4',
+          element: <PhotoTreeTT />,
+        },
+        {
+          path: 'test5',
           element: <PhotoTreeTT />,
         },
         {
@@ -69,6 +74,10 @@ const router = createBrowserRouter(
         {
           path: 'pl2/:char',
           element: <BasicApp2 />,
+        },
+        {
+          path: 'pl3/:char',
+          element: <BasicApp5 />,
         },
         {
           path: 'frame/:char',
