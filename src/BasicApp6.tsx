@@ -142,65 +142,71 @@ const ModalU = function ({
   const [fotoUrl, setFotoUrl] = useState<string>('');
 
   useEffect(() => {
-    const captureComposite = () => {
-      // iOS 분기: 비디오 요소의 실제 표시되는 bounding rect 사용
-      const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
-      if (!videoElement) return;
-      const rect = videoElement.getBoundingClientRect();
-      const containerWidth = rect.width;
-      const containerHeight = rect.height;
-      const dpr = window.devicePixelRatio || 1;
-      const compositeCanvas = document.createElement('canvas');
-      compositeCanvas.width = Math.floor(containerWidth * dpr);
-      compositeCanvas.height = Math.floor(containerHeight * dpr);
-      const ctx = compositeCanvas.getContext('2d');
-      if (!ctx) return;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.scale(dpr, dpr);
-
-      // 실제 표시되는 크기를 기준으로 계산
-      const videoWidth = videoElement.videoWidth;
-      const videoHeight = videoElement.videoHeight;
-      const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
-
-      ctx.drawImage(
-        videoElement,
-        videoParams.offsetX,
-        videoParams.offsetY,
-        videoParams.drawWidth,
-        videoParams.drawHeight
-      );
-
-      const threeCSSWidth = offscreenCanvas!.width / dpr;
-      const threeCSSHeight = offscreenCanvas!.height / dpr;
-      const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
-
-      ctx.drawImage(
-        offscreenCanvas!,
-        threeParams.offsetX,
-        threeParams.offsetY,
-        threeParams.drawWidth,
-        threeParams.drawHeight
-      );
-
-      compositeCanvas.toBlob((blob: Blob | null) => {
-        if (blob) {
-          setFoto(blob);
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          reader.onload = () => {
-            setFotoUrl(reader.result as string);
-          };
-        }
-      }, 'image/png');
-    };
 
     if (isMount) {
-      const timeoutId = setTimeout(captureComposite, 2000);
+      const timeoutId = setTimeout(captureComposite, 100);
       return () => clearTimeout(timeoutId);
     }
   }, [isMount, offscreenCanvas, cameraFov, setFoto]);
+
+  const captureComposite = () => {
+    // iOS 분기: 비디오 요소의 실제 표시되는 bounding rect 사용
+    const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
+    if (!videoElement) return;
+    const rect = videoElement.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    const compositeCanvas = document.createElement('canvas');
+    compositeCanvas.width = Math.floor(containerWidth * dpr);
+    compositeCanvas.height = Math.floor(containerHeight * dpr);
+    const ctx = compositeCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.scale(dpr, dpr);
+
+    // 실제 표시되는 크기를 기준으로 계산
+    const videoWidth = videoElement.videoWidth;
+    const videoHeight = videoElement.videoHeight;
+    const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
+
+    ctx.drawImage(
+      videoElement,
+      videoParams.offsetX,
+      videoParams.offsetY,
+      videoParams.drawWidth,
+      videoParams.drawHeight
+    );
+
+    const threeCSSWidth = offscreenCanvas!.width / dpr;
+    const threeCSSHeight = offscreenCanvas!.height / dpr;
+    const threeParams = calcCover(threeCSSWidth, threeCSSHeight, containerWidth, containerHeight);
+
+    ctx.drawImage(
+      offscreenCanvas!,
+      threeParams.offsetX,
+      threeParams.offsetY,
+      threeParams.drawWidth,
+      threeParams.drawHeight
+    );
+
+    compositeCanvas.toBlob((blob: Blob | null) => {
+      if (blob) {
+        setFoto(blob);
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onload = () => {
+          setFotoUrl(reader.result as string);
+        };
+      }
+    }, 'image/png');
+  };
+
+  const handleClose = () => {
+    // captureComposite();
+    closeModal();
+  };
 
   return (
     <div
@@ -212,14 +218,14 @@ const ModalU = function ({
         width: '100vw',
         height: '100vh',
         padding: '8px',
-        zIndex: 10000,
+        zIndex: 100000000,
       }}
       className="overflow-y-hidden"
     >
       {/* UI 버튼 및 캡처 이미지 렌더링 */}
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }} className="max-h-screen">
         <div style={{ display: 'flex', gap: '8px' }} className="h-max p-4">
-          <button onClick={closeModal} style={{ flex: 1 }}>
+          <button onClick={handleClose} style={{ flex: 1 }}>
             다시 찍기
           </button>
           <button onClick={closeSaveModal} style={{ flex: 1 }}>
@@ -287,10 +293,12 @@ function DeviceOrientationController({
       } else {
         euler.set(-beta, -alpha, gamma, 'YXZ');
         camera.quaternion.setFromEuler(euler);
-        const yCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI);
+        const yCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
         camera.quaternion.multiply(yCorrection);
-        const xCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+        const xCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
         camera.quaternion.multiply(xCorrection);
+        const zCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+        camera.quaternion.multiply(zCorrection);
       }
       camera.up.set(0, 1, 0);
     }
@@ -356,7 +364,7 @@ function SceneIOS({
       }
     }
   }, [visible, rabbitPosition, cposition]);
-  return (
+  return isIOS ? (
     <>
       <ambientLight intensity={3} />
       <Suspense fallback={null}>
@@ -369,7 +377,7 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y + 0.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[-Math.PI,- Math.PI / 4, 0]}
+              rotation={[-Math.PI, -Math.PI / 4, 0]}
               scale={cscale * 0.25}
               visible={visible}
             >
@@ -389,7 +397,54 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y + 1,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[-Math.PI,- Math.PI / 4, 0]}
+              rotation={[-Math.PI, -Math.PI / 4, 0]}
+              scale={cscale * 0.5}
+              visible={visible}
+            >
+              <Tree
+                oposition={[oposition.x, oposition.y, oposition.z]}
+                sscale={scale * 0.6}
+                on={true}
+                onRenderEnd={() => {}}
+              />
+            </group>
+          ))}
+      </Suspense>
+    </>
+  ) : (
+    <>
+      <ambientLight intensity={3} />
+      <Suspense fallback={null}>
+        {visible &&
+          (char === 'moons' ? (
+            <group
+              ref={groupRef}
+              position={[
+                rabbitPosition[0] + cposition.x,
+                rabbitPosition[1] + cposition.y + 0.2,
+                rabbitPosition[2] + cposition.z,
+              ]}
+              rotation={[-Math.PI, -Math.PI / 4, 0]}
+              scale={cscale * 0.25}
+              visible={visible}
+            >
+              <Box
+                sposition={[sposition.x, sposition.y, sposition.z]}
+                oposition={[oposition.x, oposition.y - 3.5, oposition.z]}
+                sscale={scale * 0.85}
+                on={true}
+                onRenderEnd={() => {}}
+              />
+            </group>
+          ) : (
+            <group
+              ref={groupRef}
+              position={[
+                rabbitPosition[0] + cposition.x,
+                rabbitPosition[1] + cposition.y + 1,
+                rabbitPosition[2] + cposition.z,
+              ]}
+              // rotation={[Math.PI, Math.PI / 4, 0]}
               scale={cscale * 0.5}
               visible={visible}
             >
@@ -759,15 +814,14 @@ export default function BasicApp() {
     setMount(true);
   }, []);
 
-  const onTest = () => {
-    if (xrStoreRef.current) {
-      xrStoreRef.current.getState().session?.end();
-      xrStoreRef.current.destroy();
-      xrStoreRef.current = null;
-    }
-    xrStoreRef.current = createXRStore();
-    setTimeout(() => setMount(true), 2000);
-  };
+  // const onTest = () => {
+  //   if (xrStoreRef.current) {
+  //     xrStoreRef.current.getState().session?.end();
+  //     xrStoreRef.current.destroy();
+  //     xrStoreRef.current = null;
+  //   }
+  //   xrStoreRef.current = createXRStore();
+  // };
 
   const [resetTrigger, setResetTrigger] = useState(0);
   const correctPose = (glRefObj: any) => {
@@ -851,58 +905,54 @@ export default function BasicApp() {
 
   return (
     <>
-      {mount ? (
-        <IOSARCanvas
-          xrStoreRef={xrStoreRef}
-          setSessionStarted={setSessionStarted}
-          show={show}
+      <IOSARCanvas
+        xrStoreRef={xrStoreRef}
+        setSessionStarted={setSessionStarted}
+        show={show}
+        modalIsOpen={modalIsOpen}
+        openModal={openModalHandler}
+        closeModal={() => {
+          setIsOpen(false);
+          setShow(false);
+        }}
+        closeSaveModal={handleCloseSaveModal}
+        setShow={setShow}
+        correctPose={correctPose}
+        resetTrigger={resetTrigger}
+        domWidth={domWidth}
+        domHeight={domHeight}
+        circleX={circleX}
+        circleY={circleY}
+        circleR={circleR}
+        char={char}
+        circleColor="blue"
+        setOffscreenCanvas={setOffscreenCanvas}
+        logDebug={logDebug}
+        cameraFov={cameraFov}
+        calibrationMatrixRef={calibrationMatrixRef}
+        rabbitPosition={rabbitPosition}
+        latestCameraTransformRef={latestCameraTransform}
+        streamRef={streamRef}
+        setIsMount={setIsMount}
+      />
+
+      <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
+      {!mount && (
+        <ModalU
+          isMount={isMount}
           modalIsOpen={modalIsOpen}
-          openModal={openModalHandler}
+          setFoto={setFoto}
           closeModal={() => {
             setIsOpen(false);
             setShow(false);
+            setMount(true);
           }}
+          isIOS={isIOS}
           closeSaveModal={handleCloseSaveModal}
-          setShow={setShow}
-          correctPose={correctPose}
-          resetTrigger={resetTrigger}
-          domWidth={domWidth}
-          domHeight={domHeight}
-          circleX={circleX}
-          circleY={circleY}
-          circleR={circleR}
-          char={char}
-          circleColor="blue"
-          setOffscreenCanvas={setOffscreenCanvas}
+          offscreenCanvas={offscreenCanvas}
           logDebug={logDebug}
           cameraFov={cameraFov}
-          calibrationMatrixRef={calibrationMatrixRef}
-          rabbitPosition={rabbitPosition}
-          latestCameraTransformRef={latestCameraTransform}
-          streamRef={streamRef}
-          setIsMount={setIsMount}
         />
-      ) : (
-        <>
-          <BackgroundVideo streamRef={streamRef} setIsMount={setIsMount} logDebug={logDebug} />
-          {isMount && (
-            <ModalU
-              isMount={isMount}
-              modalIsOpen={modalIsOpen}
-              setFoto={setFoto}
-              closeModal={() => {
-                setIsOpen(false);
-                setShow(false);
-                onTest();
-              }}
-              isIOS={isIOS}
-              closeSaveModal={handleCloseSaveModal}
-              offscreenCanvas={offscreenCanvas}
-              logDebug={logDebug}
-              cameraFov={cameraFov}
-            />
-          )}
-        </>
       )}
     </>
   );
