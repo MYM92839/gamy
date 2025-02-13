@@ -920,10 +920,6 @@ export default function BasicApp() {
     setIsOpen(false);
   };
 
-  useEffect(() => {
-    window.scrollTo({ top: 0});
-  }, []);
-
   return (
     <>
       <IOSARCanvas
