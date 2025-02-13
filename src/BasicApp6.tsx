@@ -94,13 +94,33 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     };
   }, []);
 
+  const requestDeviceOrientation = async () => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const response = await (DeviceOrientationEvent as any).requestPermission();
+        if (response === 'granted') {
+          // setOrientationEnabled(true);
+          // props.logDebug('DeviceOrientation permission granted (iOS).');
+        } else {
+          // props.logDebug('DeviceOrientation permission not granted.');
+        }
+      } catch (err) {
+        alert('WHY2 :' + err);
+
+        console.error('DeviceOrientation permission error:', err);
+      }
+    } else {
+      // setOrientationEnabled(true);
+    }
+  };
+
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({
         video: {
-          facingMode: { exact: 'environment', ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          facingMode: { ideal: 'environment' },
+          // width: { ideal: 1920 },
+          // height: { ideal: 1080 },
         },
         audio: false,
       })
@@ -110,8 +130,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
           streamRef.current = stream;
           videoRef.current.onloadeddata = () => {
             videoRef.current?.play().catch((err) => {
-              alert('ERRER: ' + err);
-
               return logDebug('Video play error: ' + err);
             });
             setIsMount(true);
@@ -123,7 +141,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         alert('ERRER: ' + err);
         return logDebug('getUserMedia error: ' + err);
       });
-  }, []);
+  }, [logDebug, setIsMount, streamRef]);
 
   return (
     <video
@@ -132,6 +150,8 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
       ref={videoRef}
       style={{
         position: 'absolute',
+        width: '100%',
+        height: '100%',
         top: 0,
         left: 0,
         objectFit: 'cover',
