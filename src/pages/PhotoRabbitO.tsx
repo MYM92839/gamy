@@ -30,7 +30,6 @@ export default function PhotoRabbitO() {
         }
       } catch (err) {
         alert('WHY2 :' + err);
-
         console.error('DeviceOrientation permission error:', err);
       }
     } else {

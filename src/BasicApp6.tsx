@@ -292,13 +292,13 @@ function DeviceOrientationController({
         camera.quaternion.multiply(correctionQuaternion);
       } else {
         euler.set(-beta, -alpha, gamma, 'YXZ');
+        const correctionQuaternion = new THREE.Quaternion()
+          // X축 -90도 회전 (머리가 위로)
+          .setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)
+          // Y축 -90도 회전 (앞면이 보이도록)
+          .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
         camera.quaternion.setFromEuler(euler);
-        const yCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-        camera.quaternion.multiply(yCorrection);
-        const xCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-        camera.quaternion.multiply(xCorrection);
-        const zCorrection = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
-        camera.quaternion.multiply(zCorrection);
+        camera.quaternion.multiply(correctionQuaternion);
       }
       camera.up.set(0, 1, 0);
     }
