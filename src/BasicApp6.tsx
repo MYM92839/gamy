@@ -679,7 +679,7 @@ function UIOverlayIOS({
           }
           correctPose();
           setShow(false);
-          setTimeout(() => setShow(true), 0);
+          setTimeout(() => setShow(true), 100);
         }}
         title={
           init
