@@ -118,7 +118,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         top: 0,
         left: 0,
         width: '100vw',
-        height: '100dvh',
+        height: '100vh',
         objectFit: 'cover',
         zIndex: 0,
       }}
@@ -740,7 +740,7 @@ function IOSARCanvas(props: any) {
   const [searchParams] = useSearchParams();
   const cv = searchParams.get('cv');
   return (
-    <div style={{ position: 'absolute', inset: 0, overflowY: 'hidden' }}>
+    <div style={{ position: 'absolute', inset: 0 }}>
       <BackgroundVideo streamRef={props.streamRef} setIsMount={props.setIsMount} logDebug={props.logDebug} />
       <Canvas
         id="three-canvas"
@@ -919,8 +919,9 @@ export default function BasicApp() {
     }
     setIsOpen(false);
   };
+
   useEffect(() => {
-    window.scrollTo({top:0, left:0, behavior:'instant'});
+    window.scrollTo({ top: 0});
   }, []);
 
   return (
