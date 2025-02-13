@@ -266,8 +266,11 @@ function DeviceOrientationController({
         camera.quaternion.setFromEuler(euler);
         camera.quaternion.multiply(correctionQuaternion);
       } else {
-        euler.set(-beta, -alpha, gamma, 'YXZ');
+        euler.set(beta, alpha, -gamma, 'YXZ');
         camera.quaternion.setFromEuler(euler);
+        const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+        camera.quaternion.setFromEuler(euler);
+        camera.quaternion.multiply(correctionQuaternion);
       }
       camera.up.set(0, 1, 0);
     }
@@ -445,7 +448,7 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y - 0.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[0, -Math.PI / 4, 0]}
+              rotation={[0, Math.PI / 4, 0]}
               scale={cscale * 0.25}
               visible={visible}
             >
