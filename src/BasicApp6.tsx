@@ -393,7 +393,7 @@ function SceneIOS({
         if (char === 'moons') {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 1,
+            rabbitPosition[1] + cposition.y - 0.6,
             rabbitPosition[2] + cposition.z
           );
         } else {
@@ -415,8 +415,10 @@ function SceneIOS({
       // 모델의 기본 정면과 카메라의 정면이 일치하지 않으면 보정값(offset)을 추가하세요.
       if (char === 'moons') {
         groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
+        groupRef.current.rotation.z = euler.z;
       } else {
         groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
+        groupRef.current.rotation.z = -euler.z;
       }
     }
   }, [camera, visible]);
