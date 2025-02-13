@@ -266,6 +266,8 @@ function DeviceOrientationController({
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
   const [permissionGranted, setPermissionGranted] = useState(isPermissionGranted);
+  // 비-iOS용 초기 센서 값 보정을 위한 ref
+  const initialQuaternion = useRef<THREE.Quaternion | null>(null);
 
   // 센서 권한 요청 (iOS 13+ 등에서 필요)
   useEffect(() => {
@@ -281,15 +283,21 @@ function DeviceOrientationController({
         camera.quaternion.multiply(correctionQuaternion);
       } else {
         euler.set(beta, alpha, -gamma, 'YXZ');
-        // camera.quaternion.setFromEuler(euler);
         const correctionQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-        camera.quaternion.setFromEuler(euler);
-        camera.quaternion.multiply(correctionQuaternion);
+        const computedQuaternion = new THREE.Quaternion().setFromEuler(euler);
+        computedQuaternion.multiply(correctionQuaternion);
+        if (!initialQuaternion.current) {
+          // 첫 센서 값 저장 (보정 기준)
+          initialQuaternion.current = computedQuaternion.clone();
+        }
+        // 상대적인 회전값 계산: q_rel = (q_initial)^-1 * q_current
+        const inv = initialQuaternion.current.clone().invert();
+        const relativeQuat = inv.multiply(computedQuaternion);
+        camera.quaternion.copy(relativeQuat);
       }
       camera.up.set(0, 1, 0);
     }
 
-    // 만약 requestPermission 함수를 지원한다면 권한 요청
     if (
       typeof DeviceOrientationEvent !== 'undefined' &&
       typeof (DeviceOrientationEvent as any).requestPermission === 'function'
@@ -403,7 +411,6 @@ function SceneIOS({
         }
       }
     }
-    //
   }, [visible, rabbitPosition, cposition]);
   return isIOS ? (
     <>
@@ -906,7 +913,7 @@ export default function BasicApp() {
       const currentPos = latestCameraTransform.current.position.clone();
       const newPosition = currentPos.add(offset);
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-        }
+    }
   };
 
   const openModalHandler = () => {
