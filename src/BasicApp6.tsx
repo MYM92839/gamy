@@ -955,6 +955,11 @@ export default function BasicApp() {
     setMount(true);
   }, []);
 
+  // 임계값 (라디안): 예를 들어 0.1 rad (약 5.7°) 이하이면 정면으로 판단
+const ANGLE_THRESHOLD = 0.1;
+// 최대 시도 횟수
+const MAX_ATTEMPTS = 5;
+
   const [resetTrigger, setResetTrigger] = useState(0);
   const correctPose = (glRefObj: any) => {
     if (isIOS) {
