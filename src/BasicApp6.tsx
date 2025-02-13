@@ -441,7 +441,7 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y + 1,
+                rabbitPosition[1] + cposition.y+1,
                 rabbitPosition[2] + cposition.z,
               ]}
              rotation={[0, -Math.PI / 4, 0]}
