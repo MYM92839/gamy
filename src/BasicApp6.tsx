@@ -979,6 +979,7 @@ export default function BasicApp() {
       setResetTrigger((prev) => prev + 1);
     } else {
       // non-iOS: 카메라의 forward(수평) 방향과 yaw값만 남긴 회전을 계산
+      // non-iOS: 카메라의 수평 forward 방향을 기준으로 위치와 회전을 보정
       setTimeout(() => {
         if (!glRefObj) return;
         let pos = { x: 0, y: 0, z: 0 };
@@ -993,7 +994,7 @@ export default function BasicApp() {
         }
         const distance = 5;
         const currentPos = latestCameraTransform.current.position.clone();
-        // 카메라의 월드 forward 방향을 구한 후, y성분 제거 (수평만)
+        // 카메라의 월드 forward 방향 (수평만 사용)
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(latestCameraTransform.current.quaternion);
         forward.y = 0;
         forward.normalize();
@@ -1002,15 +1003,15 @@ export default function BasicApp() {
         setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         console.log('non-iOS Rabbit position updated:', newPosition);
 
-        // 회전: 카메라의 quaternion을 Euler로 변환 후, x,z를 0으로 해서 yaw만 남김
-        const currentQuat = latestCameraTransform.current.quaternion.clone();
-        const euler = new THREE.Euler().setFromQuaternion(currentQuat, 'YXZ');
-        euler.x = 0;
-        euler.z = 0;
-        setRabbitRotation(euler);
+        // 토끼의 회전: 토끼 위치에서 카메라 위치를 바라보도록 계산
+        const cameraPos = latestCameraTransform.current.position.clone();
+        // LookAt 행렬을 사용하여 회전 Quaternion 계산 (모델의 기본 전방에 맞게 보정 필요시 추가 offset 적용)
+        const mat = new THREE.Matrix4().lookAt(newPosition, cameraPos, new THREE.Vector3(0, 1, 0));
+        const q = new THREE.Quaternion().setFromRotationMatrix(mat);
+        setRabbitRotation(new THREE.Euler().setFromQuaternion(q, 'YXZ'));
 
         setResetTrigger((prev) => prev + 1);
-      }, 30); // 딜레이 30ms (필요시 조정)
+      }, 30); // 30ms 딜레이 (필요시 조정)
     }
   };
 
