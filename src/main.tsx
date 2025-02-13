@@ -22,6 +22,9 @@ import BasicApp5 from './BasicApp5.tsx';
 import BasicApp6 from './BasicApp6.tsx';
 import PhotoRabbitO from './pages/PhotoRabbitO.tsx';
 import PhotoTreeO from './pages/PhotoTreeO.tsx';
+import BasicIos from './BasicIos.tsx';
+
+const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
 
 const router = createBrowserRouter(
   [
@@ -80,7 +83,7 @@ const router = createBrowserRouter(
         },
         {
           path: 't/:char',
-          element: <BasicApp6 />,
+          element: isIOS ? <BasicIos /> : <BasicApp6 />,
         },
         {
           path: 'pl/:char',
