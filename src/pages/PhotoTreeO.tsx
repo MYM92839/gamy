@@ -18,25 +18,31 @@ export default function PhotoTreeO() {
 
   const cv = searchParams.get('cv');
 
-  const requestDeviceOrientation = async () => {
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      try {
-        const response = await (DeviceOrientationEvent as any).requestPermission();
-        if (response === 'granted') {
-          // setOrientationEnabled(true);
-          // props.logDebug('DeviceOrientation permission granted (iOS).');
-        } else {
-          // props.logDebug('DeviceOrientation permission not granted.');
-        }
-      } catch (err) {
-        alert('WHY2 :' + err);
+  // const requestDeviceOrientation = async () => {
+  //   if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+  //     try {
+  //       const response = await (DeviceOrientationEvent as any).requestPermission();
+  //       if (response === 'granted') {
+  //         setInit(true);
+  //         // setOrientationEnabled(true);
+  //         // props.logDebug('DeviceOrientation permission granted (iOS).');
+  //       } else {
+  //         // props.logDebug('DeviceOrientation permission not granted.');
+  //       }
+  //     } catch (err) {
+  //       alert('WHY2 :' + err);
 
-        console.error('DeviceOrientation permission error:', err);
-      }
-    } else {
-      // setOrientationEnabled(true);
-    }
-  };
+  //       console.error('DeviceOrientation permission error:', err);
+  //     }
+  //   } else {
+  //     // setOrientationEnabled(true);
+  //     setInit(true);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   if
+  // }, [init]);
 
   return (
     <div className="w-full h-full relative">
@@ -46,7 +52,7 @@ export default function PhotoTreeO() {
             cv ? '&cv=true' : ''
           }`}
         >
-          <Button title="시작" className="w-[232px] mx-auto mt-[162px]" onClick={requestDeviceOrientation} />
+          <Button title="시작" className="w-[232px] mx-auto mt-[162px]" />
         </Link>
       </PhotoPara>
     </div>
