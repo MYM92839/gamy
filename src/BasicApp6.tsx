@@ -81,11 +81,24 @@ function CameraUpdater({
 /* --- BackgroundVideo (한 번만 선언) --- */
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && videoRef.current) {
+        videoRef.current.play().catch((err) => console.log('Error re-playing video:', err));
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({
         video: {
-          facingMode: { ideal: 'environment' },
+          facingMode: { exact: 'environment', ideal: 'environment' },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
@@ -96,31 +109,33 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
           videoRef.current.onloadeddata = () => {
-            videoRef.current?.play().catch((err) => logDebug('Video play error: ' + err));
+            videoRef.current?.play().catch((err) => {
+              alert('ERRER: ' + err);
+
+              return logDebug('Video play error: ' + err);
+            });
             setIsMount(true);
           };
         }
+        //
       })
-      .catch((err) => logDebug('getUserMedia error: ' + err));
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track: any) => track.stop());
-        streamRef.current = null;
-      }
-    };
+      .catch((err) => {
+        alert('ERRER: ' + err);
+        return logDebug('getUserMedia error: ' + err);
+      });
   }, []);
+
   return (
     <video
       id="three-video"
+      className="w-screen h-screen"
       ref={videoRef}
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
-        width: '100vw',
-        height: '100vh',
         objectFit: 'cover',
-        zIndex: 0,
+        zIndex: 10,
       }}
       autoPlay
       playsInline
