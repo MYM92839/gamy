@@ -421,7 +421,6 @@ function SceneIOS({
         groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
         groupRef.current.rotation.z = euler.z;
         groupRef.current.rotation.x = euler.x;
-
       }
     }
   }, [camera, visible]);
@@ -682,7 +681,7 @@ function UIOverlayIOS({
           }
           correctPose();
           setShow(false);
-          setTimeout(() => setShow(true), 100);
+          setTimeout(() => setShow(true), 1000);
         }}
         title={
           init
@@ -971,8 +970,8 @@ export default function BasicApp() {
       logDebug('iOS Rabbit position updated:', newPosition);
       setResetTrigger((prev) => prev + 1);
     } else {
-      // non-iOS: requestAnimationFrame을 사용해 최신 카메라 값 반영
-      requestAnimationFrame(() => {
+      setTimeout(() => {
+        // non-iOS: requestAnimationFrame을 사용해 최신 카메라 값 반영
         if (!glRefObj) return;
         let pos = { x: 0, y: 0, z: 0 };
         const saved = localStorage.getItem('levaValues');
@@ -998,7 +997,7 @@ export default function BasicApp() {
         setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
         logDebug('non-iOS Rabbit position updated:', newPosition);
         setResetTrigger((prev) => prev + 1);
-      });
+      }, 500);
     }
   };
 
