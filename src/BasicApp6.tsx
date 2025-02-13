@@ -106,7 +106,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         //
       })
       .catch((err) => {
-        alert('ERRER: ' + err);
         return logDebug('getUserMedia error: ' + err);
       });
   }, [logDebug, setIsMount, streamRef]);
