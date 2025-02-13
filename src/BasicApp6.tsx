@@ -1,9 +1,9 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { usePinch } from '@use-gesture/react';
 import { Leva, useControls } from 'leva';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import * as THREE from 'three';
-import { usePinch } from '@use-gesture/react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import * as THREE from 'three';
 import { Box, Tree } from './ArApp';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
@@ -845,62 +845,62 @@ function IOSARCanvas(props: any) {
 }
 
 /* --- DebugPanel --- */
-function DebugPanel({
-  logs,
-  cameraTransformRef,
-}: {
-  logs: string[];
-  cameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion }>;
-}) {
-  const [transform, setTransform] = useState({
-    position: new THREE.Vector3(),
-    quaternion: new THREE.Quaternion(),
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (cameraTransformRef.current) {
-        setTransform({
-          position: cameraTransformRef.current.position.clone(),
-          quaternion: cameraTransformRef.current.quaternion.clone(),
-        });
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [cameraTransformRef]);
+// function DebugPanel({
+//   logs,
+//   cameraTransformRef,
+// }: {
+//   logs: string[];
+//   cameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion }>;
+// }) {
+//   const [transform, setTransform] = useState({
+//     position: new THREE.Vector3(),
+//     quaternion: new THREE.Quaternion(),
+//   });
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       if (cameraTransformRef.current) {
+//         setTransform({
+//           position: cameraTransformRef.current.position.clone(),
+//           quaternion: cameraTransformRef.current.quaternion.clone(),
+//         });
+//       }
+//     }, 500);
+//     return () => clearInterval(interval);
+//   }, [cameraTransformRef]);
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        maxHeight: '200px',
-        overflowY: 'scroll',
-        background: 'rgba(0,0,0,0.7)',
-        color: 'white',
-        fontSize: '12px',
-        padding: '8px',
-        zIndex: 100000,
-      }}
-    >
-      <div>
-        <strong>Camera Pos:</strong> {transform.position.x.toFixed(2)}, {transform.position.y.toFixed(2)},{' '}
-        {transform.position.z.toFixed(2)}
-      </div>
-      <div>
-        <strong>Camera Q:</strong> {transform.quaternion.x.toFixed(2)}, {transform.quaternion.y.toFixed(2)},{' '}
-        {transform.quaternion.z.toFixed(2)}, {transform.quaternion.w.toFixed(2)}
-      </div>
-      <div>
-        <strong>Logs:</strong>
-      </div>
-      {logs.map((log, i) => (
-        <div key={i}>{log}</div>
-      ))}
-    </div>
-  );
-}
+//   return (
+//     <div
+//       style={{
+//         position: 'fixed',
+//         bottom: 0,
+//         left: 0,
+//         right: 0,
+//         maxHeight: '200px',
+//         overflowY: 'scroll',
+//         background: 'rgba(0,0,0,0.7)',
+//         color: 'white',
+//         fontSize: '12px',
+//         padding: '8px',
+//         zIndex: 100000,
+//       }}
+//     >
+//       <div>
+//         <strong>Camera Pos:</strong> {transform.position.x.toFixed(2)}, {transform.position.y.toFixed(2)},{' '}
+//         {transform.position.z.toFixed(2)}
+//       </div>
+//       <div>
+//         <strong>Camera Q:</strong> {transform.quaternion.x.toFixed(2)}, {transform.quaternion.y.toFixed(2)},{' '}
+//         {transform.quaternion.z.toFixed(2)}, {transform.quaternion.w.toFixed(2)}
+//       </div>
+//       <div>
+//         <strong>Logs:</strong>
+//       </div>
+//       {logs.map((log, i) => (
+//         <div key={i}>{log}</div>
+//       ))}
+//     </div>
+//   );
+// }
 
 /* --- BasicApp --- */
 export default function BasicApp() {
@@ -917,12 +917,12 @@ export default function BasicApp() {
   const [cameraFov] = useState<number>(60);
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState<boolean>(true);
+  // const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  // const [showDebug, setShowDebug] = useState<boolean>(true);
 
   const logDebug = (msg: any, ...opt: any[]) => {
     console.log(msg, ...opt);
-    setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    /// setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
   useEffect(() => {
