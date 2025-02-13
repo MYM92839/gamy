@@ -959,11 +959,12 @@ export default function BasicApp() {
       }
       const cameraPos = latestCameraTransform.current.position.clone();
       const cameraQuat = latestCameraTransform.current.quaternion.clone();
+      // iOS에서는 기존 로직 사용
       const offset = new THREE.Vector3(0, 0, 0);
       offset.applyQuaternion(cameraQuat);
       const newPosition = cameraPos.add(offset);
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-      logDebug('Rabbit position updated:', newPosition);
+      logDebug('iOS Rabbit position updated:', newPosition);
       setResetTrigger((prev) => prev + 1);
     } else {
       if (!glRefObj) return;
@@ -978,16 +979,22 @@ export default function BasicApp() {
         }
       }
       const distance = 5;
-      const offset = new THREE.Vector3(0, 0, -distance);
-      const currentQuat = latestCameraTransform.current.quaternion.clone();
-      offset.applyQuaternion(currentQuat);
       const currentPos = latestCameraTransform.current.position.clone();
+      const currentQuat = latestCameraTransform.current.quaternion.clone();
+      // Euler로 변환한 후 x와 z 회전을 제거하여 수평 방향(yaw)만 남김
+      const euler = new THREE.Euler().setFromQuaternion(currentQuat, 'YXZ');
+      euler.x = 0;
+      euler.z = 0;
+      const frontQuat = new THREE.Quaternion().setFromEuler(euler);
+      const offset = new THREE.Vector3(0, 0, -distance);
+      offset.applyQuaternion(frontQuat);
       const newPosition = currentPos.add(offset);
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
       logDebug('non-iOS Rabbit position updated:', newPosition);
       setResetTrigger((prev) => prev + 1);
     }
   };
+
 
   const openModalHandler = () => {
     const threeCanvas = document.querySelector('#three-canvas')?.children[0].children[0];
