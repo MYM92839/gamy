@@ -353,7 +353,8 @@ function SceneIOS({
   addGl,
   char,
   scale,
-}: SceneProps) {
+  rabbitRotation, // 추가
+}: SceneProps & any) {
   const { gl, camera, scene } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   useFrame(() => {
@@ -407,23 +408,30 @@ function SceneIOS({
     }
   }, [visible, rabbitPosition, cposition, char]);
 
-  // non-iOS: 카메라의 yaw 값을 추출해 모델의 Y축 회전을 업데이트합니다.
+  // // non-iOS: 카메라의 yaw 값을 추출해 모델의 Y축 회전을 업데이트합니다.
+  // useEffect(() => {
+  //   if (!isIOS && groupRef.current && camera) {
+  //     const euler = new THREE.Euler();
+  //     euler.setFromQuaternion(camera.quaternion, 'YXZ');
+  //     // 모델의 기본 정면과 카메라의 정면이 일치하지 않으면 보정값(offset)을 추가하세요.
+  //     if (char === 'moons') {
+  //       groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
+  //       groupRef.current.rotation.z = euler.z;
+  //       groupRef.current.rotation.x = euler.x;
+  //     } else {
+  //       groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
+  //       groupRef.current.rotation.z = euler.z;
+  //       groupRef.current.rotation.x = euler.x;
+  //     }
+  //   }
+  // }, [camera, visible]);
+
+  // non-iOS: 한 번만 rabbitRotation을 적용
   useEffect(() => {
-    if (!isIOS && groupRef.current && camera) {
-      const euler = new THREE.Euler();
-      euler.setFromQuaternion(camera.quaternion, 'YXZ');
-      // 모델의 기본 정면과 카메라의 정면이 일치하지 않으면 보정값(offset)을 추가하세요.
-      if (char === 'moons') {
-        groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
-        groupRef.current.rotation.z = euler.z;
-        groupRef.current.rotation.x = euler.x;
-      } else {
-        groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
-        groupRef.current.rotation.z = euler.z;
-        groupRef.current.rotation.x = euler.x;
-      }
+    if (!isIOS && visible && groupRef.current && rabbitRotation) {
+      groupRef.current.rotation.copy(rabbitRotation);
     }
-  }, [camera, visible]);
+  }, [visible, rabbitRotation]);
 
   return isIOS ? (
     <>
@@ -921,6 +929,7 @@ export default function BasicApp() {
   const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
   // const [debugLogs, setDebugLogs] = useState<string[]>([]);
   // const [showDebug, setShowDebug] = useState<boolean>(true);
+  const [rabbitRotation, setRabbitRotation] = useState<THREE.Euler | null>(null);
 
   const logDebug = (msg: any, ...opt: any[]) => {
     console.log(msg, ...opt);
@@ -946,7 +955,6 @@ export default function BasicApp() {
   }, []);
 
   const [resetTrigger, setResetTrigger] = useState(0);
-
   const correctPose = (glRefObj: any) => {
     if (isIOS) {
       if (!glRefObj) return;
@@ -970,8 +978,8 @@ export default function BasicApp() {
       logDebug('iOS Rabbit position updated:', newPosition);
       setResetTrigger((prev) => prev + 1);
     } else {
+      // non-iOS: 카메라의 forward(수평) 방향과 yaw값만 남긴 회전을 계산
       setTimeout(() => {
-        // non-iOS: requestAnimationFrame을 사용해 최신 카메라 값 반영
         if (!glRefObj) return;
         let pos = { x: 0, y: 0, z: 0 };
         const saved = localStorage.getItem('levaValues');
@@ -985,19 +993,24 @@ export default function BasicApp() {
         }
         const distance = 5;
         const currentPos = latestCameraTransform.current.position.clone();
+        // 카메라의 월드 forward 방향을 구한 후, y성분 제거 (수평만)
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(latestCameraTransform.current.quaternion);
+        forward.y = 0;
+        forward.normalize();
+        const offset = forward.multiplyScalar(distance);
+        const newPosition = currentPos.add(offset);
+        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+        console.log('non-iOS Rabbit position updated:', newPosition);
+
+        // 회전: 카메라의 quaternion을 Euler로 변환 후, x,z를 0으로 해서 yaw만 남김
         const currentQuat = latestCameraTransform.current.quaternion.clone();
-        // Euler로 변환한 후 x, z 회전을 제거해 수평(yaw)만 남김
         const euler = new THREE.Euler().setFromQuaternion(currentQuat, 'YXZ');
         euler.x = 0;
         euler.z = 0;
-        const frontQuat = new THREE.Quaternion().setFromEuler(euler);
-        const offset = new THREE.Vector3(0, 0, -distance);
-        offset.applyQuaternion(frontQuat);
-        const newPosition = currentPos.add(offset);
-        setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
-        logDebug('non-iOS Rabbit position updated:', newPosition);
+        setRabbitRotation(euler);
+
         setResetTrigger((prev) => prev + 1);
-      }, 500);
+      }, 30); // 딜레이 30ms (필요시 조정)
     }
   };
 
@@ -1070,6 +1083,7 @@ export default function BasicApp() {
           setIsOpen(false);
           setShow(false);
         }}
+        rabbitRotation={rabbitRotation} // 추가된 prop
         closeSaveModal={handleCloseSaveModal}
         setShow={setShow}
         correctPose={correctPose}
