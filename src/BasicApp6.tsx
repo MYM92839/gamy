@@ -94,25 +94,6 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     };
   }, []);
 
-  const requestDeviceOrientation = async () => {
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      try {
-        const response = await (DeviceOrientationEvent as any).requestPermission();
-        if (response === 'granted') {
-          // setOrientationEnabled(true);
-          // props.logDebug('DeviceOrientation permission granted (iOS).');
-        } else {
-          // props.logDebug('DeviceOrientation permission not granted.');
-        }
-      } catch (err) {
-        alert('WHY2 :' + err);
-
-        console.error('DeviceOrientation permission error:', err);
-      }
-    } else {
-      // setOrientationEnabled(true);
-    }
-  };
 
   useEffect(() => {
     navigator.mediaDevices
