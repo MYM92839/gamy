@@ -47,21 +47,20 @@ function CameraUpdater({
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-
-
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (videoRef.current && videoRef.current.paused) {
+    const handlePageShow = () => {
+      if (videoRef.current && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
         videoRef.current.play().catch((err) => {
-          console.error('Failed to play stream:', err);
+          console.error('Failed to play stream on pageshow:', err);
         });
       }
-    }, 1000);
-    return () => clearTimeout(timeout);
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
-
-
-
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -370,7 +369,6 @@ function SceneIOS({
     }
   }, [camera, gl, glRef, scene]);
 
-
   useEffect(() => {
     if (isIOS) {
       if (visible && groupRef.current) {
@@ -399,7 +397,7 @@ function SceneIOS({
         } else {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 1,
+            rabbitPosition[1] + cposition.y - 1.5,
             rabbitPosition[2] + cposition.z
           );
         }
@@ -483,7 +481,7 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y - 1,
+                rabbitPosition[1] + cposition.y - 1.5,
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[0, Math.PI / 4, 0]}
