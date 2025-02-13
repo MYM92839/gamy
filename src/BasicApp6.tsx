@@ -43,7 +43,7 @@ function CameraUpdater({
   return null;
 }
 
-/* --- BackgroundVideo (한 번만 선언) --- */
+/* --- BackgroundVideo --- */
 function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -139,7 +139,6 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
   }, [isMount, offscreenCanvas, cameraFov, setFoto]);
 
   const captureComposite = () => {
-    // iOS 분기: 비디오 요소의 실제 표시되는 bounding rect 사용
     const videoElement = document.querySelector('#three-video') as HTMLVideoElement;
     if (!videoElement) return;
     const rect = videoElement.getBoundingClientRect();
@@ -155,7 +154,6 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
     ctx.imageSmoothingQuality = 'high';
     ctx.scale(dpr, dpr);
 
-    // 실제 표시되는 크기를 기준으로 계산
     const videoWidth = videoElement.videoWidth;
     const videoHeight = videoElement.videoHeight;
     const videoParams = calcCover(videoWidth, videoHeight, containerWidth, containerHeight);
@@ -210,7 +208,6 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
       }}
       className="overflow-y-hidden"
     >
-      {/* UI 버튼 및 캡처 이미지 렌더링 */}
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }} className="max-h-screen">
         <div style={{ display: 'flex', gap: '8px' }} className="h-max p-4">
           <button onClick={handleClose} style={{ flex: 1 }}>
@@ -251,7 +248,7 @@ const ModalU = function ({ closeModal, closeSaveModal, setFoto, offscreenCanvas,
   );
 };
 
-/* --- iOS 전용 DeviceOrientationController --- */
+/* --- DeviceOrientationController (iOS 전용) --- */
 interface DeviceOrientationControllerProps {
   isPermissionGranted: boolean;
   target: THREE.Vector3 | [number, number, number];
@@ -266,10 +263,8 @@ function DeviceOrientationController({
 }: DeviceOrientationControllerProps) {
   const { camera } = useThree();
   const [permissionGranted, setPermissionGranted] = useState(isPermissionGranted);
-  // 비-iOS용 초기 센서 값 보정을 위한 ref
   const initialQuaternion = useRef<THREE.Quaternion | null>(null);
 
-  // 센서 권한 요청 (iOS 13+ 등에서 필요)
   useEffect(() => {
     function handleOrientation(event: DeviceOrientationEvent) {
       const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
@@ -287,10 +282,8 @@ function DeviceOrientationController({
         const computedQuaternion = new THREE.Quaternion().setFromEuler(euler);
         computedQuaternion.multiply(correctionQuaternion);
         if (!initialQuaternion.current) {
-          // 첫 센서 값 저장 (보정 기준)
           initialQuaternion.current = computedQuaternion.clone();
         }
-        // 상대적인 회전값 계산: q_rel = (q_initial)^-1 * q_current
         const inv = initialQuaternion.current.clone().invert();
         const relativeQuat = inv.multiply(computedQuaternion);
         camera.quaternion.copy(relativeQuat);
@@ -396,22 +389,38 @@ function SceneIOS({
       }
     } else {
       if (visible && groupRef.current) {
+        // non-iOS: 위치는 그대로 유지하고, 아래 useEffect에서 회전값을 업데이트합니다.
         if (char === 'moons') {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 0.2,
+            rabbitPosition[1] + cposition.y - 1,
             rabbitPosition[2] + cposition.z
           );
         } else {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 1.2,
+            rabbitPosition[1] + cposition.y - 1.6,
             rabbitPosition[2] + cposition.z
           );
         }
       }
     }
-  }, [visible, rabbitPosition, cposition]);
+  }, [visible, rabbitPosition, cposition, char]);
+
+  // non-iOS: 카메라의 yaw 값을 추출해 모델의 Y축 회전을 업데이트합니다.
+  useEffect(() => {
+    if (!isIOS && groupRef.current && camera) {
+      const euler = new THREE.Euler();
+      euler.setFromQuaternion(camera.quaternion, 'YXZ');
+      // 모델의 기본 정면과 카메라의 정면이 일치하지 않으면 보정값(offset)을 추가하세요.
+      if (char === 'moons') {
+        groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
+      } else {
+        groupRef.current.rotation.y = euler.y - Math.PI / 4; // 예: + Math.PI (보정이 필요하다면 추가)
+      }
+    }
+  }, [camera, visible]);
+
   return isIOS ? (
     <>
       <ambientLight intensity={3} />
@@ -469,10 +478,10 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y - 0.2,
+                rabbitPosition[1] + cposition.y - 1,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[0, Math.PI / 4, 0]}
+              rotation={[0, -Math.PI / 4, 0]}
               scale={cscale * 0.25}
               visible={visible}
             >
@@ -492,7 +501,8 @@ function SceneIOS({
                 rabbitPosition[1] + cposition.y - 1.2,
                 rabbitPosition[2] + cposition.z,
               ]}
-              rotation={[0, Math.PI / 4, 0]}
+              rotation={[0, -Math.PI / 4, 0]}
+              // rotation prop 제거 – 회전은 useEffect에서 처리됨
               scale={cscale * 0.5}
               visible={visible}
             >
@@ -680,6 +690,7 @@ function UIOverlayIOS({
   );
 }
 
+/* --- IOSARCanvasCore --- */
 function IOSARCanvasCore(props: any) {
   const { latestCameraTransformRef, orientationEnabled } = props;
   const [searchParams] = useSearchParams();
@@ -770,6 +781,7 @@ function IOSARCanvasCore(props: any) {
   );
 }
 
+/* --- IOSARCanvas --- */
 function IOSARCanvas(props: any) {
   const [, setInit] = useState(false);
   const glRef = useRef<any>(null);
@@ -830,6 +842,65 @@ function IOSARCanvas(props: any) {
   );
 }
 
+/* --- DebugPanel --- */
+function DebugPanel({
+  logs,
+  cameraTransformRef,
+}: {
+  logs: string[];
+  cameraTransformRef: React.MutableRefObject<{ position: THREE.Vector3; quaternion: THREE.Quaternion }>;
+}) {
+  const [transform, setTransform] = useState({
+    position: new THREE.Vector3(),
+    quaternion: new THREE.Quaternion(),
+  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (cameraTransformRef.current) {
+        setTransform({
+          position: cameraTransformRef.current.position.clone(),
+          quaternion: cameraTransformRef.current.quaternion.clone(),
+        });
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [cameraTransformRef]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        maxHeight: '200px',
+        overflowY: 'scroll',
+        background: 'rgba(0,0,0,0.7)',
+        color: 'white',
+        fontSize: '12px',
+        padding: '8px',
+        zIndex: 100000,
+      }}
+    >
+      <div>
+        <strong>Camera Pos:</strong> {transform.position.x.toFixed(2)}, {transform.position.y.toFixed(2)},{' '}
+        {transform.position.z.toFixed(2)}
+      </div>
+      <div>
+        <strong>Camera Q:</strong> {transform.quaternion.x.toFixed(2)}, {transform.quaternion.y.toFixed(2)},{' '}
+        {transform.quaternion.z.toFixed(2)}, {transform.quaternion.w.toFixed(2)}
+      </div>
+      <div>
+        <strong>Logs:</strong>
+      </div>
+      {logs.map((log, i) => (
+        <div key={i}>{log}</div>
+      ))}
+    </div>
+  );
+}
+
+/* --- BasicApp --- */
 export default function BasicApp() {
   const xrStoreRef = useRef<any>(null);
   const [mount, setMount] = useState(false);
@@ -844,7 +915,9 @@ export default function BasicApp() {
   const [cameraFov] = useState<number>(60);
   const calibrationMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const [rabbitPosition, setRabbitPosition] = useState<[number, number, number]>([0, 0, 0]);
-  const [, setDebugLogs] = useState<string[]>([]);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState<boolean>(true);
+
   const logDebug = (msg: any, ...opt: any[]) => {
     console.log(msg, ...opt);
     setDebugLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -902,17 +975,15 @@ export default function BasicApp() {
           console.error('levaValues parse fail:', error);
         }
       }
-      const distance = 5; // 원하는 거리
+      const distance = 5;
       const offset = new THREE.Vector3(0, 0, -distance);
-
-      // 최신 센서 값을 바로 읽어와서 offset 계산
       const currentQuat = latestCameraTransform.current.quaternion.clone();
       offset.applyQuaternion(currentQuat);
-
-      // 최신 위치를 복제해서 사용
       const currentPos = latestCameraTransform.current.position.clone();
       const newPosition = currentPos.add(offset);
       setRabbitPosition([newPosition.x + pos.x, newPosition.y + pos.y, newPosition.z + pos.z]);
+      logDebug('non-iOS Rabbit position updated:', newPosition);
+      setResetTrigger((prev) => prev + 1);
     }
   };
 
@@ -1022,6 +1093,27 @@ export default function BasicApp() {
           cameraFov={cameraFov}
         />
       )}
+      {/* non-iOS: 디버그 패널 및 토글 버튼 */}
+      {/* {!isIOS && (
+        <>
+          <button
+            onClick={() => setShowDebug((prev) => !prev)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              zIndex: 100001,
+              background: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              padding: '4px 8px',
+              border: 'none',
+            }}
+          >
+            {showDebug ? 'Hide Debug' : 'Show Debug'}
+          </button>
+          {showDebug && <DebugPanel logs={debugLogs} cameraTransformRef={latestCameraTransform} />}
+        </>
+      )} */}
     </>
   );
 }
