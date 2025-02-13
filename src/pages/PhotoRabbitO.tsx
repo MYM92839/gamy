@@ -42,7 +42,6 @@ export default function PhotoRabbitO() {
 
   useEffect(() => {
     if (init) {
-      alert('a?dfsa/')
       navigate(
         `/t/moons?ox=${ox}&oy=${oy}&oz=${oz}&cx=${cx}&cy=${cy}&cz=${cz}&sx=${sx}&sy=${sy}&sz=${sz}&ss=${ss}&cs=${cs}${
           cv ? '&cv=true' : ''

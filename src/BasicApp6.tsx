@@ -1,5 +1,4 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { noEvents } from '@react-three/xr';
 import { Leva, useControls } from 'leva';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -49,24 +48,29 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // 카메라 권한 상태를 확인 (navigator.permissions가 지원되는 경우)
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'camera' as PermissionName }).then((status) => {
-        if (status.state !== 'granted') {
-          console.warn('Camera permission is not granted.');
-        }
-      });
-    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && videoRef.current && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch((err) => {
+          console.error('Failed to play stream on visibility change:', err);
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+  useEffect(() => {
+    let activeStream: MediaStream;
     navigator.mediaDevices
       .getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          // width: { ideal: 1920 },
-          // height: { ideal: 1080 },
-        },
+        video: { facingMode: { ideal: 'environment' } },
         audio: false,
       })
       .then((stream) => {
+        activeStream = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
@@ -79,20 +83,27 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
       .catch((err) => {
         logDebug('getUserMedia error: ' + err);
       });
-  }, [logDebug, setIsMount, streamRef]);
+
+    return () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [streamRef]);
 
   return (
     <video
       id="three-video"
       ref={videoRef}
       style={{
+        backgroundColor: 'red',
         position: 'absolute',
         width: '100%',
         height: '100%',
         top: 0,
         left: 0,
         objectFit: 'cover',
-        zIndex: 10,
+        zIndex: 0,
       }}
       autoPlay
       playsInline
@@ -758,7 +769,6 @@ function IOSARCanvas(props: any) {
           props.setOffscreenCanvas(offscreen);
           props.logDebug('Offscreen canvas created in IOSARCanvas.');
         }}
-        events={noEvents}
       >
         <IOSARCanvasCore
           {...props}
