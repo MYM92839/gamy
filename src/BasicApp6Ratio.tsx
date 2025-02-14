@@ -503,7 +503,7 @@ function SceneIOS({
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[0, -Math.PI / 4, 0]}
-              scale={cscale * 0.35}
+              scale={cscale * 0.25}
               visible={visible}
             >
               <Box
