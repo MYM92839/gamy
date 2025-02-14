@@ -511,8 +511,8 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[0] + cposition.x - 0.5,
-                rabbitPosition[1] + cposition.y - 0.8,
+                rabbitPosition[1] + cposition.y - 1,
+                rabbitPosition[2] + cposition.z - 0.8,
               ]}
               rotation={[0, -Math.PI / 4, 0]}
               // rotation prop 제거 – 회전은 useEffect에서 처리됨
