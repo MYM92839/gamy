@@ -521,7 +521,7 @@ function SceneIOS({
             >
               <Tree
                 oposition={[oposition.x, oposition.y, oposition.z]}
-                sscale={scale * 0.6}
+                sscale={scale * 0.5}
                 on={true}
                 onRenderEnd={() => {}}
               />
@@ -666,7 +666,7 @@ function UIOverlayIOS({
             viewBox="0 0 595.28 841.89"
             width={domWidth}
             height={domHeight}
-            style={{ transform: `scale(${scale * 0.7}) translateY(0%)` }}
+            style={{ transform: `scale(${scale * 0.45}) translateY(0%)` }}
           >
             <g id="Layer_2_00000049944092468416363100000003561816792095906952_">
               <path
