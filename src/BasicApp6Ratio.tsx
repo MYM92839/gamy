@@ -81,7 +81,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     let activeStream: MediaStream;
     navigator.mediaDevices
       .getUserMedia({
-        video: { width: { ideal: 720 }, height: { ideal: 1280 }, facingMode: { ideal: 'environment' } },
+        video: { width: { ideal: 1080 }, height: { ideal: 1920 }, facingMode: { ideal: 'environment' } },
         audio: false,
       })
       .then((stream) => {
@@ -945,7 +945,7 @@ export default function BasicApp() {
   const domHeight = 1100;
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
-  const circleR = 80;
+  const circleR = 120;
   const latestCameraTransform = useRef({
     position: new THREE.Vector3(),
     quaternion: new THREE.Quaternion(),
