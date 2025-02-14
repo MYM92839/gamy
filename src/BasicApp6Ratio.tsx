@@ -81,7 +81,12 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     let activeStream: MediaStream;
     navigator.mediaDevices
       .getUserMedia({
-        video: { width: { ideal: 1080 }, height: { ideal: 1920 }, facingMode: { ideal: 'environment' } },
+        video: {
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+          facingMode: { ideal: 'environment' },
+          advanced: [{ zoom: 0.67 } as any], // 1/1.5 줌 (지원하는 기기에서만 작동)
+        },
         audio: false,
       })
       .then((stream) => {
