@@ -23,6 +23,8 @@ import BasicApp6 from './BasicApp6.tsx';
 import PhotoRabbitO from './pages/PhotoRabbitO.tsx';
 import PhotoTreeO from './pages/PhotoTreeO.tsx';
 import BasicIos from './BasicIos.tsx';
+import BasicApp6Ratio from './BasicApp6Ratio.tsx';
+import PhotoRabbitORatio from './pages/PhotoRabbitORatio.tsx';
 
 const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
 
@@ -104,6 +106,14 @@ const router = createBrowserRouter(
         {
           path: 'wall',
           element: <IApp />,
+        },
+        {
+          path: 'r',
+          element: <PhotoRabbitORatio />,
+        },
+        {
+          path: 'ratio/:char',
+          element: <BasicApp6Ratio />,
         },
       ],
     },
