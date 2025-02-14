@@ -86,7 +86,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
           // height: { ideal: 1920 },
           aspectRatio: 1.7777777778,
           facingMode: { ideal: 'environment' },
-          advanced: [{ zoom: 1.3 } as any], // 1/1.5 줌 (지원하는 기기에서만 작동)
+          advanced: [{ zoom: 1.4 } as any], // 1/1.5 줌 (지원하는 기기에서만 작동)
         },
         audio: false,
       })
