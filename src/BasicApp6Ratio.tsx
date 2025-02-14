@@ -82,10 +82,11 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     navigator.mediaDevices
       .getUserMedia({
         video: {
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
+          // width: { ideal: 1080 },
+          // height: { ideal: 1920 },
+          aspectRatio: 1.7777777778,
           facingMode: { ideal: 'environment' },
-          advanced: [{ zoom: 0.67 } as any], // 1/1.5 줌 (지원하는 기기에서만 작동)
+          advanced: [{ zoom: 1.2 } as any], // 1/1.5 줌 (지원하는 기기에서만 작동)
         },
         audio: false,
       })
@@ -119,9 +120,11 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
         position: 'absolute',
         width: '100%',
         height: '100%',
-        top: 0,
-        left: 0,
+        top: '50%',
+        left: '50%',
         objectFit: 'cover',
+        transform: 'translate(-50%,-50%)',
+        transformOrigin: 'center center',
         zIndex: 0,
       }}
       autoPlay
