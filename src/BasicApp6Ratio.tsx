@@ -81,7 +81,7 @@ function BackgroundVideo({ streamRef, setIsMount, logDebug }: any) {
     let activeStream: MediaStream;
     navigator.mediaDevices
       .getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: { width: { ideal: 720 }, height: { ideal: 1280 }, facingMode: { ideal: 'environment' } },
         audio: false,
       })
       .then((stream) => {
