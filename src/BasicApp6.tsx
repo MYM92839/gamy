@@ -399,8 +399,8 @@ function SceneIOS({
           );
         } else {
           groupRef.current.position.set(
-            rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 3.5,
+            rabbitPosition[0] + cposition.x - 0.5,
+            rabbitPosition[1] + cposition.y - 0.8,
             rabbitPosition[2] + cposition.z
           );
         }
@@ -511,12 +511,12 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y - 1.2,
-                rabbitPosition[2] + cposition.z,
+                rabbitPosition[0] + cposition.x - 0.5,
+                rabbitPosition[1] + cposition.y - 0.8,
               ]}
               rotation={[0, -Math.PI / 4, 0]}
               // rotation prop 제거 – 회전은 useEffect에서 처리됨
-              scale={cscale * 0.5}
+              scale={cscale * 0.45}
               visible={visible}
             >
               <Tree
@@ -666,7 +666,7 @@ function UIOverlayIOS({
             viewBox="0 0 595.28 841.89"
             width={domWidth}
             height={domHeight}
-            style={{ transform: `scale(${scale * 0.45}) translateY(0%)` }}
+            style={{ transform: `scale(${scale * 0.4}) translateY(0%)` }}
           >
             <g id="Layer_2_00000049944092468416363100000003561816792095906952_">
               <path
