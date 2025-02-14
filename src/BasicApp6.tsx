@@ -394,13 +394,13 @@ function SceneIOS({
         if (char === 'moons') {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 0.6,
+            rabbitPosition[1] + cposition.y - 0.2,
             rabbitPosition[2] + cposition.z
           );
         } else {
           groupRef.current.position.set(
             rabbitPosition[0] + cposition.x,
-            rabbitPosition[1] + cposition.y - 1.6,
+            rabbitPosition[1] + cposition.y - 3.5,
             rabbitPosition[2] + cposition.z
           );
         }
@@ -444,11 +444,11 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y + 0.2,
+                rabbitPosition[1] + cposition.y,
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[-Math.PI, -Math.PI / 4, 0]}
-              scale={cscale * 0.25}
+              scale={cscale * 0.15}
               visible={visible}
             >
               <Box
@@ -491,11 +491,11 @@ function SceneIOS({
               ref={groupRef}
               position={[
                 rabbitPosition[0] + cposition.x,
-                rabbitPosition[1] + cposition.y - 1,
+                rabbitPosition[1] + cposition.y - 0.2,
                 rabbitPosition[2] + cposition.z,
               ]}
               rotation={[0, -Math.PI / 4, 0]}
-              scale={cscale * 0.25}
+              scale={cscale * 0.15}
               visible={visible}
             >
               <Box
@@ -945,7 +945,7 @@ export default function BasicApp() {
   const domHeight = 1100;
   const circleX = domWidth / 2;
   const circleY = domHeight / 2;
-  const circleR = 120;
+  const circleR = 80;
   const latestCameraTransform = useRef({
     position: new THREE.Vector3(),
     quaternion: new THREE.Quaternion(),
