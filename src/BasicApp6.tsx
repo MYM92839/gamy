@@ -1020,7 +1020,7 @@ export default function BasicApp() {
         if (char !== 'moons') {
           targetEuler.y -= Math.PI / 2; // Tree 모델에 맞게 보정 (필요시 값 조정)
         } else if (char === 'moons') {
-          targetEuler.y -= Math.PI / 4; // Tree 모델에 맞게 보정 (필요시 값 조정)
+          targetEuler.z -= Math.PI / 2; // Tree 모델에 맞게 보정 (필요시 값 조정)
         }
 
         setRabbitRotation(targetEuler);
