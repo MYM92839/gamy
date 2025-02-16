@@ -359,7 +359,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               crossOrigin="anonymous"
               className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
-              style={{ opacity: isCrossfade ? 0 : 1 }}
+              style={{ transition: 'opacity 0.3s ease-in-out', opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
@@ -385,7 +385,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               loop
               crossOrigin="anonymous"
               className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
-              style={{ opacity: isCrossfade ? 1 : 0 }}
+              style={{ transition: 'opacity 0.3s ease-in-out', opacity: isCrossfade ? 1 : 0 }}
             >
               <source
                 src={isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`}
