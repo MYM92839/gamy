@@ -310,6 +310,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       // IE11 대응
       (element as any).msRequestFullscreen();
     }
+    setInit(true)
   };
 
   // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드 시작
