@@ -24,8 +24,8 @@ const customStyles = {
 };
 
 const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'left-0 bottom-20 w-1/2 h-auto',
-  portrait: 'left-0 bottom-10 w-1/2 h-auto',
+  landscape: 'left-0 bottom-20 w-1/2 h-auto max-w-dvw max-h-dvh',
+  portrait: 'left-0 bottom-10 w-1/2 h-auto max-w-dvw max-h-dvh',
 };
 
 Modal.setAppElement('#root');
@@ -349,7 +349,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         </div>
       </Modal>
 
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full max-w-dvw max-h-dvh">
         {/* 카메라 영상 */}
         <video
           ref={videoRef}
