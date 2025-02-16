@@ -23,6 +23,11 @@ const customStyles = {
   },
 };
 
+const STYLE_MODE: { [key: string]: string } = {
+  landscape: 'left-0 bottom-20 w-1/2 h-auto',
+  portrait: 'left-0 bottom-10 w-1/2 h-auto',
+};
+
 Modal.setAppElement('#root');
 const isIOS = /(iPad|iPhone|iPod)/.test(navigator.userAgent);
 
@@ -47,7 +52,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
-
+  const [init, setInit] = useState(false);
+  const [orientation, setOrientation] = useState('portrait');
   // 크로스페이드 상태 (false: anim video 보임, true: idle video 보임)
   const [isCrossfade, setIsCrossfade] = useState(false);
 
@@ -203,60 +209,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       URL.revokeObjectURL(url);
     }
   };
-
-  // const captureImage = async (): Promise<void> => {
-  //   const container = videoRef.current?.parentElement; // 최상위 렌더링 컨테이너
-  //   const cameraVideo = videoRef.current;
-  //   const canvas = canvasRef.current;
-
-  //   if (!container || !cameraVideo || !canvas) {
-  //     console.warn('Required elements not ready');
-  //     return;
-  //   }
-
-  //   const containerWidth = container.clientWidth;
-  //   const containerHeight = container.clientHeight;
-  //   const devicePixelRatio = window.devicePixelRatio || 1;
-  //   canvas.width = containerWidth * devicePixelRatio;
-  //   canvas.height = containerHeight * devicePixelRatio;
-
-  //   const context = canvas.getContext('2d');
-  //   if (context) {
-  //     context.scale(devicePixelRatio, devicePixelRatio);
-
-  //     // 카메라 비디오 그리기 (cover 적용)
-  //     const videoWidth = cameraVideo.videoWidth;
-  //     const videoHeight = cameraVideo.videoHeight;
-  //     const videoAspectRatio = videoWidth / videoHeight;
-  //     const containerAspectRatio = containerWidth / containerHeight;
-
-  //     let drawWidth = containerWidth;
-  //     let drawHeight = containerHeight;
-  //     let offsetX = 0;
-  //     let offsetY = 0;
-
-  //     if (videoAspectRatio > containerAspectRatio) {
-  //       drawWidth = containerHeight * videoAspectRatio;
-  //       offsetX = (containerWidth - drawWidth) / 2;
-  //     } else {
-  //       drawHeight = containerWidth / videoAspectRatio;
-  //       offsetY = (containerHeight - drawHeight) / 2;
-  //     }
-
-  //     context.drawImage(cameraVideo, offsetX, offsetY, drawWidth, drawHeight);
-
-  //     // idle 영상 대신 anim 영상을 캡처 (두 영상의 콘텐츠를 따로 처리하고 싶다면 추가 구현 필요)
-  //     if (animVideoRef.current && animVideoRef.current.readyState >= 2) {
-  //       context.drawImage(animVideoRef.current, offsetX, offsetY, drawWidth, drawHeight);
-  //     }
-
-  //     canvas.toBlob((blob) => {
-  //       if (blob) {
-  //         setFoto(blob);
-  //       }
-  //     }, 'image/png');
-  //   }
-  // };
   const captureImage = async (): Promise<void> => {
     // 부모 컨테이너 (카메라 비디오와 오버레이 영상이 포함된 영역)를 기준으로 함
     const container = videoRef.current?.parentElement;
@@ -322,6 +274,21 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }, 'image/png');
   };
 
+  // 화면 크기/방향 변경 감지
+  useEffect(() => {
+    const updateOrientation = () => {
+      setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+    };
+
+    window.addEventListener('resize', updateOrientation);
+    window.addEventListener('orientationchange', updateOrientation);
+
+    return () => {
+      window.removeEventListener('resize', updateOrientation);
+      window.removeEventListener('orientationchange', updateOrientation);
+    };
+  }, []);
+
   useEffect(() => {
     if (foto) {
       const reader = new FileReader();
@@ -342,6 +309,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   if (error) {
     return <div className="text-red-500 p-4">{error}</div>;
   }
+
 
   return (
     <div className="relative w-full h-full flex flex-col justify-center items-center">
@@ -369,7 +337,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           playsInline
           muted
           controls={false}
-          className="absolute inset-0 w-auto h-full object-cover bg-black"
+          className="absolute inset-0 w-full h-full object-cover bg-black" // 또는 object-contain
         />
 
         {/* 애니메이션 영상 (anim video) */}
@@ -383,7 +351,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
+              className={'absolute pointer-events-none' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
@@ -416,7 +384,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               loop
               crossOrigin="anonymous"
-              className="absolute w-full h-auto bottom-32 object-cover pointer-events-none"
+              className={'absolute pointer-events-none' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 1 : 0 }}
             >
               <source
