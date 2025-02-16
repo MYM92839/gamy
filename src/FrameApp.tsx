@@ -3,6 +3,7 @@ import Modal from 'react-modal';
 import { useParams } from 'react-router-dom';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
+import Button from './components/Button';
 
 const customStyles = {
   overlay: {
@@ -55,6 +56,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const [orientation, setOrientation] = useState('portrait');
   // 크로스페이드 상태 (false: anim video 보임, true: idle video 보임)
   const [isCrossfade, setIsCrossfade] = useState(false);
+  const [init, setInit] = useState(false);
 
   // 기존 open/close, captureImage, shareOrDownloadImage 등 함수들은 그대로 둡니다.
   function openModal() {
@@ -298,6 +300,19 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }
   }, [foto]);
 
+  const requestFullScreen = () => {
+    const element = document.documentElement; // 또는 전체 앱의 최상위 요소
+    if (element.requestFullscreen) {
+      element.requestFullscreen();
+    } else if ((element as any).webkitRequestFullscreen) {
+      // Safari 대응
+      (element as any).webkitRequestFullscreen();
+    } else if ((element as any).msRequestFullscreen) {
+      // IE11 대응
+      (element as any).msRequestFullscreen();
+    }
+  };
+
   // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드 시작
   const handleAnimVideoEnded = () => {
     // 상태 변경으로 anim video의 opacity를 0, idle video의 opacity를 1로 전환
@@ -309,8 +324,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     return <div className="text-red-500 p-4">{error}</div>;
   }
 
-
-  return (
+  return init ? (
+    <div className="w-screen h-screen flex items-center justify-center">
+      <button onClick={requestFullScreen} className='p-10 bg-black/50 text-white rounded-lg'>전체화면을 허용해주세요</button>
+    </div>
+  ) : (
     <div className="relative w-full h-full flex flex-col justify-center items-center">
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
