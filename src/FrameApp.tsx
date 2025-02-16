@@ -23,10 +23,13 @@ const customStyles = {
   },
 };
 
-// 오버레이를 absolute로 배치하도록 수정
+/**
+ * 오버레이를 무조건 w:80%, h:80% 로 배치
+ * (가로/세로 공통)
+ */
 const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'absolute left-0 bottom-0 w-[80%] h-[80%] max-w-dvw max-h-dvh',
-  portrait: 'absolute left-0 bottom-0 w-full h-auto max-w-dvw max-h-dvh',
+  landscape: 'absolute left-0 bottom-0 w-[80%] h-[80%]',
+  portrait: 'absolute left-0 bottom-0 w-[80%] h-[80%]',
 };
 
 Modal.setAppElement('#root');
@@ -123,6 +126,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     };
   }, []);
 
+  // 화면 크기 변동 처리
   useEffect(() => {
     const handleResize = () => {
       const parentDiv = videoRef.current?.parentElement;
@@ -140,7 +144,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         });
       }
 
-      // idle, anim video도 재생 시도
       if (animVideoRef.current) {
         animVideoRef.current.play().catch((err) => {
           console.error('Error playing anim video after resize:', err);
@@ -164,6 +167,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     };
   }, [stream]);
 
+  // 백그라운드 → 포그라운드 시 재생
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -195,6 +199,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     };
   }, [stream]);
 
+  // 이미지 저장/공유
   const shareOrDownloadImage = (blob: Blob): void => {
     if (
       isIOS &&
@@ -224,7 +229,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }
   };
 
-  // --- 캡쳐 함수 ---
+  /**
+   * 오버레이를 "컨테이너 80%"로 명시적으로 캡쳐
+   * → getBoundingClientRect() 대신, containerWidth * 0.8 / 0.8 사용
+   */
   const captureImage = async (): Promise<void> => {
     const container = videoRef.current?.parentElement;
     const cameraVideo = videoRef.current;
@@ -248,7 +256,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     if (!context) return;
     context.scale(devicePixelRatio, devicePixelRatio);
 
-    /** 1. 카메라 영상 캡쳐 (object-cover 효과 모방) **/
+    // 1. 카메라 영상 (object-cover)
     const camVideoWidth = cameraVideo.videoWidth;
     const camVideoHeight = cameraVideo.videoHeight;
     const camAspect = camVideoWidth / camVideoHeight;
@@ -266,55 +274,46 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }
     context.drawImage(cameraVideo, camOffsetX, camOffsetY, camDrawWidth, camDrawHeight);
 
-    /** 2. Overlay (애니메이션) 영상 캡쳐 – orientation에 따라 계산 **/
-    // DOM에서 오버레이의 실제 위치/크기 읽어오기
-    const animRect = animVideo.getBoundingClientRect();
-    let animOffsetX = animRect.left - containerRect.left;
-    let animOffsetY = animRect.top - containerRect.top;
-    let animDisplayWidth = animRect.width;
-    let animDisplayHeight = animRect.height;
+    // 2. 오버레이 영상: 컨테이너의 80% 크기로 명시
+    const overlayWidth = containerWidth * 0.8;
+    const overlayHeight = containerHeight * 0.8;
+    const overlayX = 0;
+    const overlayY = containerHeight - overlayHeight; // 왼쪽 하단
 
-    // landscape 시 80% 크기 강제 (원하시는 경우 유지)
-    if (orientation === 'landscape') {
-      animDisplayWidth = containerWidth * 0.8;
-      animDisplayHeight = containerHeight * 0.8;
-      animOffsetX = 0;
-      animOffsetY = containerHeight - animDisplayHeight;
-    }
-
-    // overlay 영상 원본 크기 및 비율
+    // 오버레이 영상 원본 크기/비
     const animVideoWidth = animVideo.videoWidth;
     const animVideoHeight = animVideo.videoHeight;
     const animVideoAspect = animVideoWidth / animVideoHeight;
-    const animDisplayAspect = animDisplayWidth / animDisplayHeight;
+    const overlayAspect = overlayWidth / overlayHeight;
 
-    // object-fit: cover와 유사하게, 원본 영상에서 잘라낼 영역 계산
+    // object-fit: cover
     let sx = 0,
       sy = 0,
       sWidth = animVideoWidth,
       sHeight = animVideoHeight;
-    if (animVideoAspect > animDisplayAspect) {
-      // 영상이 더 넓은 경우 좌우 크롭
-      sWidth = animVideoHeight * animDisplayAspect;
+    if (animVideoAspect > overlayAspect) {
+      // 영상이 더 넓으면 좌우 크롭
+      sWidth = animVideoHeight * overlayAspect;
       sx = (animVideoWidth - sWidth) / 2;
     } else {
-      // 영상이 더 높은 경우 상하 크롭
-      sHeight = animVideoWidth / animDisplayAspect;
+      // 영상이 더 높으면 상하 크롭
+      sHeight = animVideoWidth / overlayAspect;
       sy = (animVideoHeight - sHeight) / 2;
     }
+
     context.drawImage(
       animVideo,
       sx,
       sy,
       sWidth,
       sHeight,
-      animOffsetX,
-      animOffsetY,
-      animDisplayWidth,
-      animDisplayHeight
+      overlayX,
+      overlayY,
+      overlayWidth,
+      overlayHeight
     );
 
-    // Blob 생성 (저장 혹은 공유 처리)
+    // Blob
     canvas.toBlob((blob) => {
       if (blob) {
         setFoto(blob);
@@ -322,6 +321,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }, 'image/png');
   };
 
+  // orientation 업데이트
   useEffect(() => {
     const updateOrientation = () => {
       setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
@@ -336,6 +336,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     };
   }, []);
 
+  // foto -> url
   useEffect(() => {
     if (foto) {
       const reader = new FileReader();
@@ -346,7 +347,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }
   }, [foto]);
 
-  // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드 시작
+  // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드
   const handleAnimVideoEnded = () => {
     setIsCrossfade(true);
     idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
@@ -363,10 +364,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           전체화면
         </button>
       )}
+
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-dvw max-h-dvh flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-y-scroll">
-            {fotoUrl && <img className="flex-1 object-contain" src={fotoUrl} alt="captured" />}
+            {fotoUrl && <img className="flex-1 object-contain w-full" src={fotoUrl} alt="captured" />}
           </div>
           <div className="w-full flex gap-x-2 font-semibold">
             <button className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]" onClick={closeModal}>
@@ -379,7 +381,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         </div>
       </Modal>
 
-      {/* 부모 컨테이너에 relative 적용 -> 오버레이도 absolute로 배치 가능 */}
+      {/* 부모 컨테이너에 relative -> 오버레이 absolute */}
       <div className="relative w-full h-full max-w-dvw max-h-dvh">
         {/* 카메라 영상 */}
         <video
@@ -391,7 +393,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           className="absolute inset-0 w-full h-full object-cover bg-black"
         />
 
-        {/* 애니메이션 영상 (anim video) */}
+        {/* 오버레이: STYLE_MODE로 80% 크기 (가로/세로 공통) */}
         {dimensions.width > 0 && dimensions.height > 0 && (
           <>
             <video
@@ -402,30 +404,26 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              // 여기서 'absolute'로 변경
               className={'pointer-events-none ' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
-                  // 예: 영상 시작 시간을 0.1초로 설정
                   animVideoRef.current.currentTime = 0.1;
                 }
               }}
               onSeeked={() => {
-                animVideoRef.current?.play().catch((err) => console.error('Error playing anim video after seek:', err));
+                animVideoRef.current?.play().catch((err) =>
+                  console.error('Error playing anim video after seek:', err)
+                );
               }}
             >
               <source
                 src={isIOS ? `/${char}_anim.mp4` : `/${char}_anim.webm`}
                 type={isIOS ? 'video/mp4' : 'video/webm'}
-                onError={(e) => {
-                  console.error('Anim video error:', e);
-                }}
               />
             </video>
 
-            {/* idle 영상 (preload="auto", loop) */}
             <video
               ref={idleVideoRef}
               playsInline
@@ -441,9 +439,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               <source
                 src={isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`}
                 type={isIOS ? 'video/mp4' : 'video/webm'}
-                onError={(e) => {
-                  console.error('Idle video error:', e);
-                }}
               />
             </video>
           </>
