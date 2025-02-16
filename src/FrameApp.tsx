@@ -3,7 +3,6 @@ import Modal from 'react-modal';
 import { useParams } from 'react-router-dom';
 import Back from './assets/icons/Back';
 import Capture from './assets/icons/Capture';
-import Button from './components/Button';
 
 const customStyles = {
   overlay: {
