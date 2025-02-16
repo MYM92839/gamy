@@ -99,10 +99,10 @@ const router = createBrowserRouter(
           path: 'pl3/:char',
           element: <BasicApp5 />,
         },
-        {
-          path: 'frame/:char',
-          element: <FrameApp />,
-        },
+        // {
+        //   path: 'frame/:char',
+        //   element: <FrameApp />,
+        // },
         {
           path: 'wall',
           element: <IApp />,
@@ -116,6 +116,10 @@ const router = createBrowserRouter(
           element: <BasicApp6Ratio />,
         },
       ],
+    },
+    {
+      path: 'frame/:char',
+      element: <FrameApp />,
     },
   ],
   {
