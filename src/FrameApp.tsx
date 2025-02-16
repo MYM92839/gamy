@@ -328,13 +328,13 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     <div className="relative w-full h-full flex flex-col justify-center items-center">
       {!init &&
         !isIOS &&
-        o(
+        (
           <button className="fixed z-50 p-4 bg-transparent top-4 right-4" onClick={requestFullScreen}>
             전체화면
           </button>
         )}
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
-        <div className="w-full h-full max-w-full max-h-full flex flex-col gap-y-2 p-2">
+        <div className="w-full h-full max-w-dvw max-h-dvh flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-hidden">
             {fotoUrl && <img className="flex-1 object-contain" src={fotoUrl} alt="captured" />}
           </div>
