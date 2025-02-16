@@ -246,7 +246,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const camVideoH = cameraVideo.videoHeight;
     const camVideoAspect = camVideoW / camVideoH;
     const camDisplayAspect = camDisplayW / camDisplayH;
-    let sx = 0, sy = 0, sWidth = camVideoW, sHeight = camVideoH;
+    let sx = 0,
+      sy = 0,
+      sWidth = camVideoW,
+      sHeight = camVideoH;
     if (camVideoAspect > camDisplayAspect) {
       sWidth = camVideoH * camDisplayAspect;
       sx = (camVideoW - sWidth) / 2;
@@ -254,17 +257,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       sHeight = camVideoW / camDisplayAspect;
       sy = (camVideoH - sHeight) / 2;
     }
-    ctx.drawImage(
-      cameraVideo,
-      sx,
-      sy,
-      sWidth,
-      sHeight,
-      camOffsetX,
-      camOffsetY,
-      camDisplayW,
-      camDisplayH
-    );
+    ctx.drawImage(cameraVideo, sx, sy, sWidth, sHeight, camOffsetX, camOffsetY, camDisplayW, camDisplayH);
 
     // ----------------------------------------
     // B. 오버레이 영상 (object-contain 방식, 왼쪽 정렬)
@@ -293,17 +286,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     // 왼쪽 정렬: offsetX = destX (중앙 정렬 대신)
     const offsetX = destX;
     const offsetY = destY + (destH - drawnH) / 2;
-    ctx.drawImage(
-      overlayVideo,
-      0,
-      0,
-      ovVideoW,
-      ovVideoH,
-      offsetX,
-      offsetY,
-      drawnW,
-      drawnH
-    );
+    ctx.drawImage(overlayVideo, 0, 0, ovVideoW, ovVideoH, offsetX, offsetY, drawnW, drawnH);
 
     // ----------------------------------------
     // C. 최종 Blob 생성
@@ -342,9 +325,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드
   const handleAnimVideoEnded = () => {
     setIsCrossfade(true);
-    idleVideoRef.current?.play().catch((err) =>
-      console.error('Idle video play error:', err)
-    );
+    idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
   };
 
   if (error) {
@@ -353,41 +334,16 @@ const FrameApp: React.FC<FrameAppProps> = () => {
 
   return (
     <div className="relative w-dwv h-dvh flex flex-col justify-center items-center">
-      {!init && !isIOS && (
-        <button
-          className="fixed z-50 p-4 bg-transparent top-4 right-4"
-          onClick={requestFullScreen}
-        >
-          전체화면
-        </button>
-      )}
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={closeModal}
-        style={customStyles}
-        contentLabel="사진확인"
-      >
+      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-dvw max-h-dvh flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-y-scroll">
-            {fotoUrl && (
-              <img
-                className="flex-1 object-contain w-full"
-                src={fotoUrl}
-                alt="captured"
-              />
-            )}
+            {fotoUrl && <img className="flex-1 object-contain w-full" src={fotoUrl} alt="captured" />}
           </div>
           <div className="w-full flex gap-x-2 font-semibold">
-            <button
-              className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]"
-              onClick={closeModal}
-            >
+            <button className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]" onClick={closeModal}>
               다시찍기
             </button>
-            <button
-              className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]"
-              onClick={closeSaveModal}
-            >
+            <button className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]" onClick={closeSaveModal}>
               저장하기
             </button>
           </div>
@@ -415,10 +371,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              className={
-                'pointer-events-none object-contain object-left ' +
-                STYLE_MODE[orientation]
-              }
+              className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
@@ -427,11 +380,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
                 }
               }}
               onSeeked={() => {
-                animVideoRef.current
-                  ?.play()
-                  .catch((err) =>
-                    console.error('Error playing anim video after seek:', err)
-                  );
+                animVideoRef.current?.play().catch((err) => console.error('Error playing anim video after seek:', err));
               }}
             >
               <source
@@ -448,10 +397,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               loop
               crossOrigin="anonymous"
-              className={
-                'pointer-events-none object-contain object-left ' +
-                STYLE_MODE[orientation]
-              }
+              className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 1 : 0 }}
             >
               <source
@@ -465,10 +411,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       {!modalIsOpen && (
         <>
-          <button
-            className="fixed bottom-16 left-4 bg-transparent p-4 z-50"
-            onClick={() => window.history.back()}
-          >
+          <button className="fixed bottom-16 left-4 bg-transparent p-4 z-50" onClick={() => window.history.back()}>
             <Back />
           </button>
           <button
