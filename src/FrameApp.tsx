@@ -24,8 +24,8 @@ const customStyles = {
 };
 
 const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'left-0 bottom-20 w-1/2 h-auto max-w-dvw max-h-dvh',
-  portrait: 'left-0 bottom-10 w-1/2 h-auto max-w-dvw max-h-dvh',
+  landscape: 'left-0 bottom-20 w-[80%] h-auto max-w-dvw max-h-dvh',
+  portrait: 'left-0 bottom-10 w-full h-auto max-w-dvw max-h-dvh',
 };
 
 Modal.setAppElement('#root');
