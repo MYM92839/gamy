@@ -324,7 +324,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     return <div className="text-red-500 p-4">{error}</div>;
   }
 
-  return init ? (
+  return !init ? (
     <div className="w-screen h-screen flex items-center justify-center">
       <button onClick={requestFullScreen} className='p-10 bg-black/50 text-white rounded-lg'>전체화면을 허용해주세요</button>
     </div>
