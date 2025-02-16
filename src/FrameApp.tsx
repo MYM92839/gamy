@@ -24,8 +24,8 @@ const customStyles = {
 };
 
 const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'left-0 bottom-20 w-[80%] h-[80%] max-w-dvw max-h-dvh',
-  portrait: 'left-0 bottom-10 w-full h-auto max-w-dvw max-h-dvh',
+  landscape: 'left-0 bottom-0 w-[80%] h-[80%] max-w-dvw max-h-dvh',
+  portrait: 'left-0 bottom-0 w-full h-auto max-w-dvw max-h-dvh',
 };
 
 Modal.setAppElement('#root');
@@ -425,7 +425,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       )}
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-dvw max-h-dvh flex flex-col gap-y-2 p-2">
-          <div className="flex-1 rounded-sm overflow-hidden">
+          <div className="flex-1 rounded-sm overflow-y-scroll">
             {fotoUrl && <img className="flex-1 object-contain" src={fotoUrl} alt="captured" />}
           </div>
           <div className="w-full flex gap-x-2 font-semibold">
@@ -461,7 +461,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              className={'absolute pointer-events-none' + STYLE_MODE[orientation]}
+              className={'fixed pointer-events-none' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
@@ -494,7 +494,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               loop
               crossOrigin="anonymous"
-              className={'absolute pointer-events-none' + STYLE_MODE[orientation]}
+              className={'fixed pointer-events-none' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 1 : 0 }}
             >
               <source
