@@ -26,7 +26,7 @@ const customStyles = {
 /**
  * 오버레이 스타일
  * - landscape: 컨테이너의 80% 크기로 배치 (왼쪽 하단)
- * - portrait: width는 꽉 차고, height는 콘텐츠에 맞게
+ * - portrait: width는 꽉 차고, height는 콘텐츠에 맞게 (실제 렌더링에서도 왼쪽 하단)
  */
 const STYLE_MODE: { [key: string]: string } = {
   landscape: 'absolute left-0 bottom-0 w-[80%] h-[80%]',
@@ -77,7 +77,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   }
 
   const requestFullScreen = () => {
-    const element = document.documentElement; // 또는 전체 앱의 최상위 요소
+    const element = document.documentElement;
     if (element.requestFullscreen) {
       element.requestFullscreen();
     } else if ((element as any).webkitRequestFullscreen) {
@@ -94,16 +94,13 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         setError('getUserMedia가 지원되지 않는 브라우저입니다.');
         return;
       }
-
       try {
         const constraints = {
           video: { facingMode: 'environment' },
           audio: false,
         };
-
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         setStream(mediaStream);
-
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
           videoRef.current.play().catch((err) => {
@@ -115,9 +112,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         console.error('Camera initialization error:', err);
       }
     };
-
     startCamera();
-
     return () => {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
@@ -135,14 +130,12 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           height: parentDiv.clientHeight,
         });
       }
-
       if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch((err) => {
           console.error('Error playing camera video after resize:', err);
         });
       }
-
       if (animVideoRef.current) {
         animVideoRef.current.play().catch((err) => {
           console.error('Error playing anim video after resize:', err);
@@ -154,12 +147,9 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         });
       }
     };
-
     handleResize();
-
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
-
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
@@ -176,13 +166,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
             console.error('Error playing camera video on visibility change:', err);
           });
         }
-
         if (animVideoRef.current) {
           animVideoRef.current.play().catch((err) => {
             console.error('Error playing anim video on visibility change:', err);
           });
         }
-
         if (idleVideoRef.current) {
           idleVideoRef.current.play().catch((err) => {
             console.error('Error playing idle video on visibility change:', err);
@@ -190,9 +178,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         }
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -207,7 +193,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       const file = new File([blob], `camera-frame-${new Date().getTime()}.png`, {
         type: 'image/png',
       });
-
       navigator
         .share({
           files: [file],
@@ -234,12 +219,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     // overlay는 현재 crossfade 상태가 1이면 idleVideo, 아니면 animVideo 사용
     const overlayVideo = isCrossfade ? idleVideoRef.current : animVideoRef.current;
     const canvas = canvasRef.current;
-
     if (!container || !cameraVideo || !overlayVideo || !canvas) {
       console.warn('Required elements not ready');
       return;
     }
-
     // 1) 캔버스를 부모 컨테이너 크기로 설정
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width;
@@ -250,7 +233,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
-
     // ----------------------------------------
     // A. 카메라 영상 (object-fit: cover 방식)
     // ----------------------------------------
@@ -282,7 +264,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       camDisplayW,
       camDisplayH
     );
-
     // ----------------------------------------
     // B. 오버레이 영상 (object-contain 방식)
     // ----------------------------------------
@@ -294,12 +275,13 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       destX = 0;
       destY = containerHeight - destH;
     } else {
-      // portrait: DOM에 렌더링된 오버레이 크기 사용
-      const ovRect = overlayVideo.getBoundingClientRect();
-      destX = ovRect.left - containerRect.left;
-      destY = ovRect.top - containerRect.top;
-      destW = ovRect.width;
-      destH = ovRect.height;
+      // portrait: 강제로 왼쪽 하단에 배치, width는 꽉 채움
+      destW = containerWidth;
+      // destH는 오버레이 영상 원본 비율에 맞춰 계산
+      const ovVideoAspect = overlayVideo.videoWidth / overlayVideo.videoHeight;
+      destH = destW / ovVideoAspect;
+      destX = 0;
+      destY = containerHeight - destH;
     }
     // object-contain 방식: 원본 전체가 보이도록 축소 (비율 유지)
     const ovVideoW = overlayVideo.videoWidth;
@@ -307,7 +289,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const scale = Math.min(destW / ovVideoW, destH / ovVideoH);
     const drawnW = ovVideoW * scale;
     const drawnH = ovVideoH * scale;
-    // 중앙 정렬
+    // 중앙 정렬 within dest 영역
     const offsetX = destX + (destW - drawnW) / 2;
     const offsetY = destY + (destH - drawnH) / 2;
     ctx.drawImage(
@@ -321,7 +303,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       drawnW,
       drawnH
     );
-
     // ----------------------------------------
     // C. 최종 Blob 생성
     // ----------------------------------------
@@ -337,10 +318,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const updateOrientation = () => {
       setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
     };
-
     window.addEventListener('resize', updateOrientation);
     window.addEventListener('orientationchange', updateOrientation);
-
     return () => {
       window.removeEventListener('resize', updateOrientation);
       window.removeEventListener('orientationchange', updateOrientation);
@@ -361,7 +340,9 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드
   const handleAnimVideoEnded = () => {
     setIsCrossfade(true);
-    idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
+    idleVideoRef.current?.play().catch((err) =>
+      console.error('Idle video play error:', err)
+    );
   };
 
   if (error) {
@@ -371,27 +352,45 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   return (
     <div className="relative w-dwv h-dvh flex flex-col justify-center items-center">
       {!init && !isIOS && (
-        <button className="fixed z-50 p-4 bg-transparent top-4 right-4" onClick={requestFullScreen}>
+        <button
+          className="fixed z-50 p-4 bg-transparent top-4 right-4"
+          onClick={requestFullScreen}
+        >
           전체화면
         </button>
       )}
-
-      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
+      <Modal
+        isOpen={modalIsOpen}
+        onRequestClose={closeModal}
+        style={customStyles}
+        contentLabel="사진확인"
+      >
         <div className="w-full h-full max-w-dvw max-h-dvh flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-y-scroll">
-            {fotoUrl && <img className="flex-1 object-contain w-full" src={fotoUrl} alt="captured" />}
+            {fotoUrl && (
+              <img
+                className="flex-1 object-contain w-full"
+                src={fotoUrl}
+                alt="captured"
+              />
+            )}
           </div>
           <div className="w-full flex gap-x-2 font-semibold">
-            <button className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]" onClick={closeModal}>
+            <button
+              className="flex-1 rounded-[8px] p-2 border border-[#344173] text-[#344173]"
+              onClick={closeModal}
+            >
               다시찍기
             </button>
-            <button className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]" onClick={closeSaveModal}>
+            <button
+              className="flex-1 rounded-[8px] p-2 text-white bg-[#344173]"
+              onClick={closeSaveModal}
+            >
               저장하기
             </button>
           </div>
         </div>
       </Modal>
-
       {/* 부모 컨테이너에 relative -> 오버레이 absolute */}
       <div className="relative w-full h-full max-w-dvw max-h-dvh">
         {/* 카메라 영상 */}
@@ -403,7 +402,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           controls={false}
           className="absolute inset-0 w-full h-full object-cover bg-black"
         />
-
         {/* 오버레이: STYLE_MODE로 배치 */}
         {dimensions.width > 0 && dimensions.height > 0 && (
           <>
@@ -434,7 +432,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
                 type={isIOS ? 'video/mp4' : 'video/webm'}
               />
             </video>
-
             <video
               ref={idleVideoRef}
               playsInline
@@ -455,12 +452,13 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           </>
         )}
       </div>
-
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-
       {!modalIsOpen && (
         <>
-          <button className="fixed bottom-16 left-4 bg-transparent p-4 z-50" onClick={() => window.history.back()}>
+          <button
+            className="fixed bottom-16 left-4 bg-transparent p-4 z-50"
+            onClick={() => window.history.back()}
+          >
             <Back />
           </button>
           <button
