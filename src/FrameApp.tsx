@@ -23,9 +23,10 @@ const customStyles = {
   },
 };
 
+// 오버레이를 absolute로 배치하도록 수정
 const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'left-0 bottom-0 w-[80%] h-[80%] max-w-dvw max-h-dvh',
-  portrait: 'left-0 bottom-0 w-full h-auto max-w-dvw max-h-dvh',
+  landscape: 'absolute left-0 bottom-0 w-[80%] h-[80%] max-w-dvw max-h-dvh',
+  portrait: 'absolute left-0 bottom-0 w-full h-auto max-w-dvw max-h-dvh',
 };
 
 Modal.setAppElement('#root');
@@ -57,7 +58,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   // 크로스페이드 상태 (false: anim video 보임, true: idle video 보임)
   const [isCrossfade, setIsCrossfade] = useState(false);
 
-  // 기존 open/close, captureImage, shareOrDownloadImage 등 함수들은 그대로 둡니다.
   function openModal() {
     setIsOpen(true);
     captureImage();
@@ -223,73 +223,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       URL.revokeObjectURL(url);
     }
   };
-  // const captureImage = async (): Promise<void> => {
-  //   // 부모 컨테이너 (카메라 비디오와 오버레이 영상이 포함된 영역)를 기준으로 함
-  //   const container = videoRef.current?.parentElement;
-  //   const cameraVideo = videoRef.current;
-  //   const animVideo = animVideoRef.current;
-  //   const canvas = canvasRef.current;
 
-  //   if (!container || !cameraVideo || !animVideo || !canvas) {
-  //     console.warn('Required elements not ready');
-  //     return;
-  //   }
-
-  //   // container의 실제 크기를 가져옴 (getBoundingClientRect()를 사용)
-  //   const containerRect = container.getBoundingClientRect();
-  //   const containerWidth = containerRect.width;
-  //   const containerHeight = containerRect.height;
-  //   const devicePixelRatio = window.devicePixelRatio || 1;
-  //   canvas.width = containerWidth * devicePixelRatio;
-  //   canvas.height = containerHeight * devicePixelRatio;
-
-  //   const context = canvas.getContext('2d');
-  //   if (!context) return;
-  //   // CSS 픽셀 단위에 맞춰 스케일 적용
-  //   context.scale(devicePixelRatio, devicePixelRatio);
-
-  //   // 1. 카메라 비디오 캡쳐 (object-cover 효과 모방)
-  //   const videoWidth = cameraVideo.videoWidth;
-  //   const videoHeight = cameraVideo.videoHeight;
-  //   const videoAspectRatio = videoWidth / videoHeight;
-  //   const containerAspectRatio = containerWidth / containerHeight;
-
-  //   let drawWidth = containerWidth;
-  //   let drawHeight = containerHeight;
-  //   let offsetX = 0;
-  //   let offsetY = 0;
-
-  //   if (videoAspectRatio > containerAspectRatio) {
-  //     drawWidth = containerHeight * videoAspectRatio;
-  //     offsetX = (containerWidth - drawWidth) / 2;
-  //   } else {
-  //     drawHeight = containerWidth / videoAspectRatio;
-  //     offsetY = (containerHeight - drawHeight) / 2;
-  //   }
-  //   context.drawImage(cameraVideo, offsetX, offsetY, drawWidth, drawHeight);
-
-  //   // 2. 오버레이(애니메이션) 영상 캡쳐: 실제 렌더링된 크기와 위치 사용
-  //   const animRect = animVideo.getBoundingClientRect();
-  //   // container 기준 좌표 계산
-  //   const containerLeft = containerRect.left;
-  //   const containerTop = containerRect.top;
-  //   const animOffsetX = animRect.left - containerLeft;
-  //   const animOffsetY = animRect.top - containerTop;
-  //   const animWidth = animRect.width;
-  //   const animHeight = animRect.height;
-
-  //   context.drawImage(animVideo, animOffsetX, animOffsetY, animWidth, animHeight);
-
-  //   // Blob으로 캡쳐된 이미지 생성
-  //   canvas.toBlob((blob) => {
-  //     if (blob) {
-  //       setFoto(blob);
-  //     }
-  //   }, 'image/png');
-  // };
-
-  // 화면 크기/방향 변경 감지
-
+  // --- 캡쳐 함수 ---
   const captureImage = async (): Promise<void> => {
     const container = videoRef.current?.parentElement;
     const cameraVideo = videoRef.current;
@@ -301,7 +236,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       return;
     }
 
-    // 컨테이너 크기를 기준으로 캔버스 설정
+    // container 크기에 맞게 캔버스 설정
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width;
     const containerHeight = containerRect.height;
@@ -311,7 +246,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
 
     const context = canvas.getContext('2d');
     if (!context) return;
-    // CSS 픽셀 단위에 맞춰 스케일 적용
     context.scale(devicePixelRatio, devicePixelRatio);
 
     /** 1. 카메라 영상 캡쳐 (object-cover 효과 모방) **/
@@ -332,16 +266,23 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }
     context.drawImage(cameraVideo, camOffsetX, camOffsetY, camDrawWidth, camDrawHeight);
 
-    /** 2. Overlay (애니메이션) 영상 캡쳐 – CSS object-fit 효과 모방 **/
-    // overlay 영상의 실제 렌더링된 위치와 크기
+    /** 2. Overlay (애니메이션) 영상 캡쳐 – orientation에 따라 계산 **/
+    // DOM에서 오버레이의 실제 위치/크기 읽어오기
     const animRect = animVideo.getBoundingClientRect();
-    const animDisplayWidth = animRect.width;
-    const animDisplayHeight = animRect.height;
-    // container 내부에서의 overlay 영상 위치 계산
-    const animOffsetX = animRect.left - containerRect.left;
-    const animOffsetY = animRect.top - containerRect.top;
+    let animOffsetX = animRect.left - containerRect.left;
+    let animOffsetY = animRect.top - containerRect.top;
+    let animDisplayWidth = animRect.width;
+    let animDisplayHeight = animRect.height;
 
-    // anim 영상의 원본 크기 및 비율
+    // landscape 시 80% 크기 강제 (원하시는 경우 유지)
+    if (orientation === 'landscape') {
+      animDisplayWidth = containerWidth * 0.8;
+      animDisplayHeight = containerHeight * 0.8;
+      animOffsetX = 0;
+      animOffsetY = containerHeight - animDisplayHeight;
+    }
+
+    // overlay 영상 원본 크기 및 비율
     const animVideoWidth = animVideo.videoWidth;
     const animVideoHeight = animVideo.videoHeight;
     const animVideoAspect = animVideoWidth / animVideoHeight;
@@ -353,11 +294,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       sWidth = animVideoWidth,
       sHeight = animVideoHeight;
     if (animVideoAspect > animDisplayAspect) {
-      // 영상이 더 넓은 경우, 좌우를 크롭
+      // 영상이 더 넓은 경우 좌우 크롭
       sWidth = animVideoHeight * animDisplayAspect;
       sx = (animVideoWidth - sWidth) / 2;
     } else {
-      // 영상이 더 높은 경우, 상하를 크롭
+      // 영상이 더 높은 경우 상하 크롭
       sHeight = animVideoWidth / animDisplayAspect;
       sy = (animVideoHeight - sHeight) / 2;
     }
@@ -407,7 +348,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
 
   // 애니메이션 영상(anim video)이 끝났을 때 크로스페이드 시작
   const handleAnimVideoEnded = () => {
-    // 상태 변경으로 anim video의 opacity를 0, idle video의 opacity를 1로 전환
     setIsCrossfade(true);
     idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
   };
@@ -439,6 +379,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         </div>
       </Modal>
 
+      {/* 부모 컨테이너에 relative 적용 -> 오버레이도 absolute로 배치 가능 */}
       <div className="relative w-full h-full max-w-dvw max-h-dvh">
         {/* 카메라 영상 */}
         <video
@@ -447,7 +388,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           playsInline
           muted
           controls={false}
-          className="absolute inset-0 w-full h-full object-cover bg-black" // 또는 object-contain
+          className="absolute inset-0 w-full h-full object-cover bg-black"
         />
 
         {/* 애니메이션 영상 (anim video) */}
@@ -461,17 +402,17 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              className={'fixed pointer-events-none' + STYLE_MODE[orientation]}
+              // 여기서 'absolute'로 변경
+              className={'pointer-events-none ' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
-                  // 예: 영상 시작 시간을 3초로 설정
+                  // 예: 영상 시작 시간을 0.1초로 설정
                   animVideoRef.current.currentTime = 0.1;
                 }
               }}
               onSeeked={() => {
-                // seek가 완료되면 즉시 재생
                 animVideoRef.current?.play().catch((err) => console.error('Error playing anim video after seek:', err));
               }}
             >
@@ -494,7 +435,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               loop
               crossOrigin="anonymous"
-              className={'fixed pointer-events-none' + STYLE_MODE[orientation]}
+              className={'pointer-events-none ' + STYLE_MODE[orientation]}
               style={{ opacity: isCrossfade ? 1 : 0 }}
             >
               <source
