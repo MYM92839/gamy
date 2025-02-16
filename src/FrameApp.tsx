@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import Capture from './assets/icons/Capture';
-import Back from './assets/icons/Back';
-import { useParams } from 'react-router-dom';
 import Modal from 'react-modal';
+import { useParams } from 'react-router-dom';
+import Back from './assets/icons/Back';
+import Capture from './assets/icons/Capture';
 
 const customStyles = {
   overlay: {
@@ -52,7 +52,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
-  const [init, setInit] = useState(false);
   const [orientation, setOrientation] = useState('portrait');
   // 크로스페이드 상태 (false: anim video 보임, true: idle video 보임)
   const [isCrossfade, setIsCrossfade] = useState(false);
