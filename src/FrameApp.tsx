@@ -26,7 +26,7 @@ const customStyles = {
 /**
  * 오버레이 스타일
  * - landscape: 컨테이너의 80% 크기로 배치 (왼쪽 하단)
- * - portrait: width는 꽉 차고, height는 콘텐츠에 맞게 (실제 렌더링에서도 왼쪽 하단)
+ * - portrait: width는 꽉 차고, height는 콘텐츠에 맞게
  */
 const STYLE_MODE: { [key: string]: string } = {
   landscape: 'absolute left-0 bottom-0 w-[80%] h-[80%]',
@@ -233,6 +233,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
+
     // ----------------------------------------
     // A. 카메라 영상 (object-fit: cover 방식)
     // ----------------------------------------
@@ -264,8 +265,9 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       camDisplayW,
       camDisplayH
     );
+
     // ----------------------------------------
-    // B. 오버레이 영상 (object-contain 방식)
+    // B. 오버레이 영상 (object-contain 방식, 왼쪽 정렬)
     // ----------------------------------------
     let destX: number, destY: number, destW: number, destH: number;
     if (orientation === 'landscape') {
@@ -275,11 +277,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       destX = 0;
       destY = containerHeight - destH;
     } else {
-      // portrait: 강제로 왼쪽 하단에 배치, width는 꽉 채움
+      // portrait: 오버레이 영역은 부모 컨테이너의 전체 너비로, height는 영상 원본 비율에 맞춤
       destW = containerWidth;
-      // destH는 오버레이 영상 원본 비율에 맞춰 계산
-      const ovVideoAspect = overlayVideo.videoWidth / overlayVideo.videoHeight;
-      destH = destW / ovVideoAspect;
+      const ovAspect = overlayVideo.videoWidth / overlayVideo.videoHeight;
+      destH = destW / ovAspect;
       destX = 0;
       destY = containerHeight - destH;
     }
@@ -289,8 +290,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const scale = Math.min(destW / ovVideoW, destH / ovVideoH);
     const drawnW = ovVideoW * scale;
     const drawnH = ovVideoH * scale;
-    // 중앙 정렬 within dest 영역
-    const offsetX = destX + (destW - drawnW) / 2;
+    // 왼쪽 정렬: offsetX = destX (중앙 정렬 대신)
+    const offsetX = destX;
     const offsetY = destY + (destH - drawnH) / 2;
     ctx.drawImage(
       overlayVideo,
@@ -303,6 +304,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       drawnW,
       drawnH
     );
+
     // ----------------------------------------
     // C. 최종 Blob 생성
     // ----------------------------------------
@@ -402,7 +404,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
           controls={false}
           className="absolute inset-0 w-full h-full object-cover bg-black"
         />
-        {/* 오버레이: STYLE_MODE로 배치 */}
+        {/* 오버레이: STYLE_MODE와 object-contain object-left 추가 */}
         {dimensions.width > 0 && dimensions.height > 0 && (
           <>
             <video
@@ -413,7 +415,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              className={'pointer-events-none ' + STYLE_MODE[orientation]}
+              className={
+                'pointer-events-none object-contain object-left ' +
+                STYLE_MODE[orientation]
+              }
               style={{ opacity: isCrossfade ? 0 : 1 }}
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
@@ -422,9 +427,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
                 }
               }}
               onSeeked={() => {
-                animVideoRef.current?.play().catch((err) =>
-                  console.error('Error playing anim video after seek:', err)
-                );
+                animVideoRef.current
+                  ?.play()
+                  .catch((err) =>
+                    console.error('Error playing anim video after seek:', err)
+                  );
               }}
             >
               <source
@@ -441,7 +448,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               loop
               crossOrigin="anonymous"
-              className={'pointer-events-none ' + STYLE_MODE[orientation]}
+              className={
+                'pointer-events-none object-contain object-left ' +
+                STYLE_MODE[orientation]
+              }
               style={{ opacity: isCrossfade ? 1 : 0 }}
             >
               <source
