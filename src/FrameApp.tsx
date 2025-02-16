@@ -315,6 +315,17 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
   };
 
+
+// onTimeUpdate 이벤트 핸들러 추가
+const handleTimeUpdate = () => {
+  if (animVideoRef.current && !isCrossfade) {
+    const remainingTime = animVideoRef.current.duration - animVideoRef.current.currentTime;
+    if (remainingTime < 0.25) { // 영상이 끝나기 0.5초 전에 실행
+      handleAnimVideoEnded();
+    }
+  }
+};
+
   if (error) {
     return <div className="text-red-500 p-4">{error}</div>;
   }
@@ -359,8 +370,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               crossOrigin="anonymous"
               className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
-              style={{ transition: 'opacity 0.3s ease-in-out', opacity: isCrossfade ? 0 : 1 }}
-              onEnded={handleAnimVideoEnded}
+              style={{ transition: 'opacity 0.25s ease-in-out', opacity: isCrossfade ? 0 : 1 }}
+              onTimeUpdate={handleTimeUpdate} // 추가된 부분
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
                   animVideoRef.current.currentTime = 0;
@@ -385,7 +396,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               loop
               crossOrigin="anonymous"
               className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
-              style={{ transition: 'opacity 0.3s ease-in-out', opacity: isCrossfade ? 1 : 0 }}
+              style={{ transition: 'opacity 0.25s ease-in-out', opacity: isCrossfade ? 1 : 0 }}
             >
               <source
                 src={isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`}
