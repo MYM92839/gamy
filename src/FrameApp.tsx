@@ -423,7 +423,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               onEnded={handleAnimVideoEnded}
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
-                  animVideoRef.current.currentTime = 0.1;
+                  animVideoRef.current.currentTime = 0;
                 }
               }}
               onSeeked={() => {
