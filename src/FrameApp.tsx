@@ -223,8 +223,74 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       URL.revokeObjectURL(url);
     }
   };
+  // const captureImage = async (): Promise<void> => {
+  //   // 부모 컨테이너 (카메라 비디오와 오버레이 영상이 포함된 영역)를 기준으로 함
+  //   const container = videoRef.current?.parentElement;
+  //   const cameraVideo = videoRef.current;
+  //   const animVideo = animVideoRef.current;
+  //   const canvas = canvasRef.current;
+
+  //   if (!container || !cameraVideo || !animVideo || !canvas) {
+  //     console.warn('Required elements not ready');
+  //     return;
+  //   }
+
+  //   // container의 실제 크기를 가져옴 (getBoundingClientRect()를 사용)
+  //   const containerRect = container.getBoundingClientRect();
+  //   const containerWidth = containerRect.width;
+  //   const containerHeight = containerRect.height;
+  //   const devicePixelRatio = window.devicePixelRatio || 1;
+  //   canvas.width = containerWidth * devicePixelRatio;
+  //   canvas.height = containerHeight * devicePixelRatio;
+
+  //   const context = canvas.getContext('2d');
+  //   if (!context) return;
+  //   // CSS 픽셀 단위에 맞춰 스케일 적용
+  //   context.scale(devicePixelRatio, devicePixelRatio);
+
+  //   // 1. 카메라 비디오 캡쳐 (object-cover 효과 모방)
+  //   const videoWidth = cameraVideo.videoWidth;
+  //   const videoHeight = cameraVideo.videoHeight;
+  //   const videoAspectRatio = videoWidth / videoHeight;
+  //   const containerAspectRatio = containerWidth / containerHeight;
+
+  //   let drawWidth = containerWidth;
+  //   let drawHeight = containerHeight;
+  //   let offsetX = 0;
+  //   let offsetY = 0;
+
+  //   if (videoAspectRatio > containerAspectRatio) {
+  //     drawWidth = containerHeight * videoAspectRatio;
+  //     offsetX = (containerWidth - drawWidth) / 2;
+  //   } else {
+  //     drawHeight = containerWidth / videoAspectRatio;
+  //     offsetY = (containerHeight - drawHeight) / 2;
+  //   }
+  //   context.drawImage(cameraVideo, offsetX, offsetY, drawWidth, drawHeight);
+
+  //   // 2. 오버레이(애니메이션) 영상 캡쳐: 실제 렌더링된 크기와 위치 사용
+  //   const animRect = animVideo.getBoundingClientRect();
+  //   // container 기준 좌표 계산
+  //   const containerLeft = containerRect.left;
+  //   const containerTop = containerRect.top;
+  //   const animOffsetX = animRect.left - containerLeft;
+  //   const animOffsetY = animRect.top - containerTop;
+  //   const animWidth = animRect.width;
+  //   const animHeight = animRect.height;
+
+  //   context.drawImage(animVideo, animOffsetX, animOffsetY, animWidth, animHeight);
+
+  //   // Blob으로 캡쳐된 이미지 생성
+  //   canvas.toBlob((blob) => {
+  //     if (blob) {
+  //       setFoto(blob);
+  //     }
+  //   }, 'image/png');
+  // };
+
+  // 화면 크기/방향 변경 감지
+
   const captureImage = async (): Promise<void> => {
-    // 부모 컨테이너 (카메라 비디오와 오버레이 영상이 포함된 영역)를 기준으로 함
     const container = videoRef.current?.parentElement;
     const cameraVideo = videoRef.current;
     const animVideo = animVideoRef.current;
@@ -235,7 +301,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       return;
     }
 
-    // container의 실제 크기를 가져옴 (getBoundingClientRect()를 사용)
+    // 컨테이너 크기를 기준으로 캔버스 설정
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width;
     const containerHeight = containerRect.height;
@@ -248,39 +314,66 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     // CSS 픽셀 단위에 맞춰 스케일 적용
     context.scale(devicePixelRatio, devicePixelRatio);
 
-    // 1. 카메라 비디오 캡쳐 (object-cover 효과 모방)
-    const videoWidth = cameraVideo.videoWidth;
-    const videoHeight = cameraVideo.videoHeight;
-    const videoAspectRatio = videoWidth / videoHeight;
-    const containerAspectRatio = containerWidth / containerHeight;
-
-    let drawWidth = containerWidth;
-    let drawHeight = containerHeight;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (videoAspectRatio > containerAspectRatio) {
-      drawWidth = containerHeight * videoAspectRatio;
-      offsetX = (containerWidth - drawWidth) / 2;
+    /** 1. 카메라 영상 캡쳐 (object-cover 효과 모방) **/
+    const camVideoWidth = cameraVideo.videoWidth;
+    const camVideoHeight = cameraVideo.videoHeight;
+    const camAspect = camVideoWidth / camVideoHeight;
+    const containerAspect = containerWidth / containerHeight;
+    let camDrawWidth = containerWidth;
+    let camDrawHeight = containerHeight;
+    let camOffsetX = 0;
+    let camOffsetY = 0;
+    if (camAspect > containerAspect) {
+      camDrawWidth = containerHeight * camAspect;
+      camOffsetX = (containerWidth - camDrawWidth) / 2;
     } else {
-      drawHeight = containerWidth / videoAspectRatio;
-      offsetY = (containerHeight - drawHeight) / 2;
+      camDrawHeight = containerWidth / camAspect;
+      camOffsetY = (containerHeight - camDrawHeight) / 2;
     }
-    context.drawImage(cameraVideo, offsetX, offsetY, drawWidth, drawHeight);
+    context.drawImage(cameraVideo, camOffsetX, camOffsetY, camDrawWidth, camDrawHeight);
 
-    // 2. 오버레이(애니메이션) 영상 캡쳐: 실제 렌더링된 크기와 위치 사용
+    /** 2. Overlay (애니메이션) 영상 캡쳐 – CSS object-fit 효과 모방 **/
+    // overlay 영상의 실제 렌더링된 위치와 크기
     const animRect = animVideo.getBoundingClientRect();
-    // container 기준 좌표 계산
-    const containerLeft = containerRect.left;
-    const containerTop = containerRect.top;
-    const animOffsetX = animRect.left - containerLeft;
-    const animOffsetY = animRect.top - containerTop;
-    const animWidth = animRect.width;
-    const animHeight = animRect.height;
+    const animDisplayWidth = animRect.width;
+    const animDisplayHeight = animRect.height;
+    // container 내부에서의 overlay 영상 위치 계산
+    const animOffsetX = animRect.left - containerRect.left;
+    const animOffsetY = animRect.top - containerRect.top;
 
-    context.drawImage(animVideo, animOffsetX, animOffsetY, animWidth, animHeight);
+    // anim 영상의 원본 크기 및 비율
+    const animVideoWidth = animVideo.videoWidth;
+    const animVideoHeight = animVideo.videoHeight;
+    const animVideoAspect = animVideoWidth / animVideoHeight;
+    const animDisplayAspect = animDisplayWidth / animDisplayHeight;
 
-    // Blob으로 캡쳐된 이미지 생성
+    // object-fit: cover와 유사하게, 원본 영상에서 잘라낼 영역 계산
+    let sx = 0,
+      sy = 0,
+      sWidth = animVideoWidth,
+      sHeight = animVideoHeight;
+    if (animVideoAspect > animDisplayAspect) {
+      // 영상이 더 넓은 경우, 좌우를 크롭
+      sWidth = animVideoHeight * animDisplayAspect;
+      sx = (animVideoWidth - sWidth) / 2;
+    } else {
+      // 영상이 더 높은 경우, 상하를 크롭
+      sHeight = animVideoWidth / animDisplayAspect;
+      sy = (animVideoHeight - sHeight) / 2;
+    }
+    context.drawImage(
+      animVideo,
+      sx,
+      sy,
+      sWidth,
+      sHeight,
+      animOffsetX,
+      animOffsetY,
+      animDisplayWidth,
+      animDisplayHeight
+    );
+
+    // Blob 생성 (저장 혹은 공유 처리)
     canvas.toBlob((blob) => {
       if (blob) {
         setFoto(blob);
@@ -288,7 +381,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     }, 'image/png');
   };
 
-  // 화면 크기/방향 변경 감지
   useEffect(() => {
     const updateOrientation = () => {
       setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
@@ -326,13 +418,11 @@ const FrameApp: React.FC<FrameAppProps> = () => {
 
   return (
     <div className="relative w-dwv h-dvh flex flex-col justify-center items-center">
-      {!init &&
-        !isIOS &&
-        (
-          <button className="fixed z-50 p-4 bg-transparent top-4 right-4" onClick={requestFullScreen}>
-            전체화면
-          </button>
-        )}
+      {!init && !isIOS && (
+        <button className="fixed z-50 p-4 bg-transparent top-4 right-4" onClick={requestFullScreen}>
+          전체화면
+        </button>
+      )}
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="사진확인">
         <div className="w-full h-full max-w-dvw max-h-dvh flex flex-col gap-y-2 p-2">
           <div className="flex-1 rounded-sm overflow-hidden">
