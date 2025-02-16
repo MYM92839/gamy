@@ -57,7 +57,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const [modalIsOpen, setIsOpen] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>('');
-  const [init, setInit] = useState(false);
   const [orientation, setOrientation] = useState('portrait');
   // 크로스페이드 상태 (false: anim video 보임, true: idle video 보임)
   const [isCrossfade, setIsCrossfade] = useState(false);
@@ -75,18 +74,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     if (foto) shareOrDownloadImage(foto);
     setIsOpen(false);
   }
-
-  const requestFullScreen = () => {
-    const element = document.documentElement;
-    if (element.requestFullscreen) {
-      element.requestFullscreen();
-    } else if ((element as any).webkitRequestFullscreen) {
-      (element as any).webkitRequestFullscreen();
-    } else if ((element as any).msRequestFullscreen) {
-      (element as any).msRequestFullscreen();
-    }
-    setInit(true);
-  };
 
   useEffect(() => {
     const startCamera = async () => {
