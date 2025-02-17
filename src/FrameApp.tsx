@@ -29,7 +29,7 @@ const customStyles = {
  * - portrait: width는 꽉 차고, height는 콘텐츠에 맞게
  */
 const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'absolute left-0 bottom-0 w-[80%] h-[80%]',
+  landscape: 'absolute left-0 bottom-0 w-[100%] h-[100%]',
   portrait: 'absolute left-0 bottom-0 w-full h-auto',
 };
 
@@ -245,17 +245,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       sHeight = camVideoW / camDisplayAspect;
       sy = (camVideoH - sHeight) / 2;
     }
-    ctx.drawImage(
-      cameraVideo,
-      sx,
-      sy,
-      sWidth,
-      sHeight,
-      camOffsetX,
-      camOffsetY,
-      camDisplayW,
-      camDisplayH
-    );
+    ctx.drawImage(cameraVideo, sx, sy, sWidth, sHeight, camOffsetX, camOffsetY, camDisplayW, camDisplayH);
 
     // ----------------------------------------
     // B. 오버레이 영상 (object-contain 방식, 왼쪽 정렬)
@@ -263,8 +253,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     let destX: number, destY: number, destW: number, destH: number;
     if (orientation === 'landscape') {
       // landscape: 오버레이 영역은 컨테이너의 80%
-      destW = containerWidth * 0.8;
-      destH = containerHeight * 0.8;
+      destW = containerWidth * 1.0;
+      destH = containerHeight * 1.0;
       destX = 0;
       destY = containerHeight - destH;
     } else {
@@ -274,8 +264,8 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       let computedDestW = containerWidth;
       let computedDestH = computedDestW / ovAspect;
       // 만약 계산된 높이가 컨테이너의 50%보다 크다면, 높이를 50%로 제한하고 너비 재계산
-      if (computedDestH > containerHeight * 0.5) {
-        computedDestH = containerHeight * 0.5;
+      if (computedDestH > containerHeight * 0.85) {
+        computedDestH = containerHeight * 0.85;
         computedDestW = computedDestH * ovAspect;
       }
       destW = computedDestW;
@@ -303,7 +293,6 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       }
     }, 'image/png');
   };
-
 
   // orientation 업데이트
   useEffect(() => {
@@ -335,12 +324,12 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     idleVideoRef.current?.play().catch((err) => console.error('Idle video play error:', err));
   };
 
-
   // onTimeUpdate 이벤트 핸들러 추가
   const handleTimeUpdate = () => {
     if (animVideoRef.current && !isCrossfade) {
       const remainingTime = animVideoRef.current.duration - animVideoRef.current.currentTime;
-      if (remainingTime < 0.25) { // 영상이 끝나기 0.5초 전에 실행
+      if (remainingTime < 0.25) {
+        // 영상이 끝나기 0.5초 전에 실행
         handleAnimVideoEnded();
       }
     }
@@ -393,7 +382,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               style={{
                 transition: 'opacity 0.25s ease-in-out',
                 opacity: isCrossfade ? 0 : 1,
-                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.5}px` } : {}),
+                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.85}px` } : {}),
               }}
               onTimeUpdate={handleTimeUpdate} // 추가된 부분
               onLoadedMetadata={() => {
@@ -423,7 +412,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               style={{
                 transition: 'opacity 0.25s ease-in-out',
                 opacity: isCrossfade ? 1 : 0,
-                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.5}px` } : {}),
+                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.85}px` } : {}),
               }}
             >
               <source
