@@ -203,13 +203,14 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   const captureImage = async (): Promise<void> => {
     const container = videoRef.current?.parentElement;
     const cameraVideo = videoRef.current;
-    // overlay는 현재 crossfade 상태가 1이면 idleVideo, 아니면 animVideo 사용
+    // overlay는 현재 crossfade 상태가 true이면 idleVideo, 아니면 animVideo 사용
     const overlayVideo = isCrossfade ? idleVideoRef.current : animVideoRef.current;
     const canvas = canvasRef.current;
     if (!container || !cameraVideo || !overlayVideo || !canvas) {
       console.warn('Required elements not ready');
       return;
     }
+
     // 1) 캔버스를 부모 컨테이너 크기로 설정
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width;
@@ -244,7 +245,17 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       sHeight = camVideoW / camDisplayAspect;
       sy = (camVideoH - sHeight) / 2;
     }
-    ctx.drawImage(cameraVideo, sx, sy, sWidth, sHeight, camOffsetX, camOffsetY, camDisplayW, camDisplayH);
+    ctx.drawImage(
+      cameraVideo,
+      sx,
+      sy,
+      sWidth,
+      sHeight,
+      camOffsetX,
+      camOffsetY,
+      camDisplayW,
+      camDisplayH
+    );
 
     // ----------------------------------------
     // B. 오버레이 영상 (object-contain 방식, 왼쪽 정렬)
@@ -257,11 +268,19 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       destX = 0;
       destY = containerHeight - destH;
     } else {
-      // portrait: 오버레이 영역은 부모 컨테이너의 전체 너비로, height는 영상 원본 비율에 맞춤
-      destW = containerWidth;
+      // portrait: 오버레이 영역은 최대 세로 50%로 제한
       const ovAspect = overlayVideo.videoWidth / overlayVideo.videoHeight;
-      destH = destW / ovAspect;
-      destX = 0;
+      // 기본적으로 컨테이너 전체 너비로 계산
+      let computedDestW = containerWidth;
+      let computedDestH = computedDestW / ovAspect;
+      // 만약 계산된 높이가 컨테이너의 50%보다 크다면, 높이를 50%로 제한하고 너비 재계산
+      if (computedDestH > containerHeight * 0.5) {
+        computedDestH = containerHeight * 0.5;
+        computedDestW = computedDestH * ovAspect;
+      }
+      destW = computedDestW;
+      destH = computedDestH;
+      destX = 0; // 왼쪽 정렬
       destY = containerHeight - destH;
     }
     // object-contain 방식: 원본 전체가 보이도록 축소 (비율 유지)
@@ -270,7 +289,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     const scale = Math.min(destW / ovVideoW, destH / ovVideoH);
     const drawnW = ovVideoW * scale;
     const drawnH = ovVideoH * scale;
-    // 왼쪽 정렬: offsetX = destX (중앙 정렬 대신)
+    // 왼쪽 정렬: offsetX = destX, 중앙 정렬 대신
     const offsetX = destX;
     const offsetY = destY + (destH - drawnH) / 2;
     ctx.drawImage(overlayVideo, 0, 0, ovVideoW, ovVideoH, offsetX, offsetY, drawnW, drawnH);
@@ -284,6 +303,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       }
     }, 'image/png');
   };
+
 
   // orientation 업데이트
   useEffect(() => {
@@ -316,15 +336,15 @@ const FrameApp: React.FC<FrameAppProps> = () => {
   };
 
 
-// onTimeUpdate 이벤트 핸들러 추가
-const handleTimeUpdate = () => {
-  if (animVideoRef.current && !isCrossfade) {
-    const remainingTime = animVideoRef.current.duration - animVideoRef.current.currentTime;
-    if (remainingTime < 0.25) { // 영상이 끝나기 0.5초 전에 실행
-      handleAnimVideoEnded();
+  // onTimeUpdate 이벤트 핸들러 추가
+  const handleTimeUpdate = () => {
+    if (animVideoRef.current && !isCrossfade) {
+      const remainingTime = animVideoRef.current.duration - animVideoRef.current.currentTime;
+      if (remainingTime < 0.25) { // 영상이 끝나기 0.5초 전에 실행
+        handleAnimVideoEnded();
+      }
     }
-  }
-};
+  };
 
   if (error) {
     return <div className="text-red-500 p-4">{error}</div>;
@@ -370,7 +390,11 @@ const handleTimeUpdate = () => {
               controls={false}
               crossOrigin="anonymous"
               className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
-              style={{ transition: 'opacity 0.25s ease-in-out', opacity: isCrossfade ? 0 : 1 }}
+              style={{
+                transition: 'opacity 0.25s ease-in-out',
+                opacity: isCrossfade ? 0 : 1,
+                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.5}px` } : {}),
+              }}
               onTimeUpdate={handleTimeUpdate} // 추가된 부분
               onLoadedMetadata={() => {
                 if (animVideoRef.current && char === 'cat') {
@@ -396,7 +420,11 @@ const handleTimeUpdate = () => {
               loop
               crossOrigin="anonymous"
               className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
-              style={{ transition: 'opacity 0.25s ease-in-out', opacity: isCrossfade ? 1 : 0 }}
+              style={{
+                transition: 'opacity 0.25s ease-in-out',
+                opacity: isCrossfade ? 1 : 0,
+                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.5}px` } : {}),
+              }}
             >
               <source
                 src={isIOS ? `/${char}_idle.mp4` : `/${char}_idle.webm`}
