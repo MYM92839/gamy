@@ -28,9 +28,15 @@ const customStyles = {
  * - landscape: 컨테이너의 80% 크기로 배치 (왼쪽 하단)
  * - portrait: width는 꽉 차고, height는 콘텐츠에 맞게
  */
-const STYLE_MODE: { [key: string]: string } = {
-  landscape: 'absolute left-0 bottom-0 w-[100%] h-[100%]',
-  portrait: 'absolute left-0 bottom-0 w-full h-auto',
+const STYLE_MODE: { [key: string]: { [key: string]: string } } = {
+  cat: {
+    landscape: 'absolute left-0 bottom-0 w-[100%] h-[100%] transform origin-bottom-left scale-[1.2]',
+    portrait: 'absolute left-0 bottom-0 w-full h-auto',
+  },
+  kokoang: {
+    landscape: 'absolute left-0 bottom-0 w-[100%] h-[100%]',
+    portrait: 'absolute left-0 bottom-0 w-full h-auto',
+  },
 };
 
 Modal.setAppElement('#root');
@@ -253,8 +259,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
     let destX: number, destY: number, destW: number, destH: number;
     if (orientation === 'landscape') {
       // landscape: 오버레이 영역은 컨테이너의 80%
-      destW = containerWidth * 1.0;
-      destH = containerHeight * 1.0;
+      const scale = char === 'cat' ? 1.2 : 1.0;
+
+      destW = containerWidth * scale;
+      destH = containerHeight * scale;
       destX = 0;
       destY = containerHeight - destH;
     } else {
@@ -263,9 +271,10 @@ const FrameApp: React.FC<FrameAppProps> = () => {
       // 기본적으로 컨테이너 전체 너비로 계산
       let computedDestW = containerWidth;
       let computedDestH = computedDestW / ovAspect;
+      const scale = char === 'cat' ? 1 : 0.85;
       // 만약 계산된 높이가 컨테이너의 50%보다 크다면, 높이를 50%로 제한하고 너비 재계산
-      if (computedDestH > containerHeight * 0.85) {
-        computedDestH = containerHeight * 0.85;
+      if (computedDestH > containerHeight * scale) {
+        computedDestH = containerHeight * scale;
         computedDestW = computedDestH * ovAspect;
       }
       destW = computedDestW;
@@ -357,7 +366,7 @@ const FrameApp: React.FC<FrameAppProps> = () => {
         </div>
       </Modal>
       {/* 부모 컨테이너에 relative -> 오버레이 absolute */}
-      <div className="relative w-full h-full max-w-dvw max-h-dvh">
+      <div className="relative w-full h-full max-w-dvw max-h-dvh overflow-hidden">
         {/* 카메라 영상 */}
         <video
           ref={videoRef}
@@ -378,11 +387,16 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               preload="auto"
               controls={false}
               crossOrigin="anonymous"
-              className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
+              className={
+                'pointer-events-none object-contain object-left ' +
+                (char === 'cat' ? STYLE_MODE.cat[orientation] : STYLE_MODE.kokoang[orientation])
+              }
               style={{
                 transition: 'opacity 0.25s ease-in-out',
                 opacity: isCrossfade ? 0 : 1,
-                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.85}px` } : {}),
+                ...(orientation === 'portrait'
+                  ? { maxHeight: char === 'cat' ? `${dimensions.height * 1}px` : `${dimensions.height * 0.85}px` }
+                  : {}),
               }}
               onTimeUpdate={handleTimeUpdate} // 추가된 부분
               onLoadedMetadata={() => {
@@ -408,11 +422,16 @@ const FrameApp: React.FC<FrameAppProps> = () => {
               controls={false}
               loop
               crossOrigin="anonymous"
-              className={'pointer-events-none object-contain object-left ' + STYLE_MODE[orientation]}
+              className={
+                'pointer-events-none object-contain object-left ' +
+                (char === 'cat' ? STYLE_MODE.cat[orientation] : STYLE_MODE.kokoang[orientation])
+              }
               style={{
                 transition: 'opacity 0.25s ease-in-out',
                 opacity: isCrossfade ? 1 : 0,
-                ...(orientation === 'portrait' ? { maxHeight: `${dimensions.height * 0.85}px` } : {}),
+                ...(orientation === 'portrait'
+                  ? { maxHeight: char === 'cat' ? `${dimensions.height * 1}px` : `${dimensions.height * 0.85}px` }
+                  : {}),
               }}
             >
               <source
