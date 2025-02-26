@@ -1,10 +1,16 @@
-import { Outlet } from "react-router-dom";
-
+import { Outlet } from 'react-router-dom';
 
 export default function Layout() {
-
   return (
-    <div id="layout" className="w-dvw min-h-screen h-screen mx-auto relative bg-[#344173] font-pretendard overscroll-contain touch-manipulation">
+    <div
+      id="layout"
+      className="w-dvw min-h-screen h-screen mx-auto relative bg-[#344173] font-pretendard overscroll-contain"
+      style={{
+        WebkitOverflowScrolling: 'touch', // iOS 스크롤 부드럽게
+        overflow: 'auto',
+      }}
+    >
       <Outlet />
-    </div>)
+    </div>
+  );
 }

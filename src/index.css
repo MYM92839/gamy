@@ -12,11 +12,18 @@
 }
 
 @supports (-webkit-touch-callout: none) {
-  html, body {
+  html,
+  body {
     overscroll-behavior: none; /* 스와이프 방지 */
   }
 
   .relative {
     overflow: hidden; /* 스크롤 막기 */
   }
+}
+html,
+body {
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
 }
