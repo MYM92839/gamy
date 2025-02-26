@@ -42,13 +42,11 @@ type GLTFResult = GLTF & {
     L_EyeBall_GEO: THREE.SkinnedMesh;
     L_EyeHighLight_GEO: THREE.SkinnedMesh;
     Lower_gum_GEO: THREE.SkinnedMesh;
-    Lower_Teeth_GEO: THREE.SkinnedMesh;
     R_EyeBall_GEO: THREE.SkinnedMesh;
     R_EyeHighLight_GEO: THREE.SkinnedMesh;
     Rabbit_Xgen_GEO: THREE.SkinnedMesh;
     Tongue_GEO: THREE.SkinnedMesh;
     Upper_gum_GEO: THREE.SkinnedMesh;
-    Upper_Teeth_GEO: THREE.SkinnedMesh;
     L_Iris_GEO: THREE.Mesh;
     Root_M: THREE.Bone;
   };
@@ -437,12 +435,12 @@ export function Box({
               material={materials.Motion_Eye_M_LMBT}
               skeleton={nodes.L_EyeBall_GEO.skeleton}
             />
-            {/* <skinnedMesh
+            <skinnedMesh
               name="L_EyeHighLight_GEO"
               geometry={nodes.L_EyeHighLight_GEO.geometry}
               material={materials.Motion_EyeHighLight_M_LMBT}
               skeleton={nodes.L_EyeHighLight_GEO.skeleton}
-            /> */}
+            />
             <skinnedMesh
               name="Lower_gum_GEO"
               geometry={nodes.Lower_gum_GEO.geometry}
@@ -450,23 +448,17 @@ export function Box({
               skeleton={nodes.Lower_gum_GEO.skeleton}
             />
             <skinnedMesh
-              name="Lower_Teeth_GEO"
-              geometry={nodes.Lower_Teeth_GEO.geometry}
-              material={materials.Motion_Mouth_M_BLNN}
-              skeleton={nodes.Lower_Teeth_GEO.skeleton}
-            />
-            <skinnedMesh
               name="R_EyeBall_GEO"
               geometry={nodes.R_EyeBall_GEO.geometry}
               material={materials.Motion_Eye_M_LMBT}
               skeleton={nodes.R_EyeBall_GEO.skeleton}
             />
-            {/* <skinnedMesh
+            <skinnedMesh
               name="R_EyeHighLight_GEO"
               geometry={nodes.R_EyeHighLight_GEO.geometry}
               material={materials.Motion_EyeHighLight_M_LMBT}
               skeleton={nodes.R_EyeHighLight_GEO.skeleton}
-            /> */}
+            />
             <skinnedMesh
               name="Rabbit_Xgen_GEO"
               geometry={nodes.Rabbit_Xgen_GEO.geometry}
@@ -485,15 +477,18 @@ export function Box({
               material={materials.Motion_Mouth_M_BLNN}
               skeleton={nodes.Upper_gum_GEO.skeleton}
             />
-            <skinnedMesh
-              name="Upper_Teeth_GEO"
-              geometry={nodes.Upper_Teeth_GEO.geometry}
-              material={materials.Motion_Mouth_M_BLNN}
-              skeleton={nodes.Upper_Teeth_GEO.skeleton}
-            />
             <primitive object={nodes.Root_M} />
           </group>
         </group>
+        <mesh
+          name="L_Iris_GEO"
+          castShadow
+          receiveShadow
+          geometry={nodes.L_Iris_GEO.geometry}
+          material={materials.Motion_Iris_M_BLNN}
+          position={[0, 1.844, -26.939]}
+          scale={7.71}
+        />
       </group>
     </group>
   );
