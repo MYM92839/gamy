@@ -2,7 +2,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { usePinch } from '@use-gesture/react';
 import { Leva, useControls } from 'leva';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import { Box, Tree } from './ArApp';
 import Back from './assets/icons/Back';
@@ -574,6 +574,9 @@ function UIOverlayIOS({
   });
   const [searchParams] = useSearchParams();
   const cv = searchParams.get('cv');
+  const isGuided = !searchParams.get('f');
+  const navigate = useNavigate();
+
   const getPosition = () => {
     const saved = localStorage.getItem('levaValues');
     if (saved) {
@@ -616,8 +619,9 @@ function UIOverlayIOS({
           zIndex: 99999,
         }}
         onClick={() => {
-          window.location.href =
-            char === 'moons' ? 'https://gamy-six.vercel.app/rabbit' : 'https://gamy-six.vercel.app/tree';
+          // window.location.href =
+          //   char === 'moons' ? 'https://gamy-six.vercel.app/rabbit' : 'https://gamy-six.vercel.app/tree';
+          navigate(-1);
         }}
       >
         <Back />
@@ -647,7 +651,7 @@ function UIOverlayIOS({
           zIndex: 0,
         }}
       >
-        {char === 'moons' ? (
+        {char === 'moons' && isGuided ? (
           <svg width={domWidth} height={domHeight}>
             <circle
               cx={circleX}
@@ -659,7 +663,7 @@ function UIOverlayIOS({
               strokeDasharray="4, 4"
             />
           </svg>
-        ) : (
+        ) : char === 'trees' && isGuided ? (
           <svg
             id="tree"
             xmlns="http://www.w3.org/2000/svg"
@@ -681,7 +685,7 @@ function UIOverlayIOS({
               />
             </g>
           </svg>
-        )}
+        ) : null}
       </div>
       <Button
         onClick={() => {
