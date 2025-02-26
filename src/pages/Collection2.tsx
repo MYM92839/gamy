@@ -19,7 +19,7 @@ export default function Collection2() {
   };
 
   return (
-    <div className="w-full h-full  min-h-[874px] relative">
+    <div className="w-full h-full min-h-[874px] relative">
       <img className="absolute top-0 w-full" src="/top_image.png" />
       <div className="absolute inset-0 px-[24px]">
         <img className="mt-[60px] mx-auto" src="/title.png" />
